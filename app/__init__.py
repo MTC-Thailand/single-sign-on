@@ -24,7 +24,13 @@ api.add_resource(CMTEScore, '/<int:lic_id>/cmte/scores')
 def create_app(config):
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+    database_url = os.environ.get('DATABASE_URL')
+
+    if database_url.startswith('postgresql'):
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres', 'postgresql')
+
     admin.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
