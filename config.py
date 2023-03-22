@@ -7,15 +7,20 @@ load_dotenv()
 
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECRET_KEY = os.environ.get('SECRET_KEY')
 
 
 class DevelopmentConfig(Config):
-    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI')
+
+
+class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI')
 
 
 environments = {
-    'development': DevelopmentConfig
+    'development': DevelopmentConfig,
+    'production': Config
 }
 
 env_setting = os.environ.get('FLASK_ENV', 'production')
