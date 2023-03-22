@@ -6,6 +6,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin
 from flasgger import Swagger
 from flask_migrate import Migrate
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from app.api.views import CMTEScore
 
@@ -21,7 +24,7 @@ api = Api(api_bp)
 api.add_resource(CMTEScore, '/<int:lic_id>/cmte/scores')
 
 
-def create_app(config):
+def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
     database_url = os.environ.get('DATABASE_URL')

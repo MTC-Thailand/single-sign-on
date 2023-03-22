@@ -43,4 +43,6 @@ class Client(db.Model):
         raise ValueError
 
     def generate_api_key(self):
-        self._api_key = uuid.uuid4()
+        key = uuid.uuid4()
+        self._api_key = generate_password_hash(str(key))
+        return key
