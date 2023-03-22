@@ -29,6 +29,8 @@ class CMTEScore(Resource):
             200:
                 description: Sum of the CMTE scores of the individual
         """
+        if lic_id != 7247:
+            return jsonify({'message': 'Only a specific license ID is allowed for testing.'})
         type_ = request.args.get('type', 'valid')
         if type_ == 'valid':
             query = f'''
