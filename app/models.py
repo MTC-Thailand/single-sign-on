@@ -26,7 +26,7 @@ class Client(db.Model):
     id = db.Column(db.String(255), primary_key=True)
     name = db.Column('name', db.String())
     email = db.Column('email', db.String(), nullable=False)
-    _api_key = db.Column(db.String(), nullable=False)
+    _secret = db.Column('secret', db.String(), nullable=False)
     is_valid = db.Column(db.Boolean(), default=True)
     creator_id = db.Column(db.ForeignKey('users.id'))
     creator = db.relationship(User, backref=db.backref('clients',
@@ -35,14 +35,14 @@ class Client(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     @property
-    def api_key(self):
+    def client_secret(self):
         return self._api_key
 
-    @api_key.setter
-    def set_api_key(self):
+    @client_secret.setter
+    def set_client_secret(self):
         raise ValueError
 
-    def generate_api_key(self):
+    def generate_client_secret(self):
         key = uuid.uuid4()
-        self._api_key = generate_password_hash(str(key))
+        self._secret = generate_password_hash(str(key))
         return key
