@@ -2,20 +2,38 @@ import datetime
 import os
 
 import pandas as pd
+from http import HTTPStatus
 from flask import jsonify, request
+from flask_jwt_extended import create_access_token, jwt_required
 from flask_restful import Resource
 from sqlalchemy import create_engine
+from werkzeug.security import check_password_hash
+
 
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
 MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
 MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
 
-engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
-engine.connect()
+
+class Login(Resource):
+    def post(self):
+        from app.models import Client
+        client_id = request.json.get('client_id')
+        api_key = request.json.get('api_key')
+        client = Client.query.filter_by(id=client_id).first()
+        if client:
+            if check_password_hash(client.api_key, api_key):
+                access_token = create_access_token(identity=client_id)
+                return jsonify(access_token=access_token)
+            else:
+                return {'message': 'Invalid API Key'}, HTTPStatus.UNAUTHORIZED
+        else:
+            return {'message': 'Client was not found.'}, HTTPStatus.NOT_FOUND
 
 
 class CMTEScore(Resource):
+    @jwt_required()
     def get(self, lic_id):
         """
         This is a demo
@@ -29,8 +47,9 @@ class CMTEScore(Resource):
             200:
                 description: Sum of the CMTE scores of the individual
         """
-        if lic_id != 7247:
-            return jsonify({'message': 'Only a specific license ID is allowed for testing.'})
+        engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
+        engine.connect()
+
         type_ = request.args.get('type', 'valid')
         if type_ == 'valid':
             query = f'''

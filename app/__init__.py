@@ -2,6 +2,7 @@ import os
 
 from flask import Flask
 from flask_restful import Api
+from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin
 from flasgger import Swagger
@@ -10,18 +11,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.api.views import CMTEScore
+from app.api.views import CMTEScore, Login
 
 admin = Admin()
 migrate = Migrate()
 db = SQLAlchemy()
 swagger = Swagger()
+jwt = JWTManager()
 
 from app.api import api_bp
 
 api = Api(api_bp)
 
-api.add_resource(CMTEScore, '/<int:lic_id>/cmte/scores')
+api.add_resource(Login, '/login')
+api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
 
 
 def create_app():
@@ -37,6 +40,7 @@ def create_app():
     admin.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
+    jwt.init_app(app)
     app.register_blueprint(api_bp)
     swagger.init_app(app)
 
