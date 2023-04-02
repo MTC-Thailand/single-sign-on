@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="columns">
+    <div class="column is-one-third is-offset-4">
+      <p>Client ID</p>
+      <p class="notification">{{client.id}}</p>
+      <p>Client Secret</p>
+      <p class="notification">{{secret}}</p>
+    </div>
+  </div>
+  <div class="columns">
+    <div class="column has-text-centered">
+      <a href="{{url_for('index')}}" class="button is-light">Home</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

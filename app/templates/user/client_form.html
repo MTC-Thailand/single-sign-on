@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="columns">
+    <div class="column is-one-third is-offset-4 box">
+      {% include "messages.html" %}
+      <form method="post">
+        {{form.hidden_tag()}}
+        <div class="field">
+          <label class="label">{{form.name.label}}</label>
+          <div class="control">
+            {{form.name(class="input is-danger")}}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">{{form.email.label}}</label>
+          <div class="control">
+            {{form.email(class="input is-danger")}}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">{{form.company.label}}</label>
+          <div class="control">
+            {{form.company(class="input")}}
+          </div>
+        </div>
+        <div class="field">
+          <div class="control">
+            <input type="submit" value="Register" class="button is-primary">
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
