@@ -36,7 +36,7 @@ class Client(db.Model):
 
     @property
     def client_secret(self):
-        return self._api_key
+        return self._secret
 
     @client_secret.setter
     def set_client_secret(self):

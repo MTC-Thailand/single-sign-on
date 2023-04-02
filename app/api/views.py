@@ -4,7 +4,7 @@ import os
 import pandas as pd
 from http import HTTPStatus
 from flask import jsonify, request
-from flask_jwt_extended import create_access_token, jwt_required
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token
 from flask_restful import Resource
 from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
@@ -20,16 +20,25 @@ class Login(Resource):
     def post(self):
         from app.models import Client
         client_id = request.json.get('client_id')
-        api_key = request.json.get('api_key')
+        secret = request.json.get('client_secret')
         client = Client.query.filter_by(id=client_id).first()
         if client:
-            if check_password_hash(client.api_key, api_key):
+            if check_password_hash(client.client_secret, secret):
                 access_token = create_access_token(identity=client_id)
-                return jsonify(access_token=access_token)
+                refresh_token = create_refresh_token(identity=client_id)
+                return jsonify(access_token=access_token, refresh_token=refresh_token)
             else:
                 return {'message': 'Invalid API Key'}, HTTPStatus.UNAUTHORIZED
         else:
             return {'message': 'Client was not found.'}, HTTPStatus.NOT_FOUND
+
+
+class RefreshToken(Resource):
+    @jwt_required(refresh=True)
+    def post(self):
+        identity = get_jwt_identity()
+        access_token = create_access_token(identity=identity)
+        return jsonify(access_token=access_token)
 
 
 class CMTEScore(Resource):

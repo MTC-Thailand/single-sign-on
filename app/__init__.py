@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.api.views import CMTEScore, Login
+from app.api.views import CMTEScore, Login, RefreshToken
 
 admin = Admin()
 migrate = Migrate()
@@ -23,8 +23,9 @@ from app.api import api_bp
 
 api = Api(api_bp)
 
-api.add_resource(Login, '/login')
+api.add_resource(Login, '/auth/login')
 api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
+api.add_resource(RefreshToken, '/auth/refresh')
 
 
 def create_app():
@@ -36,6 +37,8 @@ def create_app():
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres', 'postgresql')
+
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     admin.init_app(app)
     db.init_app(app)
