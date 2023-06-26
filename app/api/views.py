@@ -44,7 +44,7 @@ class CMTEScore(Resource):
     @jwt_required()
     def get(self, lic_id):
         """
-        This is a demo
+        This endpoint returns CMTE scores.
         ---
         parameters:
             -   lic_id: license ID
@@ -79,21 +79,167 @@ class CMTEScore(Resource):
 
 class MemberInfo(Resource):
     @jwt_required()
-    def get(self, pid):
+    def get(self, pin):
+        """
+        This end point returns personal information of a member with matching PIN.
+        ---
+        parameters:
+            -   pin: Personal Identification Number
+                in: path
+                type: string
+                required: true
+        responses:
+            200:
+                description: Personal information of the member.
+                schema:
+                    id: Member
+                    properties:
+                        mem_id:
+                            type: number
+                            description: License ID
+                        lic_b_date:
+                            type: date
+                            description: วันออกใบอนุญาต
+                        lic_exp_date:
+                            type: date
+                            description: วันหมดอายุใบอนุญาต
+                        lic_status_name:
+                            type: string
+                            description: สถานะใบอนุญาต
+                        mem_id_text:
+                            type: string
+                            description: Member ID
+                        birthday:
+                            type: date
+                            description: birthdate
+                        title_id:
+                            type: string
+                            description: Thai title
+                        fname:
+                            type: string
+                            description: Thai first name
+                        lname:
+                            type: string
+                            description: Thai lastname
+                        e_fname:
+                            type: string
+                            description: English first name
+                        e_lname:
+                            type: string
+                            description: English lastname
+                        e_title:
+                            type: string
+                            description: English title
+                        cmte_score:
+                            type: object
+                            properties:
+                                total:
+                                    type: number
+                                    description: คะแนนสะสมทั้งหมด
+                                valid:
+                                    type: number
+                                    description: คะแนนสำหรับต่ออายุใบอนุญาตในรอบปัจจุบัน
+                        document_id:
+                            type: integer
+                            description: mailing address ที่อยู่สำหรับส่งเอกสาร, 1=current address, 2=work address, 3=home address
+                        current_addr:
+                            type: object
+                            description: a current address ที่อยู่ปัจจุบัน
+                            properties:
+                                add_id:
+                                    type: integer
+                                    description: address ID, 1=current address, 2=work address, 3=home address
+                                add1:
+                                    type: string
+                                    description: street address
+                                zipcode:
+                                    type: string
+                                PROVINCE_NAME:
+                                    type: string
+                                AMPHUR_NAME:
+                                    type: string
+                                DISTRICT_NAME:
+                                    type: string
+                                moo:
+                                    type: string
+                                road:
+                                    type: string
+                                soi:
+                                    type: string
+                        mobilesms:
+                            type: string
+                            description: mobile phone
+                        email_member:
+                            type: string
+                            description: email
+                        mem_status:
+                            type: string
+                            description: สถานภาพสมาชิก
+                        office:
+                            type: object
+                            properties:
+                                contract:
+                                    type: string
+                                    description: ประเภทการจ้าง
+                                employer:
+                                    type: string
+                                    description: ประเภทหน่วยงาน
+                                function:
+                                    type: string
+                                    description: หน้าที่
+                                office_name:
+                                    type: string
+                                    description: ชื่อสถานที่ทำงาน
+                                office_department:
+                                    type: string
+                                    description: ชื่อหน่วยงาน/ภาควิชา
+                                office_position:
+                                    type: string
+                                    description: ตำแหน่งงาน
+                                office_addr:
+                                    type: object
+                                    properties:
+                                        add_id:
+                                            type: integer
+                                            description: address ID, 1=current address, 2=work address, 3=home address
+                                        add1:
+                                            type: string
+                                            description: street address
+                                        zipcode:
+                                            type: string
+                                        PROVINCE_NAME:
+                                            type: string
+                                        AMPHUR_NAME:
+                                            type: string
+                                        DISTRICT_NAME:
+                                            type: string
+                                        moo:
+                                            type: string
+                                        road:
+                                            type: string
+                                        soi:
+                                            type: string
+        """
         engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
         engine.connect()
         query = f'''
         SELECT member.mem_id_txt,member.mem_id,member.title_id,member.fname,member.lname,member.e_title,member.e_fname,member.e_lname,
         emp_function.function_name,emp_owner.emp_owner_name,emp_contract.contract_name,member.address_id_doc,member.birthday,
-        member.position,member.office_name,member.department_w
+        member.position,member.office_name,member.department_w,member.mobilesms,member.email_member,mem_status.status_name AS mem_status,
+        lic_mem.lic_exp_date,lic_mem.lic_b_date,lic_status.lic_status_name
         FROM member
         INNER JOIN emp_function ON member.emp_function_id=emp_function.emp_function_id
         INNER JOIN emp_owner ON emp_owner.emp_owner_id=member.emp_owner_id
         INNER JOIN emp_contract ON emp_contract.emp_contract_id=member.emp_contract_id
-        WHERE member.persion_id={pid}
+        INNER JOIN mem_status on member.mem_status_id=mem_status.mem_status_id
+        INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
+        INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
+        WHERE member.persion_id={pin}
         '''
         data = pd.read_sql_query(query, con=engine)
         data = data.squeeze().to_dict()
+        data['lic_b_date'] = data['lic_b_date'].isoformat()
+        data['lic_exp_date'] = data['lic_exp_date'].isoformat()
         data['document_addr'] = data.pop('address_id_doc')
         mem_id = data['mem_id']
         data['birthday'] = data['birthday'].isoformat()

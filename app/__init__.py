@@ -35,7 +35,7 @@ api = Api(api_bp)
 
 api.add_resource(Login, '/auth/login')
 api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
-api.add_resource(MemberInfo, '/members/<string:pid>/info')
+api.add_resource(MemberInfo, '/members/<string:pin>/info')
 api.add_resource(RefreshToken, '/auth/refresh')
 
 
