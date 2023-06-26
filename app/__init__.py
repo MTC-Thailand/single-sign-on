@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, url_for, render_template
+from flask import Flask, render_template
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.api.views import CMTEScore, Login, RefreshToken
+from app.api.views import CMTEScore, Login, RefreshToken, MemberInfo
 
 
 class MyAdminIndexView(AdminIndexView):
@@ -35,6 +35,7 @@ api = Api(api_bp)
 
 api.add_resource(Login, '/auth/login')
 api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
+api.add_resource(MemberInfo, '/members/<string:pid>/info')
 api.add_resource(RefreshToken, '/auth/refresh')
 
 
