@@ -224,32 +224,55 @@ class MemberInfo(Resource):
         engine.connect()
         query = f'''
         SELECT member.mem_id_txt,member.mem_id,member.title_id,member.fname,member.lname,member.e_title,member.e_fname,member.e_lname,
-        emp_function.function_name,emp_owner.emp_owner_name,emp_contract.contract_name,member.address_id_doc,member.birthday,
-        member.position,member.office_name,member.department_w,member.mobilesms,member.email_member,mem_status.status_name AS mem_status,
-        lic_mem.lic_exp_date,lic_mem.lic_b_date,lic_status.lic_status_name
-        FROM member
-        INNER JOIN emp_function ON member.emp_function_id=emp_function.emp_function_id
-        INNER JOIN emp_owner ON emp_owner.emp_owner_id=member.emp_owner_id
-        INNER JOIN emp_contract ON emp_contract.emp_contract_id=member.emp_contract_id
-        INNER JOIN mem_status on member.mem_status_id=mem_status.mem_status_id
-        INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-        INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
-        WHERE member.persion_id={pin}
+        member.address_id_doc,member.birthday,member.position,member.office_name,member.department_w,member.mobilesms,member.email_member,
+        member.mem_status_id,member.emp_function_id,member.emp_owner_id,member.emp_contract_id
+        FROM member WHERE member.persion_id='{pin}';
         '''
         data = pd.read_sql_query(query, con=engine)
         data = data.squeeze().to_dict()
-        data['lic_b_date'] = data['lic_b_date'].isoformat()
-        data['lic_exp_date'] = data['lic_exp_date'].isoformat()
-        data['document_addr'] = data.pop('address_id_doc')
-        mem_id = data['mem_id']
-        data['birthday'] = data['birthday'].isoformat()
+
+        query = f'''
+        SELECT lic_mem.lic_exp_date,lic_mem.lic_b_date FROM lic_mem
+        INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
+        WHERE lic_mem.mem_id={data['mem_id']}
+        '''
+        lic_data = pd.read_sql_query(query, con=engine)
+        lic_data = lic_data.squeeze().to_dict()
+        data.update(lic_data)
+
+        query = f'''
+        SELECT status_name AS mem_status_name FROM mem_status WHERE {data['mem_status_id']}=mem_status.mem_status_id;
+        '''
+
+        mem_status_data = pd.read_sql_query(query, con=engine)
+        data['mem_status'] = mem_status_data.squeeze()
+
+        if data['emp_function_id']:
+            query = f"""
+            SELECT emp_function.function_name,emp_owner.emp_owner_name,emp_contract.contract_name
+            FROM emp_function
+            INNER JOIN emp_owner ON emp_owner.emp_owner_id={data['emp_owner_id']}
+            INNER JOIN emp_contract ON emp_contract.emp_contract_id={data['emp_contract_id']}
+            WHERE emp_function.emp_function_id={data['emp_function_id']}
+            """
+            emp_data = pd.read_sql_query(query, con=engine)
+            data.update(emp_data.squeeze().to_dict())
+
+        data['lic_b_date'] = data['lic_b_date'].isoformat() if data['lic_b_date'] else None
+        data['lic_exp_date'] = data['lic_exp_date'].isoformat() if data['lic_exp_date'] else None
+        data['document_addr'] = data.pop('address_id_doc', None) or ''
+        data['birthday'] = data['birthday'].isoformat() if data['birthday'] else None
+
         work_office = {}
-        work_office['office_position'] = data.pop('position')
-        work_office['office_name'] = data.pop('office_name')
-        work_office['office_department'] = data.pop('department_w')
-        work_office['function'] = data.pop('function_name')
-        work_office['employer'] = data.pop('emp_owner_name')
-        work_office['contract'] = data.pop('contract_name')
+        work_office['office_position'] = data.pop('position', None) or ''
+        work_office['office_name'] = data.pop('office_name', None) or ''
+        work_office['office_department'] = data.pop('department_w', None) or ''
+        work_office['function'] = data.pop('function_name', None) or ''
+        work_office['employer'] = data.pop('emp_owner_name', None) or ''
+        work_office['contract'] = data.pop('contract_name', None) or ''
+        mem_id = data['mem_id']
+        data['office'] = work_office
+
         query = f'''
         SELECT add_id,add1,moo,soi,road,zipcode,province.PROVINCE_NAME,amphur.AMPHUR_NAME,district.DISTRICT_NAME,updt
         FROM member_add
@@ -258,7 +281,6 @@ class MemberInfo(Resource):
         INNER JOIN district ON district.DISTRICT_ID=member_add.DISTRICT_ID
         WHERE mem_id={mem_id}
         '''
-        data['office'] = work_office
 
         addr = pd.read_sql_query(query, con=engine)
         for idx, row in addr.iterrows():
