@@ -62,6 +62,9 @@ def create_app():
     from app.user import user_bp
     app.register_blueprint(user_bp)
 
+    from app.members import member_blueprint
+    app.register_blueprint(member_blueprint)
+
     @app.route('/')
     def index():
         return render_template('index.html')
