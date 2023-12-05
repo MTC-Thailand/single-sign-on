@@ -52,7 +52,7 @@
                         <div class="field-body">
                             <div class="field">
                                 <div class="control">
-                                    <button id="submit-btn" type="submit" class="button is-info">ตรวจหา</button>
+                                    <button id="submit-btn" type="submit" class="button is-info">ค้นหา</button>
                                 </div>
                             </div>
                         </div>
@@ -72,7 +72,11 @@
 {{super()}}
 <script>
     document.addEventListener('htmx:beforeSend', function () {
-        htmx.addClass(htmx.find('#submit-btn', 'is-loading'))
+        htmx.addClass(htmx.find('#submit-btn'), 'is-loading')
+    })
+    document.addEventListener('stopLoading', function (evt) {
+        console.log(evt.detail.value)
+        htmx.removeClass(htmx.find(evt.detail.value), 'is-loading')
     })
 </script>
 {% endblock %}
