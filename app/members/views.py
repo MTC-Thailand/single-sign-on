@@ -119,6 +119,7 @@ def search_member():
                                                    rec.get('lastnameEN'),
                                                    int(rec.get('license_no')),
                                                    'has-text-info' if delta.days > 0 else 'has-text-danger',
+                                                   rec.get('end_date'),
                                                    exp_date.humanize(granularity=['year', 'day'], locale='th'),
                                                    'is-success' if license_status == 'ปกติ' else 'is-danger',
                                                    license_status,
