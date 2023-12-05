@@ -4,8 +4,22 @@
 <section class="section">
     <div class="container">
         <div class="columns">
-            <div class="column is-two-thirds is-offset-2">
-                <h1 class="title has-text-centered">ค้นหาผู้ประกอบวิชาชีพเทคนิคการแพทย์</h1>
+            <div class="column">
+                <div class="block has-text-centered">
+                    <figure class="image is-128x128 is-inline-block">
+                        <img src="{{url_for('static', filename='logo.png')}}" width="100">
+                    </figure>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="columns">
+            <div class="column">
+                <h1 class="title has-text-centered">ตรวจสอบใบอนุญาตประกอบวิชาชีพเทคนิคการแพทย์</h1>
+            </div>
+        </div>
+        <div class="columns">
+            <div class="column is-one-third is-offset-2">
                 <form class="box"
                       hx-swap="innerHTML"
                       hx-target="#result"
@@ -59,13 +73,12 @@
                     </div>
                 </form>
             </div>
-        </div>
-        <div class="columns">
-            <div class="column">
+            <div class="column is-one-third">
                 <div id="result"></div>
             </div>
         </div>
     </div>
+    <br>
     <footer>
         <div class="content has-text-centered">
             สภาเทคนิคการแพทย์กำลังอยู่ในระหว่างปรับปรุงฐานข้อมูลสมาชิก หากพบข้อผิดพลาดหรือสงสัยในข้อมูลสมาชิกกรุณาติดต่อกับเจ้าหน้าที่เพื่อตรวจสอบยืนยัน โทร 02-0266491 ต่อ 107
