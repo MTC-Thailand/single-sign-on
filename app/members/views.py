@@ -97,6 +97,9 @@ def search_member():
     form = MemberSearchForm()
     if form.validate_on_submit():
         message = ''
+        form.firstname.data = form.firstname.data.strip()
+        form.lastname.data = form.lastname.data.strip()
+        form.license_id.data = form.license_id.data.strip()
         if form.firstname.data and form.lastname.data:
             try:
                 response = requests.get(f'{BASE_URL}/GetdataBylicenseAndfirstnamelastname',
