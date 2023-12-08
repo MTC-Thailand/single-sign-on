@@ -29,17 +29,6 @@ template = '''
 </div>
 '''
 
-# template = '''
-# <div class="box">
-# <img src="data:image/png;base64, {}">
-# <span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
-# <span class="label">Name</span> <span>{} {}</span><br>
-# <span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
-# <span class="label">วันหมดอายุ</span> <span>{}</span><br>
-# <span class="label">สถานะใบอนุญาต</span> <span>{}</span>
-# </div>
-# '''
-
 
 def load_from_mtc(firstname=None, lastname=None, license_id=None):
     engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
