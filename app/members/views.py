@@ -13,8 +13,7 @@ from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
-# BASE_URL = 'https://mtc.thaijobjob.com/api/user'
-BASE_URL = 'https://uat-mtc.thaijobjob.com/api/user'
+BASE_URL = 'https://mtc.thaijobjob.com/api/user'
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
 MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
@@ -111,6 +110,7 @@ def search_member():
                 try:
                     data_ = response.json().get('results', [])
                 except requests.exceptions.JSONDecodeError as e:
+                    pprint(e)
                     data_ = load_from_mtc(form.firstname.data, form.lastname.data)
                     for rec in data_:
                         exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
@@ -162,6 +162,7 @@ def search_member():
                 try:
                     data_ = response.json().get('results', [])
                 except requests.exceptions.JSONDecodeError as e:
+                    pprint(e)
                     data_ = load_from_mtc(license_id=form.license_id.data)
                     for rec in data_:
                         exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
