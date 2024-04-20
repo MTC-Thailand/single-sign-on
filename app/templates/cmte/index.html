@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <h1 class="title">Welcome to CMTE.</h1>
+        {% include "messages.html" %}
+        <ul>
+            <li><a href="{{url_for('cmte.register_event')}}">ขออนุมัติจัดกิจกรรม</a></li>
+        </ul>
+    </div>
+</section>
+{% endblock %}

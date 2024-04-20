@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <h1 class="title">Event Registration</h1>
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column">
+                <form method="post">
+                    {{form.hidden_tag()}}
+                    <div class="field">
+                        <label class="label">{{form.title.label}}</label>
+                        <div class="control">
+                            {{form.title(class="input")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.event_type.label}}</label>
+                        <div class="select">
+                            {{form.event_type()}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.fee_rate.label}}</label>
+                        <div class="select">
+                            {{form.fee_rate()}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.start_date.label}}</label>
+                        <div class="control">
+                            {{form.start_date(class="input", type="text")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.end_date.label}}</label>
+                        <div class="control">
+                            {{form.end_date(class="input", type="text")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.venue.label}}</label>
+                        <div class="control">
+                            {{form.venue(class="textarea")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.website.label}}</label>
+                        <div class="control">
+                            {{form.website(class="textarea")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="is-grouped is-grouped-centered">
+                            <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Cancel</a>
+                            <button type="submit" class="button is-success">Submit</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script>
+    $(function() {
+        $("input[name='start_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if not form.start_date.data %}
+            startDate: moment(),
+            {% else %}
+            startDate: {{form.start_date.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            {% endif %}
+            timePicker: true,
+            timePicker24Hour: true,
+            timePickerIncrement: 30,
+            singleDatePicker: true,
+            locale: {
+                format: 'DD/MM/YYYY HH:mm'
+            }
+        })
+        $("input[name='end_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if not form.end_date.data %}
+            startDate: moment(),
+            {% else %}
+            startDate: {{form.end_date.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            {% endif %}
+            timePicker: true,
+            timePicker24Hour: true,
+            timePickerIncrement: 30,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY HH:mm'
+        }
+    })
+    });
+</script>
+{% endblock %}

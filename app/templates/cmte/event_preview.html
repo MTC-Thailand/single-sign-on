@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <h1 class="title">Event Registration Preview</h1>
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column">
+                <h2 class="title">{{event.event_type}}</h2>
+                <h3 class="subtitle">{{event.title}}</h3>
+                <table class="table is-fullwidth is-bordered">
+                    <tbody>
+                    <tr>
+                        <td>ประเภท</td>
+                        <td>{{event.event_type.category}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>ชนิด</td>
+                        <td>{{event.event_type}}</td>
+                        <td>
+                            <table class="table is-fullwidth is-bordered">
+                                <tbody>
+                                <tr>
+                                    <td>เกณฑ์การให้คะแนน</td>
+                                    <td>{{event.event_type.score_criteria}}</td>
+                                </tr>
+                                <tr>
+                                    <td>คะแนนสูงสุดต่อครั้ง</td>
+                                    <td>{{event.event_type.max_score}}</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>ชื่อกิจกรรม</td>
+                        <td>{{event.title}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>วันและเวลาจัดกิจกรรม</td>
+                        <td>{{event.start_date|localdatetime}} - {{event.end_date|localdatetime}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>อัตราค่าธรรมเนียม</td>
+                        <td>{{event.fee_rate}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>สถานที่จัด</td>
+                        <td>{{event.venue}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Website</td>
+                        <td><a href="{{event.website}}">{{event.website}}</a></td>
+                        <td></td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div class="buttons is-centered">
+                    <a href="{{url_for('cmte.edit_event', event_id=event.id)}}" class="button is-light">แก้ไขข้อมูล</a>
+                    <a hx-confirm="ท่านต้องการยื่นขออนุมัติกิจกรรมนี้หรือไม่"
+                       hx-post="{{url_for('cmte.submit_event', event_id=event.id)}}"
+                       class="button is-link">ยื่นขออนุมัติ</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,4 +1,5 @@
 import os
+from pytz import timezone
 
 from flask import Flask, render_template
 from flask_restful import Api
@@ -65,8 +66,21 @@ def create_app():
     from app.members import member_blueprint
     app.register_blueprint(member_blueprint)
 
+    from app.cmte import cmte_bp as cmte_blueprint
+    app.register_blueprint(cmte_blueprint)
+
     @app.route('/')
     def index():
         return render_template('index.html')
+
+    @app.template_filter("localdatetime")
+    def local_datetime(dt):
+        bangkok = timezone('Asia/Bangkok')
+        datetime_format = '%d/%m/%Y %X'
+        if dt:
+            if dt.tzinfo:
+                return dt.astimezone(bangkok).strftime(datetime_format)
+        else:
+            return None
 
     return app

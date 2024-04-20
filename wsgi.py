@@ -18,3 +18,11 @@ class ClientAdminView(ModelView):
 
 admin.add_view(ModelView(User, db.session))
 admin.add_view(ClientAdminView(Client, db.session))
+
+from app.cmte.models import *
+admin.add_view(ModelView(CMTEEvent, db.session, category='CMTE Events'))
+admin.add_view(ModelView(CMTEEventCategory, db.session, category='CMTE Events'))
+admin.add_view(ModelView(CMTEEventType, db.session, category='CMTE Events'))
+admin.add_view(ModelView(CMTEEventFormat, db.session, category='CMTE Events'))
+admin.add_view(ModelView(CMTEEventSponsor, db.session, category='CMTE Events'))
+admin.add_view(ModelView(CMTEEventFeeRate, db.session, category='CMTE Events'))
