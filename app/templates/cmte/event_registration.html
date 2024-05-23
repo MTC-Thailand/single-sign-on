@@ -26,7 +26,11 @@
                     <div class="field">
                         <label class="label">{{form.event_type.label}}</label>
                         <div class="select">
-                            {{ form.event_type(**{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates'), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {% if event %}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates', fee_rate_id=event.fee_rate_id), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {% else %}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates'), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {% endif %}
                         </div>
                     </div>
                     <div class="field">
@@ -36,13 +40,13 @@
                     <div class="field">
                         <label class="label">{{form.start_date.label}}</label>
                         <div class="control">
-                            {{form.start_date(class="input", type="text")}}
+                            {{form.start_date(class="input", type="text", required=True)}}
                         </div>
                     </div>
                     <div class="field">
                         <label class="label">{{form.end_date.label}}</label>
                         <div class="control">
-                            {{form.end_date(class="input", type="text")}}
+                            {{form.end_date(class="input", type="text", required=True)}}
                         </div>
                     </div>
                     <div class="field">
@@ -64,19 +68,19 @@
                         <div class="field">
                             <label class="label">{{form.coord_name.label}}</label>
                             <div class="control">
-                                {{form.coord_name(class="input")}}
+                                {{form.coord_name(class="input", required=True)}}
                             </div>
                         </div>
                         <div class="field">
                             <label class="label">{{form.coord_email.label}}</label>
                             <div class="control">
-                                {{form.coord_email(class="input")}}
+                                {{form.coord_email(class="input", required=True)}}
                             </div>
                         </div>
                         <div class="field">
                             <label class="label">{{form.coord_phone.label}}</label>
                             <div class="control">
-                                {{form.coord_phone(class="input")}}
+                                {{form.coord_phone(class="input", required=True)}}
                             </div>
                         </div>
                     </div>
@@ -98,6 +102,7 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <script>
     $(function() {
+        htmx.trigger('#event_type', 'change')
         $("input[name='start_date']").daterangepicker({
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',

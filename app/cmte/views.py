@@ -27,7 +27,7 @@ def register_event():
 def edit_event(event_id):
     event = CMTEEvent.query.get(event_id)
     form = CMTEEventForm(obj=event)
-    return render_template('cmte/event_registration.html', form=form)
+    return render_template('cmte/event_registration.html', form=form, event=event)
 
 
 @cmte.post('/events/registration')
@@ -54,11 +54,13 @@ def create_event(event_id=None):
 
 @cmte.post('/fee-rates')
 def get_fee_rates():
-    event_type_id = request.form.get('event_type')
+    event_type_id = request.form.get('event_type', type=int)
+    fee_rate_id = request.args.get('fee_rate_id', type=int)
     event_type = CMTEEventType.query.get(event_type_id)
     options = ''
     for fr in event_type.fee_rates:
-        options += f'<label class="radio is-danger"><input type="radio" required name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
+        checked = 'checked' if fr.id == fee_rate_id else ''
+        options += f'<label class="radio is-danger"><input type="radio" required {checked} name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
     options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
     return options
 
