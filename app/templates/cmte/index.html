@@ -5,9 +5,22 @@
     <div class="container">
         <h1 class="title">Welcome to CMTE.</h1>
         {% include "messages.html" %}
-        <ul>
-            <li><a href="{{url_for('cmte.register_event')}}">ขออนุมัติจัดกิจกรรม</a></li>
-        </ul>
+        <div class="columns">
+            <div class="column is-one-third is-offset-4">
+                <article class="panel">
+                    <p class="panel-heading">สมาชิก</p>
+                    <a class="panel-block" href="{{url_for('cmte.register_event')}}">
+                        ขออนุมัติจัดกิจกรรม
+                    </a>
+                </article>
+                <article class="panel is-info">
+                    <p class="panel-heading">เจ้าหน้าที่</p>
+                    <a class="panel-block" href="{{url_for('cmte.pending_events')}}">
+                        อนุมัติกิจกรรม
+                    </a>
+                </article>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}

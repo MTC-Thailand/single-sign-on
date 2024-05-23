@@ -1,10 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <h1 class="title">Welcome to CMTE.</h1>
+    {% include "messages.html" %}
+    <div class="columns">
+      <div class="column">
+        <div class="tabs is-boxed">
+          <ul>
+            <li class="is-active"><a>รออนุมัติ</a></li>
+            <li><a>อนุมัติแล้ว</a></li>
+          </ul>
+        </div>
+        <table class="table is-fullwidth">
+          <tbody>
+          {% for evt in events %}
+          <tr>
+            <td>{{evt.title}}</td>
+            <td>{{evt.start_date|localdatetime}} - {{evt.end_date|localdatetime}}</td>
+            <td>{{evt.event_type}}</td>
+            <td>{{evt.fee_rate}}</td>
+            <td><a>รายละเอียด</a></td>
+            <td>
+              <a hx-post="{{url_for('cmte.approve_event', event_id=evt.id)}}"
+                 hx-confirm="ต้องการอนุมัติกิจกรรมนี้ใช่หรือไม่"
+                 hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+              >
+              อนุมัติ
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="buttons is-centered">
+          {% if next_url %}
+          <button class="button is-dark is-outlined">
+            <span>Load More</span>
+            <span class="icon">
+              <i class="fa-solid fa-spinner"></i>
+            </span>
+          </button>
+          {% else %}
+          All pending events
+          {% endif %}
+        </div>
+        <div class="buttons is-centered">
+          <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

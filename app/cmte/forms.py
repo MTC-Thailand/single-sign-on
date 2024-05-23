@@ -19,4 +19,3 @@ class CMTEEventForm(ModelForm):
         datetime_format = '%d/%m/%Y %H:%M'
 
     event_type = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
-    fee_rate = QuerySelectField('อัตราค่าธรรมเนียม', query_factory=lambda: CMTEEventFeeRate.query.all())

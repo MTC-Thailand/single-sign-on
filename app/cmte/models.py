@@ -1,5 +1,12 @@
 from app import db, models
 
+event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
+                          db.Column('event_type_id', db.Integer,
+                                    db.ForeignKey('cmte_event_types.id')),
+                          db.Column('fee_rate_id', db.Integer,
+                                    db.ForeignKey('cmte_event_fee_rates.id'))
+                          )
+
 
 class CMTEEventSponsor(db.Model):
     __tablename__ = 'cmte_event_sponsors'
@@ -31,6 +38,7 @@ class CMTEEventType(db.Model):
     submission_due = db.Column('submission_due', db.Integer(), default=30)
     max_score = db.Column('max_score', db.Integer(), default=25)
     score_criteria = db.Column('score_criteria', db.String())
+    fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'))
 
     def __str__(self):
         return self.name
@@ -51,11 +59,14 @@ class CMTEEventFeeRate(db.Model):
     max_participants = db.Column('max_participants', db.Integer())
     fee_rate = db.Column('fee_rate', db.Numeric())
     is_online = db.Column('is_online', db.Boolean(), default=False, info={'label': 'รูปแบบออนไลน์'})
+    desc = db.Column('desc', db.Text())
 
     def __str__(self):
         format = 'รูปแบบ Online' if self.is_online else 'รูปแบบ Onsite'
         if self.fee_rate and self.max_participants:
             return f'{format} ไม่เกิน {self.max_participants} คน: {self.fee_rate} บาท'
+        elif self.fee_rate:
+            return f'{format}: {self.fee_rate} บาท'
         elif self.max_participants:
             return f'{format} ไม่เกิน {self.max_participants} คน: ไม่มีค่าธรรมเนียม'
         else:
@@ -80,8 +91,11 @@ class CMTEEvent(db.Model):
     sponsor = db.relationship('CMTEEventSponsor', backref=db.backref('events'))
     submission_due_date = db.Column('submission_due_date', db.Date())
     website = db.Column('website', db.Text(), info={'label': 'ลิงค์ไปยังเว็บไซต์ลงทะเบียน/ประชาสัมพันธ์'})
-    fee_rate_id = db.Column('fee_rate_id', db.Integer, db.ForeignKey('cmte_event_fee_rates.id'))
-    fee_rate = db.relationship('CMTEEventFeeRate', backref=db.backref('events'))
+    coord_name = db.Column('coord_name', db.String(), info={'label': 'ชื่อผู้ประสานงาน'})
+    coord_phone = db.Column('coord_phone', db.String(), info={'label': 'โทรศัพท์'})
+    coord_email = db.Column('coord_email', db.String(), info={'label': 'อีเมล'})
+    fee_rate_id = db.Column('fee_rate_id', db.ForeignKey('cmte_event_fee_rates.id'))
+    fee_rate = db.relationship(CMTEEventFeeRate, backref=db.backref('events'))
 
     def __str__(self):
         return self.title

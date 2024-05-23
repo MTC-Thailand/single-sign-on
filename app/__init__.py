@@ -7,6 +7,7 @@ from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_admin import Admin, AdminIndexView
+from flask_wtf.csrf import CSRFProtect
 from flasgger import Swagger
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -26,6 +27,7 @@ migrate = Migrate()
 db = SQLAlchemy()
 swagger = Swagger()
 jwt = JWTManager()
+csrf = CSRFProtect()
 login_manager = LoginManager()
 login_manager.login_view = 'users.login'
 
@@ -59,6 +61,7 @@ def create_app():
     app.register_blueprint(api_bp)
     swagger.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     from app.user import user_bp
     app.register_blueprint(user_bp)

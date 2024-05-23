@@ -8,12 +8,15 @@
 {% block content %}
 <section class="section">
     <div class="container">
-        <h1 class="title">Event Registration</h1>
+        <h1 class="title has-text-centered">Event Registration</h1>
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column">
-                <form method="post">
+            <div class="column is-half is-offset-3 box">
+                <form method="post" hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'>
                     {{form.hidden_tag()}}
+                    <h5 class="title is-size-5">
+                        ข้อมูลสำหรับติดต่อประสานงานกิจกรรม
+                    </h5>
                     <div class="field">
                         <label class="label">{{form.title.label}}</label>
                         <div class="control">
@@ -23,14 +26,12 @@
                     <div class="field">
                         <label class="label">{{form.event_type.label}}</label>
                         <div class="select">
-                            {{form.event_type()}}
+                            {{ form.event_type(**{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates'), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">{{form.fee_rate.label}}</label>
-                        <div class="select">
-                            {{form.fee_rate()}}
-                        </div>
+                        <label class="label">ค่าธรรมเนียม</label>
+                        <div id="feeRateSelectField"></div>
                     </div>
                     <div class="field">
                         <label class="label">{{form.start_date.label}}</label>
@@ -47,13 +48,36 @@
                     <div class="field">
                         <label class="label">{{form.venue.label}}</label>
                         <div class="control">
-                            {{form.venue(class="textarea")}}
+                            {{form.venue(class="textarea", placeholder="Optional")}}
                         </div>
                     </div>
                     <div class="field">
                         <label class="label">{{form.website.label}}</label>
                         <div class="control">
-                            {{form.website(class="textarea")}}
+                            {{form.website(class="textarea", placeholder="Optional")}}
+                        </div>
+                    </div>
+                    <h5 class="title is-size-5">
+                        ข้อมูลสำหรับติดต่อประสานงานกิจกรรม
+                    </h5>
+                    <div class="notification">
+                        <div class="field">
+                            <label class="label">{{form.coord_name.label}}</label>
+                            <div class="control">
+                                {{form.coord_name(class="input")}}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">{{form.coord_email.label}}</label>
+                            <div class="control">
+                                {{form.coord_email(class="input")}}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">{{form.coord_phone.label}}</label>
+                            <div class="control">
+                                {{form.coord_phone(class="input")}}
+                            </div>
                         </div>
                     </div>
                     <div class="field">
