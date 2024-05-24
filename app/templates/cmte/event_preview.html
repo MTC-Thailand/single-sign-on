@@ -123,7 +123,7 @@
                         <span>ชำระค่าธรรมเนียม</span>
                     </a>
                     {% endif %}
-                    {% if not event.is_past_submission_due_date %}
+                    {% if not event.is_past_submission_due_date and event.approved_datetime %}
                     <a class="button is-success" hx-get="{{url_for('cmte.edit_participants', event_id=event.id)}}"
                        hx-target="#participant-form"
                        hx-swap="innerHTML"
