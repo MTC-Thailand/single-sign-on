@@ -68,6 +68,53 @@
                         <td></td>
                         {% endif %}
                     </tr>
+                    {% if event.approved_datetime %}
+                    <tr>
+                        <td><strong>คะแนนที่ได้รับอนุมัติ</strong></td>
+                        <td id="cmtePointInput">
+                            <h1 class="title is-size-3">{{event.cmte_points}} คะแนน</h1>
+                        </td>
+                        <td id="cmtePointBtn">
+                            <a class="button is-light"
+                               hx-get="{{url_for('cmte.get_cmte_point_input', event_id=event.id)}}"
+                               hx-target="#cmtePointInput"
+                               hx-swap="innerHTML"
+                            >
+                                <span class="icon">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </span>
+                                <span>แก้ไขคะแนน</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if event.payment_datetime and not event.approved_datetime %}
+                    <tr>
+                        <td>
+                            <strong>คะแนนที่ได้รับอนุมัติ</strong>
+                        </td>
+                        <td colspan="2">
+                            <form hx-confirm="ท่านต้องการอนุมัติกิจกรรมนี้ใช่หรือไม่"
+                                  hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                                  hx-post="{{url_for('cmte.approve_event', event_id=event.id, next=request.url)}}"
+                            >
+                                <div class="field has-addons">
+                                    <div class="control is-expanded">
+                                        <input type="number" required step="0.1" class="input is-danger" name="cmte_points">
+                                    </div>
+                                    <div class="control">
+                                        <button type="submit" class="button is-link">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-circle-check"></i>
+                                            </span>
+                                            <span>อนุมัติ</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endif %}
                     </tbody>
                 </table>
                 <div class="buttons is-centered">
@@ -77,17 +124,6 @@
                         </span>
                         <span>กลับ</span>
                     </a>
-                    {% if event.payment_datetime %}
-                    <a hx-confirm="ท่านต้องการอนุมัติกิจกรรมนี้หรือไม่"
-                       hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
-                       hx-post="{{url_for('cmte.approve_event', event_id=event.id, next=request.url)}}"
-                       class="button is-link">
-                        <span class="icon">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </span>
-                        <span>อนุมัติ</span>
-                    </a>
-                    {% endif %}
                 </div>
             </div>
         </div>

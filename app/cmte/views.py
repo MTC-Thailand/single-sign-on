@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import arrow
 from flask import render_template, flash, redirect, url_for, make_response, request
+from flask_wtf.csrf import generate_csrf
 from pytz import timezone
 
 from app import db
@@ -73,7 +74,7 @@ def preview_event(event_id):
     return render_template('cmte/event_preview.html', event=event, next_url=next_url)
 
 
-@cmte.get('/admin/events/<int:event_id>/preview')
+@cmte.route('/admin/events/<int:event_id>/preview', methods=('GET', 'POST'))
 def admin_preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
     return render_template('cmte/admin/event_preview.html', event=event)
@@ -142,7 +143,7 @@ def edit_participants(event_id: int=None, rec_id: int=None):
 @cmte.get('/admin/events/pending')
 def pending_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter_by(approved_datetime=None)
+    query = CMTEEvent.query.filter_by(approved_datetime=None).filter(CMTEEvent.payment_datetime!=None).filter(CMTEEvent.submitted_datetime!=None)
     events = query.paginate(page=page, per_page=20)
     next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
     return render_template('cmte/admin/pending_events.html',
@@ -167,15 +168,50 @@ def load_pending_events(page_no=1):
 @cmte.post('/admin/events/<int:event_id>/approve')
 def approve_event(event_id):
     event = CMTEEvent.query.get(event_id)
-    events = CMTEEvent.query.filter_by(approved_datetime=None)
     event.approved_datetime = arrow.now('Asia/Bangkok').datetime
     event.submitted_datetime = event.approved_datetime + timedelta(days=event.event_type.submission_due)
+    cmte_points = request.form.get('cmte_points', type=float)
+    event.cmte_points = cmte_points
     db.session.add(event)
     db.session.commit()
     flash('อนุมัติกิจกรรมเรียบร้อย', 'success')
     resp = make_response()
-    resp.headers['HX-Redirect'] = url_for('cmte.pending_events')
+    resp.headers['HX-Refresh'] = "true"
     return resp
+
+
+@cmte.post('/admin/events/<int:event_id>/edit-cmte-points')
+def edit_cmte_points(event_id):
+    event = CMTEEvent.query.get(event_id)
+    cmte_points = request.form.get('cmte_points', type=float)
+    event.cmte_points = cmte_points
+    db.session.add(event)
+    db.session.commit()
+    template = f'''<h1 class="title is-size-3">{event.cmte_points} คะแนน</h1>'''
+    return template
+
+
+@cmte.get('/admin/events/<int:event_id>/edit-cmte-points')
+def get_cmte_point_input(event_id):
+    event = CMTEEvent.query.get(event_id)
+    template = f'''
+    <form method="post" hx-post="{url_for('cmte.edit_cmte_points', event_id=event_id)}"
+        hx-headers='{{ "X-CSRF-Token": "{generate_csrf()}" }}'
+        hx-target="#cmtePointInput"
+        hx-swap="innerHTML"
+        hx-indicator="#submit-btn"
+    >
+        <div class="field has-addons">
+            <div class="control">
+                <input type="number" value={event.cmte_points} step="0.1" name="cmte_points" required class="input" />
+            </div>
+            <div class="control">
+                <button type="submit" id="submit-btn" class="button is-primary">Save</button>
+            </div>
+        </div>
+    </form>
+    '''
+    return template
 
 
 @cmte.get('/events/drafts')

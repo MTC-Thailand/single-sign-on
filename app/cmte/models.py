@@ -3,11 +3,11 @@ import datetime
 from app import db, models
 
 event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
-                          db.Column('event_type_id', db.Integer,
-                                    db.ForeignKey('cmte_event_types.id')),
-                          db.Column('fee_rate_id', db.Integer,
-                                    db.ForeignKey('cmte_event_fee_rates.id'))
-                          )
+                                db.Column('event_type_id', db.Integer,
+                                          db.ForeignKey('cmte_event_types.id')),
+                                db.Column('fee_rate_id', db.Integer,
+                                          db.ForeignKey('cmte_event_fee_rates.id'))
+                                )
 
 
 class CMTEEventSponsor(db.Model):
@@ -100,6 +100,9 @@ class CMTEEvent(db.Model):
     fee_rate = db.relationship(CMTEEventFeeRate, backref=db.backref('events'))
     payment_datetime = db.Column('payment_datetime', db.DateTime(timezone=True))
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
+    cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
+
+    # TODO: add a field for an approver
 
     def __str__(self):
         return self.title
