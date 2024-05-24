@@ -1,6 +1,5 @@
 import time
 from datetime import timedelta
-from tkinter import EventType
 
 import arrow
 from flask import render_template, flash, redirect, url_for, make_response, request
