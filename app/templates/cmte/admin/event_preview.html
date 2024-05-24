@@ -71,40 +71,21 @@
                     </tbody>
                 </table>
                 <div class="buttons is-centered">
-                    <a href="{{next_url or url_for('cmte.show_draft_events')}}" class="button is-light">
+                    <a href="{{url_for('cmte.pending_events')}}" class="button is-light">
                         <span class="icon">
                             <i class="fa-solid fa-chevron-left"></i>
                         </span>
                         <span>กลับ</span>
                     </a>
-                    {% if not event.payment_datetime and not event.submitted_datetime %}
-                    <a href="{{url_for('cmte.edit_event', event_id=event.id, next=request.url)}}" class="button is-light is-success">
-                        <span class="icon">
-                            <i class="fa-solid fa-pencil"></i>
-                        </span>
-                        <span>แก้ไขข้อมูล</span>
-                    </a>
-                    {% endif %}
-                    {% if event.payment_datetime and not event.submitted_datetime %}
-                    <a hx-confirm="ท่านต้องการยื่นขออนุมัติกิจกรรมนี้หรือไม่"
+                    {% if event.payment_datetime %}
+                    <a hx-confirm="ท่านต้องการอนุมัติกิจกรรมนี้หรือไม่"
                        hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
-                       hx-post="{{url_for('cmte.submit_event', event_id=event.id, next=request.url)}}"
+                       hx-post="{{url_for('cmte.approve_event', event_id=event.id, next=request.url)}}"
                        class="button is-link">
                         <span class="icon">
-                            <i class="fa-regular fa-paper-plane"></i>
+                            <i class="fa-solid fa-circle-check"></i>
                         </span>
-                        <span>ยื่นขออนุมัติ</span>
-                    </a>
-                    {% endif %}
-                    {% if not event.payment_datetime %}
-                    <a hx-confirm="ท่านต้องการชำระค่าธรรมเนียมใช่หรือไม่"
-                       hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
-                       hx-post="{{url_for('cmte.process_payment', event_id=event.id)}}"
-                       class="button is-warning">
-                        <span class="icon">
-                            <i class="fa-solid fa-credit-card"></i>
-                        </span>
-                        <span>ชำระค่าธรรมเนียม</span>
+                        <span>อนุมัติ</span>
                     </a>
                     {% endif %}
                 </div>

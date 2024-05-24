@@ -9,11 +9,20 @@
       <div class="column">
         <div class="tabs is-boxed">
           <ul>
-            <li class="is-active"><a>รออนุมัติ</a></li>
-            <li><a href="{{url_for('cmte.admin_approved_events')}}">อนุมัติแล้ว</a></li>
+            <li><a href="{{url_for('cmte.pending_events')}}">รออนุมัติ</a></li>
+            <li class="is-active"><a href="{{url_for('cmte.admin_approved_events')}}">อนุมัติแล้ว</a></li>
           </ul>
         </div>
         <table class="table is-fullwidth">
+          <thead>
+          <th>ชื่อ</th>
+          <th>วันและเวลา</th>
+          <th>ประเภท</th>
+          <th>อัตราค่าธรรมเนียม</th>
+          <th>วันที่ยื่น</th>
+          <th>วันที่อนุมัติ</th>
+          <th></th>
+          </thead>
           <tbody>
           {% for evt in events %}
           <tr>
@@ -21,14 +30,14 @@
             <td>{{evt.start_date|localdatetime}} - {{evt.end_date|localdatetime}}</td>
             <td>{{evt.event_type}}</td>
             <td>{{evt.fee_rate}}</td>
-            <td>
-              <a class="button is-link is-outlined is-small" href="{{url_for('cmte.admin_preview_event', event_id=evt.id)}}">
-                <span class="icon">
-                  <i class="fa-solid fa-circle-info"></i>
-                </span>
-                <span>รายละเอียด</span>
-              </a>
-            </td>
+            <td>{{evt.submitted_datetime|localdatetime}}</td>
+            <td>{{evt.approved_datetime|localdatetime}}</td>
+            <td><a class="button is-small is-link is-outlined" href="{{url_for('cmte.admin_preview_event', event_id=evt.id, next_url=request.url)}}">
+              <span class="icon">
+                <i class="fa-solid fa-circle-info"></i>
+              </span>
+              <span>รายละเอียด</span>
+            </a></td>
           </tr>
           {% endfor %}
           </tbody>
@@ -41,8 +50,6 @@
               <i class="fa-solid fa-spinner"></i>
             </span>
           </button>
-          {% else %}
-          All pending events
           {% endif %}
         </div>
         <div class="buttons is-centered">

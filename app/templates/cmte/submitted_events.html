@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <h1 class="title">Welcome to CMTE.</h1>
+    {% include "messages.html" %}
+    <div class="columns">
+      <div class="column">
+        <div class="buttons is-centered">
+          <a class="button is-medium is-success" href="{{url_for('cmte.create_event')}}">
+            <span class="icon">
+              <i class="fa-solid fa-plus"></i>
+            </span>
+            <span>เพิ่มกิจกรรมใหม่</span>
+          </a>
+        </div>
+        <div class="tabs is-boxed">
+          <ul>
+            <li><a href="{{url_for('cmte.show_draft_events')}}">รอยื่นขออนุมัติ</a></li>
+            <li class="is-active"><a>รอผลการอนุมัติ</a></li>
+            <li><a href="{{url_for('cmte.show_approved_events')}}">อนุมัติแล้ว</a></li>
+          </ul>
+        </div>
+        <table class="table is-fullwidth">
+          <thead>
+          <th>ชื่อ</th>
+          <th>วันและเวลา</th>
+          <th>ประเภท</th>
+          <th>อัตราค่าธรรมเนียม</th>
+          <th>วันที่ยื่น</th>
+          <th></th>
+          <th></th>
+          </thead>
+          <tbody>
+          {% for evt in events %}
+          <tr>
+            <td>{{evt.title}}</td>
+            <td>{{evt.start_date|localdatetime}} - {{evt.end_date|localdatetime}}</td>
+            <td>{{evt.event_type}}</td>
+            <td>{{evt.fee_rate}}</td>
+            <td>{{evt.submitted_datetime|localdatetime}}</td>
+            <td><a class="button is-small is-link is-outlined" href="{{url_for('cmte.preview_event', event_id=evt.id, next_url=request.url)}}">
+              <span class="icon">
+                <i class="fa-solid fa-circle-info"></i>
+              </span>
+              <span>รายละเอียด</span>
+            </a></td>
+            <td>
+              <a class="button is-small is-danger is-outlined" hx-delete="{{url_for('cmte.cancel_event', event_id=evt.id)}}"
+                 hx-confirm="ต้องการยกเลิกกิจกรรมนี้ใช่หรือไม่"
+                 hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+              >
+                <span class="icon">
+                  <i class="fa-solid fa-trash"></i>
+                </span>
+                <span>ยกเลิก</span>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="buttons is-centered">
+          {% if next_url %}
+          <button class="button is-dark is-outlined">
+            <span>Load More</span>
+            <span class="icon">
+              <i class="fa-solid fa-spinner"></i>
+            </span>
+          </button>
+          {% endif %}
+        </div>
+        <div class="buttons is-centered">
+          <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

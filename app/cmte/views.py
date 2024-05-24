@@ -1,3 +1,4 @@
+import time
 from tkinter import EventType
 
 import arrow
@@ -68,7 +69,14 @@ def get_fee_rates():
 @cmte.get('/events/<int:event_id>/preview')
 def preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
-    return render_template('cmte/event_preview.html', event=event)
+    next_url = request.args.get('next_url')
+    return render_template('cmte/event_preview.html', event=event, next_url=next_url)
+
+
+@cmte.get('/admin/events/<int:event_id>/preview')
+def admin_preview_event(event_id):
+    event = CMTEEvent.query.get(event_id)
+    return render_template('cmte/admin/event_preview.html', event=event)
 
 
 @cmte.post('/events/<int:event_id>/submission')
@@ -82,7 +90,21 @@ def submit_event(event_id):
     else:
         flash('รายการนี้ได้ยื่นขออนุมัติแล้ว', 'success')
     resp = make_response()
-    resp.headers['HX-Redirect'] = url_for('cmte.cmte_index')
+    resp.headers['HX-Redirect'] = request.args.get('next') or url_for('cmte.cmte_index')
+    return resp
+
+
+@cmte.post('/events/<int:event_id>/payment')
+def process_payment(event_id):
+    # mimic an ajax request to the payment system
+    time.sleep(3)
+    event = CMTEEvent.query.get(event_id)
+    event.payment_datetime = arrow.now('Asia/Bangkok').datetime
+    db.session.add(event)
+    db.session.commit()
+    resp = make_response()
+    flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
+    resp.headers['HX-Redirect'] = url_for('cmte.preview_event', event_id=event_id)
     return resp
 
 
@@ -96,10 +118,19 @@ def pending_events():
                            events=events.items, next_url=next_url)
 
 
+@cmte.get('/admin/events/approved')
+def admin_approved_events():
+    page = request.args.get('page', type=int, default=1)
+    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime!=None)
+    events = query.paginate(page=page, per_page=20)
+    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
+    return render_template('cmte/admin/approved_events.html',
+                           events=events.items, next_url=next_url)
+
+
 @cmte.get('/admin/events/load-pending/pages/<int:page_no>')
 def load_pending_events(page_no=1):
-    events = CMTEEvent.query.filter_by(approved_datetime=None).offset(page_no*10).limit(10)
-
+    events = CMTEEvent.query.filter_by(approved_datetime=None).offset(page_no * 10).limit(10)
 
 
 @cmte.post('/admin/events/<int:event_id>/approve')
@@ -112,4 +143,44 @@ def approve_event(event_id):
     flash('อนุมัติกิจกรรมเรียบร้อย', 'success')
     resp = make_response()
     resp.headers['HX-Redirect'] = url_for('cmte.pending_events')
+    return resp
+
+
+@cmte.get('/events/drafts')
+def show_draft_events():
+    page = request.args.get('page', type=int, default=1)
+    query = CMTEEvent.query.filter_by(submitted_datetime=None)
+    events = query.paginate(page=page, per_page=20)
+    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
+    return render_template('cmte/draft_events.html',
+                           events=events.items, next_url=next_url)
+
+
+@cmte.get('/events/submitted')
+def show_submitted_events():
+    page = request.args.get('page', type=int, default=1)
+    query = CMTEEvent.query.filter(CMTEEvent.submitted_datetime != None).filter(CMTEEvent.approved_datetime == None)
+    events = query.paginate(page=page, per_page=20)
+    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
+    return render_template('cmte/submitted_events.html', events=events.items, next_url=next_url)
+
+
+@cmte.get('/events/approved')
+def show_approved_events():
+    page = request.args.get('page', type=int, default=1)
+    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
+    events = query.paginate(page=page, per_page=20)
+    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
+    return render_template('cmte/approved_events.html', events=events.items, next_url=next_url)
+
+
+@cmte.delete('/admin/events/<int:event_id>/cancel')
+def cancel_event(event_id):
+    time.sleep(3)
+    event = CMTEEvent.query.get(event_id)
+    db.session.delete(event)
+    db.session.commit()
+    flash('อนุมัติกิจกรรมเรียบร้อย', 'success')
+    resp = make_response()
+    resp.headers['HX-Redirect'] = request.args.get('next') or url_for('cmte.show_draft_events')
     return resp

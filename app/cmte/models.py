@@ -96,6 +96,7 @@ class CMTEEvent(db.Model):
     coord_email = db.Column('coord_email', db.String(), info={'label': 'อีเมล'})
     fee_rate_id = db.Column('fee_rate_id', db.ForeignKey('cmte_event_fee_rates.id'))
     fee_rate = db.relationship(CMTEEventFeeRate, backref=db.backref('events'))
+    payment_datetime = db.Column('payment_datetime', db.DateTime(timezone=True))
 
     def __str__(self):
         return self.title
