@@ -1,0 +1,65 @@
+<div class="modal is-active animate__animated" id="participant-form-modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">New Participant</p>
+            <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
+        </header>
+        <form hx-post="{{ url_for('cmte.edit_participants', event_id=event_id) }}"
+              hx-swap="none"
+              hx-indicator="#save-btn"
+        >
+            {{ form.hidden_tag() }}
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">{{ form.title.label }}</label>
+                    <div class="control">
+                        {{ form.title(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.firstname.label }}</label>
+                    <div class="control">
+                        {{ form.firstname(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.middlename.label }}</label>
+                    <div class="control">
+                        {{ form.middlename(class="input", placeholder='Optional') }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.lastname.label }}</label>
+                    <div class="control">
+                        {{ form.lastname(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.license_id.label }}</label>
+                    <div class="control">
+                        {{ form.license_id(class="input") }}
+                    </div>
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <div class="buttons">
+                    <button class="button is-outlined is-dark" id="cancel-btn">Cancel</button>
+                    <button class="button is-success" id="save-btn">Save</button>
+                </div>
+            </footer>
+        </form>
+    </div>
+</div>
+<script>
+    window.document.getElementById("cancel-btn").addEventListener("click", function (event) {
+        event.preventDefault()
+        htmx.removeClass(htmx.find('#participant-form-modal'), 'is-active')
+    })
+    window.document.getElementById("cancelButton").addEventListener("click", function () {
+        htmx.removeClass(htmx.find('#participant-form-modal'), 'is-active')
+    })
+    window.addEventListener('closeModal', (evt) => {
+        htmx.removeClass(htmx.find('#participant-form-modal'), 'is-active')
+    })
+</script>

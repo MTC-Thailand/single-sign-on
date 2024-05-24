@@ -68,8 +68,24 @@
                         <td></td>
                         {% endif %}
                     </tr>
+                    <tr>
+                        <td><strong>ต้องส่งรายชื่อผู้เข้าร่วมกิจกรรมภายในวันที่</strong></td>
+                        <td>
+                            <h1 class="title is-size-5 has-text-danger">
+                                {{event.submission_due_date|localdate}}
+                            </h1>
+                        </td>
+                        <td>
+                            <span class="tag is-warning">
+                                <strong>
+                                    {{event.submission_due_date|humanizedate}}
+                                </strong>
+                            </span>
+                        </td>
+                    </tr>
                     </tbody>
                 </table>
+                <div id="participant-form"></div>
                 <div class="buttons is-centered">
                     <a href="{{next_url or url_for('cmte.show_draft_events')}}" class="button is-light">
                         <span class="icon">
@@ -107,6 +123,49 @@
                         <span>ชำระค่าธรรมเนียม</span>
                     </a>
                     {% endif %}
+                    {% if not event.is_past_submission_due_date %}
+                    <a class="button is-success" hx-get="{{url_for('cmte.edit_participants', event_id=event.id)}}"
+                       hx-target="#participant-form"
+                       hx-swap="innerHTML"
+                    >
+                        <span class="icon">
+                            <i class="fa-solid fa-user-plus"></i>
+                        </span>
+                        <span>เพิ่มรายชื่อผู้เข้าร่วม</span>
+                    </a>
+                    {% endif %}
+                </div>
+                <h1 class="title is-size-4">รายชื่อผู้เข้าร่วม</h1>
+                <div id="participant-table">
+                    <table class="table">
+                        <thead>
+                        <th>ชื่อ</th>
+                        <th>ชื่อกลาง</th>
+                        <th>นามสกุล</th>
+                        <th>หมายเลขใบอนุญาต (ท.น.)</th>
+                        <th>เพิ่มเมื่อ</th>
+                        <th></th>
+                        </thead>
+                        <tbody>
+                        {% for rec in event.participants %}
+                        <tr>
+                            <td>{{rec.firstname}}</td>
+                            <td>{{rec.middlename}}</td>
+                            <td>{{rec.lastname}}</td>
+                            <td>{{rec.license_id}}</td>
+                            <td>{{rec.create_datetime|localdatetime}}</td>
+                            <td>
+                                <a class="icon"
+                                      hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
+                                      hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                                      hx-delete="{{url_for('cmte.edit_participants', rec_id=rec.id, event_id=rec.event.id, _method='DELETE')}}">
+                                    <i class="fa-solid fa-trash-can has-text-danger"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

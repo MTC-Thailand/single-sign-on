@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 from tkinter import EventType
 
 import arrow
@@ -7,8 +8,8 @@ from pytz import timezone
 
 from app import db
 from app.cmte import cmte_bp as cmte
-from app.cmte.forms import CMTEEventForm
-from app.cmte.models import CMTEEvent, CMTEEventType
+from app.cmte.forms import CMTEEventForm, ParticipantForm
+from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord
 
 bangkok = timezone('Asia/Bangkok')
 
@@ -108,6 +109,37 @@ def process_payment(event_id):
     return resp
 
 
+@cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
+@cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['DELETE', 'PATCH'])
+def edit_participants(event_id: int=None, rec_id: int=None):
+    form = ParticipantForm()
+    if request.method == 'GET':
+        return render_template('cmte/modals/participant_form.html', form=form, event_id=event_id)
+
+    if request.method == 'DELETE':
+        rec = CMTEEventParticipationRecord.query.get(rec_id)
+        db.session.delete(rec)
+        db.session.commit()
+        flash('ลบรายการเรียบร้อยแล้ว', 'success')
+    if form.validate_on_submit():
+        rec = CMTEEventParticipationRecord.query.filter_by(firstname=form.firstname.data, lastname=form.lastname.data).first()
+        if rec:
+            flash('รายชื่อนี้มีการเพิ่มเข้ามาแล้ว', 'warning')
+        else:
+            rec = CMTEEventParticipationRecord()
+            form.populate_obj(rec)
+            rec.event_id = event_id
+            rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+            db.session.add(rec)
+            db.session.commit()
+            flash('เพิ่มรายชื่อเรียบร้อยแล้ว', 'success')
+
+    if request.headers.get('HX-Request') == 'true':
+        resp = make_response()
+        resp.headers['HX-Redirect'] = url_for('cmte.preview_event', event_id=event_id)
+        return resp
+
+
 @cmte.get('/admin/events/pending')
 def pending_events():
     page = request.args.get('page', type=int, default=1)
@@ -138,6 +170,7 @@ def approve_event(event_id):
     event = CMTEEvent.query.get(event_id)
     events = CMTEEvent.query.filter_by(approved_datetime=None)
     event.approved_datetime = arrow.now('Asia/Bangkok').datetime
+    event.submitted_datetime = event.approved_datetime + timedelta(days=event.event_type.submission_due)
     db.session.add(event)
     db.session.commit()
     flash('อนุมัติกิจกรรมเรียบร้อย', 'success')

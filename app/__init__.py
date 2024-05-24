@@ -1,4 +1,6 @@
 import os
+
+import arrow
 from pytz import timezone
 
 from flask import Flask, render_template
@@ -83,6 +85,21 @@ def create_app():
         if dt:
             if dt.tzinfo:
                 return dt.astimezone(bangkok).strftime(datetime_format)
+        else:
+            return None
+
+    @app.template_filter("localdate")
+    def local_date(dt):
+        datetime_format = '%d/%m/%Y'
+        if dt:
+            return dt.strftime(datetime_format)
+        else:
+            return None
+
+    @app.template_filter("humanizedate")
+    def humanize_date(dt):
+        if dt:
+            return arrow.get(dt).humanize(locale='th', granularity='day')
         else:
             return None
 
