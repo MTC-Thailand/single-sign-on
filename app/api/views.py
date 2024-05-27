@@ -9,6 +9,8 @@ from flask_restful import Resource
 from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
 
+from app import csrf
+
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
 MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
@@ -16,6 +18,7 @@ MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
 
 
 class Login(Resource):
+    @csrf.exempt
     def post(self):
         from app.models import Client
         client_id = request.json.get('client_id')
@@ -34,6 +37,7 @@ class Login(Resource):
 
 class RefreshToken(Resource):
     @jwt_required(refresh=True)
+    @csrf.exempt
     def post(self):
         identity = get_jwt_identity()
         access_token = create_access_token(identity=identity)
