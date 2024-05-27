@@ -36,7 +36,7 @@ login_manager.login_view = 'users.login'
 
 from app.api import api_bp
 
-api = Api(api_bp)
+api = Api(api_bp, decorators=[csrf.exempt])
 
 api.add_resource(Login, '/auth/login')
 api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
