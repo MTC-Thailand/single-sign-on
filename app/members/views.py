@@ -24,8 +24,8 @@ template = '''
 <span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
 <span class="label">Name</span> <span>{} {}</span><br>
 <span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
-<span class="label">วันหมดอายุ</span> <span class="{}">{} ({})</span><br>
-<span class="label">สถานะใบอนุญาต</span> <span class="tag {}">{}</span>
+<span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
+<span class="help">{}</span>
 </div>
 '''
 
@@ -99,7 +99,6 @@ def search_member():
                 try:
                     data_ = response.json().get('results', [])
                 except requests.exceptions.JSONDecodeError as e:
-                    pprint(e)
                     data_ = load_from_mtc(form.firstname.data, form.lastname.data)
                     for rec in data_:
                         exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
@@ -110,8 +109,8 @@ def search_member():
                                                    rec.get('firstnameEN'),
                                                    rec.get('lastnameEN'),
                                                    int(rec.get('license_no')),
-                                                   'has-text-info' if delta.days > 0 else 'has-text-danger',
-                                                   rec.get('end_date'),
+                                                   'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                                   exp_date.format('DD MMMM YYYY', locale='th'),
                                                    exp_date.humanize(granularity=['year', 'day'], locale='th'),
                                                    'is-success' if license_status == 'ปกติ' else 'is-danger',
                                                    license_status,
@@ -130,8 +129,8 @@ def search_member():
                                                    rec.get('firstnameEN'),
                                                    rec.get('lastnameEN'),
                                                    int(rec.get('license_no')),
-                                                   'has-text-info' if delta.days > 0 else 'has-text-danger',
-                                                   rec.get('end_date'),
+                                                   'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                                   exp_date.format('DD MMMM YYYY', locale='th'),
                                                    exp_date.humanize(granularity=['year', 'day'], locale='th'),
                                                    'is-success' if license_status == 'ปกติ' else 'is-danger',
                                                    license_status,
@@ -151,10 +150,12 @@ def search_member():
                 try:
                     data_ = response.json().get('results', [])
                 except requests.exceptions.JSONDecodeError as e:
-                    pprint(e)
+                    print(f'***************{form.license_id.data}*************')
+                    pprint(response.text)
+                    # pprint(e)
                     data_ = load_from_mtc(license_id=form.license_id.data)
                     for rec in data_:
-                        exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
+                        exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
                         delta = exp_date - arrow.now()
                         license_status = check_license_status(delta, rec.get('status_license'))
                         message += template.format(rec.get('firstnameTH'),
@@ -162,8 +163,8 @@ def search_member():
                                                    rec.get('firstnameEN'),
                                                    rec.get('lastnameEN'),
                                                    int(rec.get('license_no')),
-                                                   'has-text-info' if delta.days > 0 else 'has-text-danger',
-                                                   rec.get('end_date'),
+                                                   'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                                   exp_date.format('DD MMMM YYYY', locale='th'),
                                                    exp_date.humanize(granularity=['year', 'day'], locale='th'),
                                                    'is-success' if license_status == 'ปกติ' else 'is-danger',
                                                    license_status,
@@ -175,6 +176,8 @@ def search_member():
                     for rec in data_:
                         exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
                         delta = exp_date - arrow.now()
+                        pprint(response.json().get('results'))
+                        print(exp_date, delta.days)
                         license_status = check_license_status(delta, rec.get('status_license'))
                         message += template.format(
                             # rec.get('profile'),
@@ -183,8 +186,8 @@ def search_member():
                             rec.get('firstnameEN'),
                             rec.get('lastnameEN'),
                             int(rec.get('license_no')),
-                            'has-text-info' if delta.days > 0 else 'has-text-danger',
-                            rec.get('end_date'),
+                            'has-text-success' if delta.days > 0 else 'has-text-danger',
+                            exp_date.format('DD MMMM YYYY', locale='th'),
                             exp_date.humanize(granularity=['year', 'day'], locale='th'),
                             'is-success' if license_status == 'ปกติ' else 'is-danger',
                             license_status,
