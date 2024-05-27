@@ -9,8 +9,6 @@ from flask_restful import Resource
 from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
 
-from app import csrf
-
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
 MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
