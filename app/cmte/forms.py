@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms.validators import DataRequired
+from flask_wtf.file import FileField
 from wtforms_alchemy import model_form_factory, QuerySelectField
-from wtforms import StringField
+from wtforms import FieldList, FormField
 
 from app import db
 from app.cmte.models import *
@@ -15,12 +15,20 @@ class ModelForm(BaseModelForm):
         return db.session
 
 
+class CMTEEventDocForm(ModelForm):
+    class Meta:
+        model = CMTEEventDoc
+        only = ['note']
+    upload_file = FileField('Document Upload')
+
+
 class CMTEEventForm(ModelForm):
     class Meta:
         model = CMTEEvent
         datetime_format = '%d/%m/%Y %H:%M'
 
     event_type = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
 
 
 class ParticipantForm(ModelForm):

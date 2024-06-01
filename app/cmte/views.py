@@ -1,17 +1,54 @@
 import time
+import os
+import uuid
 from datetime import timedelta
+from io import BytesIO
 
 import arrow
-from flask import render_template, flash, redirect, url_for, make_response, request
+import boto3
+from flask import render_template, flash, redirect, url_for, make_response, request, send_file
 from flask_wtf.csrf import generate_csrf
 from pytz import timezone
 
 from app import db
 from app.cmte import cmte_bp as cmte
 from app.cmte.forms import CMTEEventForm, ParticipantForm
-from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord
+from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc
 
 bangkok = timezone('Asia/Bangkok')
+
+
+@cmte.route('/test-aws-s3/download/<key>', methods=['GET'])
+def download_file(key):
+    download_filename = request.args.get('download_filename')
+    s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                             aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                             region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+    outfile = BytesIO()
+    s3_client.download_fileobj(os.environ.get('BUCKETEER_BUCKET_NAME'), key, outfile)
+    outfile.seek(0)
+    return send_file(outfile, download_name=download_filename, as_attachment=True)
+
+
+@cmte.route('/test-aws-s3', methods=['GET', 'POST'])
+def test_s3():
+    s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+    if request.method == 'GET':
+        template = f'''
+        <form method="post" enctype="multipart/form-data">
+            <input type="hidden" value="{generate_csrf()}" name="csrf_token"/>
+            <input type="file" name="file" multiple/>
+            <input type="Submit" value="Upload"/>
+        </form>
+        '''
+        return template
+    if request.method == 'POST':
+        files = request.files.getlist('file')
+        for n,f in enumerate(files):
+            s3_client.upload_fileobj(f, os.environ.get('BUCKETEER_BUCKET_NAME'), f'test-file-{n}')
+        return 'upload finished.'
 
 
 @cmte.get('/')
@@ -46,6 +83,19 @@ def create_event(event_id=None):
         event.fee_rate_id = event_type_fee_rate_id
         event.start_date = arrow.get(event.start_date, 'Asia/Bangkok').datetime
         event.end_date = arrow.get(event.end_date, 'Asia/Bangkok').datetime
+        s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                 aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                 region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+        for doc_form in form.upload_files:
+            _file = doc_form.upload_file.data
+            if _file:
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTEEventDoc(event=event, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = doc_form.note.data
+                db.session.add(doc)
         db.session.add(event)
         db.session.commit()
         flash('กรุณาตรวจสอบข้อมูลก่อนทำการยื่นขออนุมัติ', 'success')
@@ -111,7 +161,7 @@ def process_payment(event_id):
 
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
 @cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['DELETE', 'PATCH'])
-def edit_participants(event_id: int=None, rec_id: int=None):
+def edit_participants(event_id: int = None, rec_id: int = None):
     form = ParticipantForm()
     if request.method == 'GET':
         return render_template('cmte/modals/participant_form.html', form=form, event_id=event_id)
@@ -122,7 +172,8 @@ def edit_participants(event_id: int=None, rec_id: int=None):
         db.session.commit()
         flash('ลบรายการเรียบร้อยแล้ว', 'success')
     if form.validate_on_submit():
-        rec = CMTEEventParticipationRecord.query.filter_by(firstname=form.firstname.data, lastname=form.lastname.data).first()
+        rec = CMTEEventParticipationRecord.query.filter_by(firstname=form.firstname.data,
+                                                           lastname=form.lastname.data).first()
         if rec:
             flash('รายชื่อนี้มีการเพิ่มเข้ามาแล้ว', 'warning')
         else:
@@ -143,7 +194,8 @@ def edit_participants(event_id: int=None, rec_id: int=None):
 @cmte.get('/admin/events/pending')
 def pending_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter_by(approved_datetime=None).filter(CMTEEvent.payment_datetime!=None).filter(CMTEEvent.submitted_datetime!=None)
+    query = CMTEEvent.query.filter_by(approved_datetime=None).filter(CMTEEvent.payment_datetime != None).filter(
+        CMTEEvent.submitted_datetime != None)
     events = query.paginate(page=page, per_page=20)
     next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
     return render_template('cmte/admin/pending_events.html',
@@ -153,7 +205,7 @@ def pending_events():
 @cmte.get('/admin/events/approved')
 def admin_approved_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime!=None)
+    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
     events = query.paginate(page=page, per_page=20)
     next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
     return render_template('cmte/admin/approved_events.html',

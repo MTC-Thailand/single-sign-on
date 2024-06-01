@@ -115,6 +115,17 @@ class CMTEEvent(db.Model):
         return False
 
 
+class CMTEEventDoc(db.Model):
+    __tablename__ = 'cmte_event_docs'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    event_id = db.Column('event_id', db.Integer, db.ForeignKey('cmte_events.id'))
+    event = db.relationship(CMTEEvent, backref=db.backref('docs', cascade='all, delete-orphan'))
+    key = db.Column('key', db.Text(), nullable=False)
+    filename = db.Column('filename', db.Text(), nullable=False)
+    upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
+    note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
+
+
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)

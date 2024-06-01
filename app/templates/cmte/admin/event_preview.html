@@ -68,6 +68,24 @@
                         <td></td>
                         {% endif %}
                     </tr>
+                    <tr>
+                        <td><strong>เอกสารประกอบ</strong></td>
+                        <td>
+                            <ul>
+                                {% for doc in event.docs %}
+                                <li>
+                                    {{doc.filename}}
+                                    <a href="{{url_for('cmte.download_file', key=doc.key, download_filename=doc.filename)}}">
+                                    <span class="icon">
+                                        <i class="fa-solid fa-file-arrow-down"></i>
+                                    </span>
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td></td>
+                    </tr>
                     {% if event.approved_datetime %}
                     <tr>
                         <td><strong>คะแนนที่ได้รับอนุมัติ</strong></td>

@@ -9,13 +9,14 @@
 <section class="section">
     <div class="container">
         <h1 class="title has-text-centered">Event Registration</h1>
+        <h1 class="subtitle has-text-centered">ลงทะเบียนกิจกรรมเพื่อขออนุมัติคะแนน</h1>
         {% include "messages.html" %}
         <div class="columns">
             <div class="column is-half is-offset-3 box">
-                <form method="post" hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'>
+                <form method="post" hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }' enctype="multipart/form-data">
                     {{form.hidden_tag()}}
                     <h5 class="title is-size-5">
-                        ข้อมูลสำหรับติดต่อประสานงานกิจกรรม
+                        ข้อมูลกิจกรรม
                     </h5>
                     <div class="field">
                         <label class="label">{{form.title.label}}</label>
@@ -83,6 +84,24 @@
                                 {{form.coord_phone(class="input", required=True)}}
                             </div>
                         </div>
+                    </div>
+                    <h5 class="title is-size-5">
+                        เอกสารประกอบการพิจารณา
+                    </h5>
+                    <div class="notification">
+                        {% for upload_form in form.upload_files %}
+                        <div class="file">
+                            <label class="file-label">
+                                {{upload_form.upload_file()}}
+                            </label>
+                        </div>
+                        <div class="field">
+                            <label class="label">{{upload_form.note.label}}</label>
+                            <div class="control">
+                                {{upload_form.note(class="textarea", placeholder="Optional")}}
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                     <div class="field">
                         <div class="is-grouped is-grouped-centered">
