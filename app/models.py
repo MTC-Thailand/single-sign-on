@@ -13,7 +13,7 @@ alphabet = string.digits
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column('name', db.String())
+    username = db.Column('name', db.String(), unique=True, nullable=False)
     _password_hash = db.Column(db.String(255))
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
