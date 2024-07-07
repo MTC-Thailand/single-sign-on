@@ -1,10 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="block">
+      <span class="has-text-danger">
+        ข้อมูลที่แสดงมาจากระบบฐานข้อมูลเก่า
+      </span>
+    </div>
+    <div class="grid">
+      <div class="cell">
+        <form class="box"
+              hx-swap="innerHTML"
+              hx-target="#result"
+              hx-indicator="#submit-btn"
+              hx-post="{{url_for('member.view_members')}}">
+          {{form.hidden_tag()}}
+          <div class="field is-horizontal">
+            <div class="field-label is-normal">
+              <label class="label">{{form.license_id.label}}</label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  {{form.license_id(class="input")}}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="field is-horizontal">
+            <div class="field-label is-normal">
+              <label class="label">{{form.license_renewal_date.label}}</label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  {{form.license_renewal_date(class="input", placeholder="YYYY-MM-DD")}}
+                </div>
+                <p class="help has-text-link">Optional</p>
+              </div>
+            </div>
+          </div>
+          <div class="field is-horizontal">
+            <div class="field-label is-normal">
+              <label class="label">{{form.license_expire_date.label}}</label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  {{form.license_expire_date(class="input", placeholder="YYYY-MM-DD")}}
+                </div>
+                <p class="help has-text-link">Optional</p>
+              </div>
+            </div>
+          </div>
+          <div class="field is-horizontal">
+            <div class="field-label is-normal"></div>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  <button id="submit-btn" type="submit" class="button is-info">ค้นหา</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="cell">
+        <div id="result"></div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

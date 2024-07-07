@@ -6,7 +6,8 @@ from pprint import pprint
 import requests
 import pandas as pd
 
-from flask import render_template, make_response
+from flask import render_template, make_response, jsonify
+from flask_login import login_required
 from sqlalchemy import create_engine
 
 from app.members import member_blueprint as member
@@ -26,6 +27,17 @@ template = '''
 <span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
 <span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
 <span class="help">{}</span>
+</div>
+'''
+
+template_cmte = '''
+<div class="box">
+<span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
+<span class="label">Name</span> <span>{} {}</span><br>
+<span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
+<span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
+<span class="help has-text-{}">{} {}</span><br>
+<span class="label">Valid CMTE <span class="title is-size-5 has-text-info">{} คะแนน</span>
 </div>
 '''
 
@@ -80,6 +92,80 @@ def check_license_status(delta, status):
         return status
 
 
+@member.route('/search/test/<license_id>')
+def search_test(license_id):
+    try:
+        response = requests.get(f'{BASE_URL}/GetdataBylicenseAndfirstnamelastname',
+                                params={'search': license_id},
+                                headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+
+    except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
+        return str(e)
+    else:
+        data_ = response.json().get('results', [])
+        return jsonify(data_)
+
+
+@member.route('/admin')
+@login_required
+def admin_index():
+    return render_template('members/admin/index.html')
+
+
+@member.route('/admin/members', methods=['GET', 'POST'])
+@login_required
+def view_members():
+    form = MemberSearchForm()
+    if form.validate_on_submit():
+        data_ = load_from_mtc(license_id=form.license_id.data)
+        message = ''
+        engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
+        engine.connect()
+        renewal_date = form.license_renewal_date.data
+        expire_date = form.license_expire_date.data
+        for rec in data_:
+            exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
+            delta = exp_date - arrow.now()
+            license_status = check_license_status(delta, rec.get('status_license'))
+            if renewal_date and expire_date:
+                query = f'''
+                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
+                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
+                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
+                    WHERE lic_id={form.license_id.data}
+                    AND cpd_work.w_bdate BETWEEN '{renewal_date}' AND '{expire_date}'
+                    ORDER BY cpd_work.w_bdate DESC
+                    '''
+            else:
+                query = f'''
+                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
+                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
+                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
+                    WHERE lic_id={form.license_id.data}
+                    AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
+                    ORDER BY cpd_work.w_bdate DESC
+                    '''
+            valid_score_df = pd.read_sql_query(query, con=engine)
+            message += template_cmte.format(rec.get('firstnameTH'),
+                                            rec.get('lastnameTH'),
+                                            rec.get('firstnameEN'),
+                                            rec.get('lastnameEN'),
+                                            int(rec.get('license_no')),
+                                            'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                            exp_date.format('DD MMMM YYYY', locale='th'),
+                                            'success' if license_status == 'ปกติ' else 'danger',
+                                            exp_date.humanize(granularity=['year', 'day'], locale='th'),
+                                            license_status,
+                                            valid_score_df.cpd_score.sum(),
+                                            )
+            message += valid_score_df.to_html(classes='table is-fullwidth is-striped')
+        resp = make_response(message)
+        return resp
+    else:
+        print(form.errors)
+    return render_template('members/admin/members.html', form=form)
+
+
 @member.route('/search', methods=['GET', 'POST'])
 def search_member():
     form = MemberSearchForm()
@@ -91,8 +177,9 @@ def search_member():
         if form.firstname.data and form.lastname.data:
             try:
                 response = requests.get(f'{BASE_URL}/GetdataBylicenseAndfirstnamelastname',
-                                         params={'search': f'{form.firstname.data} {form.lastname.data}'},
-                                         headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+                                        params={'search': f'{form.firstname.data} {form.lastname.data}'},
+                                        headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True,
+                                        timeout=99)
             except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
                 resp = make_response(str(e))
             else:
@@ -177,7 +264,7 @@ def search_member():
                         exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
                         delta = exp_date - arrow.now()
                         pprint(response.json().get('results'))
-                        print(exp_date, delta.days)
+                        # print(exp_date, delta.days)
                         license_status = check_license_status(delta, rec.get('status_license'))
                         message += template.format(
                             # rec.get('profile'),
