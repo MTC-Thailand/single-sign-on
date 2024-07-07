@@ -4,25 +4,26 @@
 <section class="section">
   <div class="columns">
     <div class="column is-one-third is-offset-4 box">
+      <h1 class="title has-text-centered">Admin Registration</h1>
       {% include "messages.html" %}
       <form method="post">
         {{form.hidden_tag()}}
         <div class="field">
-          <label class="label">{{form.name.label}}</label>
+          <label class="label">{{form.username.label}}</label>
           <div class="control">
-            {{form.name(class="input is-danger")}}
+            {{form.username(class="input is-danger")}}
           </div>
         </div>
         <div class="field">
-          <label class="label">{{form.email.label}}</label>
+          <label class="label">{{form.new_password.label}}</label>
           <div class="control">
-            {{form.email(class="input is-danger")}}
+            {{form.new_password(class="input is-danger")}}
           </div>
         </div>
         <div class="field">
-          <label class="label">{{form.company.label}}</label>
+          <label class="label">{{form.confirm_password.label}}</label>
           <div class="control">
-            {{form.company(class="input")}}
+            {{form.confirm_password(class="input is-danger")}}
           </div>
         </div>
         <div class="field">
