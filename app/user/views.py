@@ -5,7 +5,7 @@ from werkzeug.security import check_password_hash
 from app import db
 from app.models import User, Client
 from app.user import user_bp as user
-from app.user.forms import LoginForm, ClientRegisterForm
+from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm
 
 
 @user.route('/login', methods=['GET', 'POST'])
@@ -16,7 +16,10 @@ def login():
         if user:
             if check_password_hash(user._password_hash, form.password.data):
                 login_user(user, remember=True)
-                flash('Logged in successfully', 'success')
+                if user.is_activated:
+                    flash('Logged in successfully', 'success')
+                else:
+                    flash('User has not been activated.', 'danger')
                 return redirect(url_for('index'))
             else:
                 flash('Invalid username or password', 'danger')
@@ -52,3 +55,20 @@ def register_client():
         for field in form.errors:
             flash('{}: {}'.format(field, form.errors[field]), 'danger')
     return render_template('user/client_form.html', form=form)
+
+
+@user.route('/users/register', methods=['GET', 'POST'])
+def register_user():
+    form = UserRegisterForm()
+    if form.validate_on_submit():
+        user = User()
+        form.populate_obj(user)
+        print(form.new_password.data)
+        user.password = form.new_password.data
+        db.session.add(user)
+        db.session.commit()
+        return redirect(url_for('index'))
+    else:
+        for field in form.errors:
+            flash('{}: {}'.format(field, form.errors[field]), 'danger')
+    return render_template('user/user_registration_form.html', form=form)

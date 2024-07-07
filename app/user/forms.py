@@ -1,11 +1,11 @@
 from wtforms import PasswordField, StringField
 from flask_wtf import FlaskForm
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, EqualTo
 from wtforms_alchemy import model_form_factory
 
 
 from app import db
-from app.models import Client
+from app.models import Client, User
 
 BaseModelForm = model_form_factory(FlaskForm)
 
@@ -19,6 +19,15 @@ class ModelForm(BaseModelForm):
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
+
+
+class UserRegisterForm(ModelForm):
+    class Meta:
+        model = User
+        only = ['username']
+    new_password = PasswordField('Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm Password',
+                                     validators=[DataRequired(), EqualTo('new_password')])
 
 
 class ClientRegisterForm(ModelForm):

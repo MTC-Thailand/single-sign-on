@@ -13,22 +13,23 @@ alphabet = string.digits
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column('name', db.String(), unique=True, nullable=False)
+    username = db.Column('name', db.String(), unique=True, nullable=False, info={'label': 'Username'})
     _password_hash = db.Column(db.String(255))
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    is_activated = db.Column('is_activated', db.Boolean(), default=False)
 
     @property
     def password(self):
         raise ValueError
 
     @password.setter
-    def set_password(self, pw):
+    def password(self, pw):
         self._password_hash = generate_password_hash(pw)
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.query.filter_by(id=user_id, is_activated=True).first()
 
 
 class Client(db.Model):
