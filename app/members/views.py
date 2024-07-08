@@ -123,13 +123,13 @@ def view_members():
         message = ''
         engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
         engine.connect()
-        renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
-        expire_date = renewal_date + relativedelta(years=5)
         for rec in data_:
             exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
             delta = exp_date - arrow.now()
             license_status = check_license_status(delta, rec.get('status_license'))
-            if renewal_date and expire_date:
+            if form.license_renewal_date.data:
+                renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
+                expire_date = renewal_date + relativedelta(years=5)
                 query = f'''
                     SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
                     INNER JOIN member ON member.mem_id=cpd_work.mem_id
@@ -303,13 +303,13 @@ def view_member_info():
         message = ''
         engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
         engine.connect()
-        renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
-        expire_date = renewal_date + relativedelta(years=5)
         for rec in data_:
             exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
             delta = exp_date - arrow.now()
             license_status = check_license_status(delta, rec.get('status_license'))
-            if renewal_date and expire_date:
+            if form.license_renewal_date.data:
+                renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
+                expire_date = renewal_date + relativedelta(years=5)
                 query = f'''
                     SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
                     INNER JOIN member ON member.mem_id=cpd_work.mem_id

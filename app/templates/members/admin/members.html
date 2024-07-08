@@ -4,10 +4,17 @@
 {% block content %}
 <section class="section">
   <div class="container">
-    <div class="block">
-      <span class="has-text-danger">
-        ข้อมูลที่แสดงมาจากระบบฐานข้อมูลเก่า
-      </span>
+    <div class="columns">
+      <div class="column">
+        <div class="block has-text-centered">
+          <figure class="image is-64x64 is-inline-block">
+            <img src="{{url_for('static', filename='logo.png')}}">
+          </figure>
+        </div>
+      </div>
+    </div>
+    <div class="notification is-light is-warning">
+      ข้อมูลที่แสดงมาจากระบบฐานข้อมูลเก่า
     </div>
     <div class="grid">
       <div class="cell">
