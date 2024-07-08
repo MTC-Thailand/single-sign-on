@@ -4,10 +4,10 @@
 {% block content %}
 <section class="section">
   <div class="container">
-    <div class="block">
-      <span class="has-text-danger">
-        ข้อมูลที่แสดงมาจากระบบฐานข้อมูลเก่า
-      </span>
+    <div class="block has-text-centered">
+      <div class="notification">
+        ข้อมูลที่แสดงมาจากระบบฐานข้อมูลเก่า กรุณาระบุวันที่ต่ออายุใบอนุญาตล่าสุดและวันหมดอายุใบอนุญาต หากท่านได้ดำเนินการต่ออายุใบอนุญาตในระบบ One Platform เนื่องจากระบบจะไม่แสดงรายการหลังจากวันหมดอายุใบอนุญาต
+      </div>
     </div>
     <div class="grid">
       <div class="cell">
@@ -15,7 +15,7 @@
               hx-swap="innerHTML"
               hx-target="#result"
               hx-indicator="#submit-btn"
-              hx-post="{{url_for('member.view_members')}}">
+              hx-post="{{url_for('member.view_member_info')}}">
           {{form.hidden_tag()}}
           <div class="field is-horizontal">
             <div class="field-label is-normal">
@@ -24,7 +24,19 @@
             <div class="field-body">
               <div class="field">
                 <div class="control">
-                  {{form.license_id(class="input")}}
+                  {{form.license_id(class="input is-danger")}}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="field is-horizontal">
+            <div class="field-label is-normal">
+              <label class="label">{{form.password.label}}</label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  {{form.password(class="input is-danger")}}
                 </div>
               </div>
             </div>
@@ -36,9 +48,9 @@
             <div class="field-body">
               <div class="field">
                 <div class="control">
-                  {{form.license_renewal_date(class="input", placeholder="YYYY-MM-DD ปีพ.ศ.")}}
+                  {{form.license_renewal_date(class="input", placeholder="YYYY-MM-DD ปีพ.ศ. เช่น 2566-10-15")}}
                 </div>
-                <p class="help has-text-link">Optional</p>
+                <p class="help has-text-link">โปรดระบุหากท่านต่ออายุใบอนุญาตครั้งล่าสุดในระบบ One platform</p>
               </div>
             </div>
           </div>

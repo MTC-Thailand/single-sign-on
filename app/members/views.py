@@ -1,6 +1,8 @@
 import json
+
 import arrow
 import os
+from dateutil.relativedelta import relativedelta
 from pprint import pprint
 
 import requests
@@ -11,7 +13,7 @@ from flask_login import login_required
 from sqlalchemy import create_engine
 
 from app.members import member_blueprint as member
-from app.members.forms import MemberSearchForm
+from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
@@ -121,8 +123,8 @@ def view_members():
         message = ''
         engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
         engine.connect()
-        renewal_date = form.license_renewal_date.data
-        expire_date = form.license_expire_date.data
+        renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
+        expire_date = renewal_date + relativedelta(years=5)
         for rec in data_:
             exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
             delta = exp_date - arrow.now()
@@ -134,6 +136,7 @@ def view_members():
                     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
                     WHERE lic_id={form.license_id.data}
                     AND cpd_work.w_bdate BETWEEN '{renewal_date}' AND '{expire_date}'
+                    AND cpd_work.w_appr_date IS NOT NULL
                     ORDER BY cpd_work.w_bdate DESC
                     '''
             else:
@@ -143,6 +146,7 @@ def view_members():
                     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
                     WHERE lic_id={form.license_id.data}
                     AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
+                    AND cpd_work.w_appr_date IS NOT NULL
                     ORDER BY cpd_work.w_bdate DESC
                     '''
             valid_score_df = pd.read_sql_query(query, con=engine)
@@ -289,3 +293,63 @@ def search_member():
         return resp
 
     return render_template('members/search_form.html', form=form)
+
+
+@member.route('/info', methods=['GET', 'POST'])
+def view_member_info():
+    form = AnonymousMemberSearchForm()
+    if form.validate_on_submit():
+        data_ = load_from_mtc(license_id=form.license_id.data)
+        message = ''
+        engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
+        engine.connect()
+        renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
+        expire_date = renewal_date + relativedelta(years=5)
+        for rec in data_:
+            exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
+            delta = exp_date - arrow.now()
+            license_status = check_license_status(delta, rec.get('status_license'))
+            if renewal_date and expire_date:
+                query = f'''
+                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
+                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
+                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
+                    WHERE lic_id={form.license_id.data}
+                    AND member.login_password='{form.password.data}'
+                    AND cpd_work.w_bdate BETWEEN '{renewal_date}' AND '{expire_date}'
+                    AND cpd_work.w_appr_date IS NOT NULL
+                    ORDER BY cpd_work.w_bdate DESC
+                    '''
+            else:
+                query = f'''
+                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
+                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
+                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
+                    WHERE lic_id={form.license_id.data}
+                    AND member.login_password='{form.password.data}'
+                    AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
+                    AND cpd_work.w_appr_date IS NOT NULL
+                    ORDER BY cpd_work.w_bdate DESC
+                    '''
+            valid_score_df = pd.read_sql_query(query, con=engine)
+            if valid_score_df.empty:
+                message += '<div class="notification is-light is-danger">ไม่พบข้อมูล กรุณาตรวจสอบหมายเลขท.น. รหัสผ่าน และวันหมดอายุใบอนุญาต</span>'
+            else:
+                message += template_cmte.format(rec.get('firstnameTH'),
+                                                rec.get('lastnameTH'),
+                                                rec.get('firstnameEN'),
+                                                rec.get('lastnameEN'),
+                                                int(rec.get('license_no')),
+                                                'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                                exp_date.format('DD MMMM YYYY', locale='th'),
+                                                'success' if license_status == 'ปกติ' else 'danger',
+                                                exp_date.humanize(granularity=['year', 'day'], locale='th'),
+                                                license_status,
+                                                valid_score_df.cpd_score.sum(),
+                                                )
+                message += valid_score_df.to_html(classes='table is-fullwidth is-striped')
+        resp = make_response(message)
+        return resp
+    else:
+        print(form.errors)
+    return render_template('members/member_info.html', form=form)
