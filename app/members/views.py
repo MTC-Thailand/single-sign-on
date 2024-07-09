@@ -36,6 +36,8 @@ template_cmte = '''
 <div class="box">
 <span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
 <span class="label">Name</span> <span>{} {}</span><br>
+<span class="label">Tel.</span> <span>{}</span><br>
+<span class="label">Email</span> <span>{}</span><br>
 <span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
 <span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
 <span class="help has-text-{}">{} {}</span><br>
@@ -49,7 +51,7 @@ def load_from_mtc(firstname=None, lastname=None, license_id=None):
     engine.connect()
     if firstname and lastname:
         query = f'''
-        SELECT member.mem_id, member.fname AS firstnameTH, member.lname AS lastnameTH, member.e_fname AS firstnameEN, member.e_lname AS lastnameEN 
+        SELECT member.mem_id, member.fname AS firstnameTH, member.lname AS lastnameTH, member.e_fname AS firstnameEN, member.e_lname AS lastnameEN, member.mobilesms AS mobilesms, member.email_member AS email 
         FROM member WHERE member.fname='{firstname}' AND member.lname='{lastname}';
         '''
         data = pd.read_sql_query(query, con=engine)
@@ -75,7 +77,7 @@ def load_from_mtc(firstname=None, lastname=None, license_id=None):
         data = lic_data.squeeze().to_dict()
 
         query = f'''
-        SELECT member.mem_id, member.fname AS firstnameTH, member.lname AS lastnameTH, member.e_fname AS firstnameEN, member.e_lname AS lastnameEN 
+        SELECT member.mem_id, member.fname AS firstnameTH, member.lname AS lastnameTH, member.e_fname AS firstnameEN, member.e_lname AS lastnameEN, member.mobilesms AS mobilesms, member.email_member AS email 
         FROM member WHERE member.mem_id={data['mem_id']};
         '''
         mem_data = pd.read_sql_query(query, con=engine)
@@ -154,6 +156,8 @@ def view_members():
                                             rec.get('lastnameTH'),
                                             rec.get('firstnameEN'),
                                             rec.get('lastnameEN'),
+                                            rec.get('mobilesms'),
+                                            rec.get('email'),
                                             int(rec.get('license_no')),
                                             'has-text-success' if delta.days > 0 else 'has-text-danger',
                                             exp_date.format('DD MMMM YYYY', locale='th'),
