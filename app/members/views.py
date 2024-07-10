@@ -32,12 +32,23 @@ template = '''
 </div>
 '''
 
-template_cmte = '''
+template_cmte_admin = '''
 <div class="box">
 <span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
 <span class="label">Name</span> <span>{} {}</span><br>
 <span class="label">Tel.</span> <span>{}</span><br>
 <span class="label">Email</span> <span>{}</span><br>
+<span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
+<span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
+<span class="help has-text-{}">{} {}</span><br>
+<span class="label">Valid CMTE <span class="title is-size-5 has-text-info">{} คะแนน</span>
+</div>
+'''
+
+template_cmte = '''
+<div class="box">
+<span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
+<span class="label">Name</span> <span>{} {}</span><br>
 <span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
 <span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
 <span class="help has-text-{}">{} {}</span><br>
@@ -152,20 +163,20 @@ def view_members():
                     ORDER BY cpd_work.w_bdate DESC
                     '''
             valid_score_df = pd.read_sql_query(query, con=engine)
-            message += template_cmte.format(rec.get('firstnameTH'),
-                                            rec.get('lastnameTH'),
-                                            rec.get('firstnameEN'),
-                                            rec.get('lastnameEN'),
-                                            rec.get('mobilesms'),
-                                            rec.get('email'),
-                                            int(rec.get('license_no')),
-                                            'has-text-success' if delta.days > 0 else 'has-text-danger',
-                                            exp_date.format('DD MMMM YYYY', locale='th'),
-                                            'success' if license_status == 'ปกติ' else 'danger',
-                                            exp_date.humanize(granularity=['year', 'day'], locale='th'),
-                                            license_status,
-                                            valid_score_df.cpd_score.sum(),
-                                            )
+            message += template_cmte_admin.format(rec.get('firstnameTH'),
+                                                  rec.get('lastnameTH'),
+                                                  rec.get('firstnameEN'),
+                                                  rec.get('lastnameEN'),
+                                                  rec.get('mobilesms'),
+                                                  rec.get('email'),
+                                                  int(rec.get('license_no')),
+                                                  'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                                  exp_date.format('DD MMMM YYYY', locale='th'),
+                                                  'success' if license_status == 'ปกติ' else 'danger',
+                                                  exp_date.humanize(granularity=['year', 'day'], locale='th'),
+                                                  license_status,
+                                                  valid_score_df.cpd_score.sum(),
+                                                  )
             message += valid_score_df.to_html(classes='table is-fullwidth is-striped')
         resp = make_response(message)
         return resp
