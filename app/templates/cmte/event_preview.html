@@ -93,8 +93,8 @@
                         </span>
                         <span>กลับ</span>
                     </a>
-                    {% if not event.payment_datetime and not event.submitted_datetime %}
-                    <a href="{{url_for('cmte.edit_event', event_id=event.id, next=request.url)}}" class="button is-light is-success">
+                    {% if not event.submitted_datetime %}
+                    <a href="{{url_for('cmte.edit_event', event_id=event.id, next=request.url)}}" class="button is-link is-outlined">
                         <span class="icon">
                             <i class="fa-solid fa-pencil"></i>
                         </span>

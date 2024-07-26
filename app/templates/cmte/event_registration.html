@@ -88,6 +88,22 @@
                     <h5 class="title is-size-5">
                         เอกสารประกอบการพิจารณา
                     </h5>
+                    <ul class="notification">
+                        <label class="label">
+                            เอกสารที่อัพโหลดแล้ว
+                        </label>
+                        {% for doc in event.docs %}
+                        <li>
+                            {{doc.filename}}
+                            <a>
+                                <span class="icon">
+                                    <i class="fa-solid fa-trash-can has-text-danger"></i>
+                                </span>
+                            </a>
+                            <p class="help">{{doc.note}}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
                     <div class="notification">
                         {% for upload_form in form.upload_files %}
                         <div class="file">

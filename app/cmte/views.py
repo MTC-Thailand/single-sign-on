@@ -18,7 +18,7 @@ from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationReco
 bangkok = timezone('Asia/Bangkok')
 
 
-@cmte.route('/test-aws-s3/download/<key>', methods=['GET'])
+@cmte.route('/aws-s3/download/<key>', methods=['GET'])
 def download_file(key):
     download_filename = request.args.get('download_filename')
     s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
@@ -28,27 +28,6 @@ def download_file(key):
     s3_client.download_fileobj(os.environ.get('BUCKETEER_BUCKET_NAME'), key, outfile)
     outfile.seek(0)
     return send_file(outfile, download_name=download_filename, as_attachment=True)
-
-
-@cmte.route('/test-aws-s3', methods=['GET', 'POST'])
-def test_s3():
-    s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
-                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
-                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))
-    if request.method == 'GET':
-        template = f'''
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" value="{generate_csrf()}" name="csrf_token"/>
-            <input type="file" name="file" multiple/>
-            <input type="Submit" value="Upload"/>
-        </form>
-        '''
-        return template
-    if request.method == 'POST':
-        files = request.files.getlist('file')
-        for n,f in enumerate(files):
-            s3_client.upload_fileobj(f, os.environ.get('BUCKETEER_BUCKET_NAME'), f'test-file-{n}')
-        return 'upload finished.'
 
 
 @cmte.get('/')
@@ -73,11 +52,11 @@ def edit_event(event_id):
 @cmte.post('/events/<int:event_id>/edit')
 def create_event(event_id=None):
     form = CMTEEventForm()
+    if event_id:
+        event = CMTEEvent.query.get(event_id)
     if form.validate_on_submit():
         if not event_id:
             event = CMTEEvent()
-        else:
-            event = CMTEEvent.query.get(event_id)
         form.populate_obj(event)
         event_type_fee_rate_id = request.form.get('event_type_fee_rate', type=int)
         event.fee_rate_id = event_type_fee_rate_id
@@ -101,7 +80,7 @@ def create_event(event_id=None):
         flash('กรุณาตรวจสอบข้อมูลก่อนทำการยื่นขออนุมัติ', 'success')
         return redirect(url_for('cmte.preview_event', event_id=event.id))
     flash('กรุณาตรวจสอบความถูกต้องของข้อมูล', 'warning')
-    return render_template('cmte/event_registration.html', form=form)
+    return render_template('cmte/event_registration.html', form=form, event=event)
 
 
 @cmte.post('/fee-rates')
@@ -127,7 +106,8 @@ def preview_event(event_id):
 @cmte.route('/admin/events/<int:event_id>/preview', methods=('GET', 'POST'))
 def admin_preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
-    return render_template('cmte/admin/event_preview.html', event=event)
+    next_url = request.args.get('next_url')
+    return render_template('cmte/admin/event_preview.html', event=event, next_url=next_url)
 
 
 @cmte.post('/events/<int:event_id>/submission')

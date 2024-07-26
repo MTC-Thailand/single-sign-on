@@ -12,6 +12,12 @@
             {{ form.hidden_tag() }}
             <section class="modal-card-body">
                 <div class="field">
+                    <label class="label">{{ form.license_id.label }}</label>
+                    <div class="control">
+                        {{ form.license_id(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
                     <label class="label">{{ form.title.label }}</label>
                     <div class="control">
                         {{ form.title(class="input") }}
@@ -33,12 +39,6 @@
                     <label class="label">{{ form.lastname.label }}</label>
                     <div class="control">
                         {{ form.lastname(class="input") }}
-                    </div>
-                </div>
-                <div class="field">
-                    <label class="label">{{ form.license_id.label }}</label>
-                    <div class="control">
-                        {{ form.license_id(class="input") }}
                     </div>
                 </div>
             </section>
