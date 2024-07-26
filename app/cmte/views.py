@@ -14,6 +14,7 @@ from app import db
 from app.cmte import cmte_bp as cmte
 from app.cmte.forms import CMTEEventForm, ParticipantForm
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc
+from app.members.models import License
 
 bangkok = timezone('Asia/Bangkok')
 
@@ -140,11 +141,22 @@ def process_payment(event_id):
 
 
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
-@cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['DELETE', 'PATCH'])
+@cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['GET', 'DELETE', 'POST'])
 def edit_participants(event_id: int = None, rec_id: int = None):
     form = ParticipantForm()
     if request.method == 'GET':
-        return render_template('cmte/modals/participant_form.html', form=form, event_id=event_id)
+        license = None
+        if rec_id:
+            rec = CMTEEventParticipationRecord.query.get(rec_id)
+            if rec:
+                form.license_number.data = rec.license_number
+                form.score.data = rec.score
+                license = rec.license
+        return render_template('cmte/modals/participant_form.html',
+                               form=form,
+                               event_id=event_id,
+                               license=license,
+                               rec_id=rec_id)
 
     if request.method == 'DELETE':
         rec = CMTEEventParticipationRecord.query.get(rec_id)
@@ -152,18 +164,26 @@ def edit_participants(event_id: int = None, rec_id: int = None):
         db.session.commit()
         flash('ลบรายการเรียบร้อยแล้ว', 'success')
     if form.validate_on_submit():
-        rec = CMTEEventParticipationRecord.query.filter_by(firstname=form.firstname.data,
-                                                           lastname=form.lastname.data).first()
-        if rec:
-            flash('รายชื่อนี้มีการเพิ่มเข้ามาแล้ว', 'warning')
+        if rec_id:
+            rec = CMTEEventParticipationRecord.query.get(rec_id)
+            if rec:
+                rec.score = form.score.data
+                rec.create_datetime = arrow.now('Asia/Bangkok').datetime
         else:
-            rec = CMTEEventParticipationRecord()
-            form.populate_obj(rec)
-            rec.event_id = event_id
-            rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-            db.session.add(rec)
-            db.session.commit()
-            flash('เพิ่มรายชื่อเรียบร้อยแล้ว', 'success')
+            rec = CMTEEventParticipationRecord.query.filter_by(license_number=form.license_number.data, event_id=event_id).first()
+            if rec:
+                resp = make_response()
+                resp.headers['HX-Trigger'] = 'alertError'
+                return resp
+            else:
+                rec = CMTEEventParticipationRecord(event_id=event_id, license_number=form.license_number.data, score=float(form.score.data))
+                rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+        db.session.add(rec)
+        db.session.commit()
+        flash('เพิ่มข้อมูลเรียบร้อยแล้ว', 'success')
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
 
     if request.headers.get('HX-Request') == 'true':
         resp = make_response()
@@ -284,3 +304,25 @@ def cancel_event(event_id):
     resp = make_response()
     resp.headers['HX-Redirect'] = request.args.get('next') or url_for('cmte.show_draft_events')
     return resp
+
+
+@cmte.get('/search-license')
+def search_license():
+    license_number = request.args.get('license_number')
+    event_id = request.args.get('event_id')
+    today = arrow.now('Asia/Bangkok').date()
+    license = License.query.filter_by(number=license_number)\
+        .filter(License.end_date>=today).first()
+    form = ParticipantForm(data={'license_number': license_number})
+    if license:
+        return render_template('cmte/modals/participant_form.html',
+                               license=license,
+                               event_id=event_id,
+                               form=form,
+                               rec_id=None)
+    else:
+        return render_template('cmte/modals/participant_form.html',
+                               not_found=True,
+                               event_id=event_id,
+                               form=form,
+                               rec_id=None)

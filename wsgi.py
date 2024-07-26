@@ -20,9 +20,15 @@ admin.add_view(ModelView(User, db.session))
 admin.add_view(ClientAdminView(Client, db.session))
 
 from app.cmte.models import *
+
 admin.add_view(ModelView(CMTEEvent, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventCategory, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventType, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventFormat, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventSponsor, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventFeeRate, db.session, category='CMTE Events'))
+
+from app.members.models import Member, License
+
+admin.add_view(ModelView(License, db.session, category='Members'))
+admin.add_view(ModelView(Member, db.session, category='Members', endpoint='members_'))

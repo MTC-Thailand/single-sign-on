@@ -129,12 +129,10 @@ class CMTEEventDoc(db.Model):
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column('title', db.String(), info={'label': 'คำนำหน้า'})
-    firstname = db.Column('firstname', db.String(), nullable=False, info={'label': 'ชื่อ'})
-    lastname = db.Column('lastname', db.String(), nullable=False, info={'label': 'นามสกุล'})
-    middlename = db.Column('middlename', db.String(), info={'label': 'ชื่อกลาง'})
-    license_id = db.Column('license_id', db.String(), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
+    license_number = db.Column('license_number', db.ForeignKey('licenses.number'), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
     event = db.relationship(CMTEEvent, backref=db.backref('participants'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
     approved_date = db.Column('approved_date', db.Date())
+    license = db.relationship('License', backref=db.backref('cmte_records'))
+    score = db.Column('score', db.Numeric(), info={'label': 'Score'})

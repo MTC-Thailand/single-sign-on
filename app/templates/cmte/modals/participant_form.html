@@ -5,42 +5,54 @@
             <p class="modal-card-title">New Participant</p>
             <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
         </header>
-        <form hx-post="{{ url_for('cmte.edit_participants', event_id=event_id) }}"
+        <form hx-post="{{ url_for('cmte.edit_participants', event_id=event_id, rec_id=rec_id) }}"
               hx-swap="none"
               hx-indicator="#save-btn"
         >
-            {{ form.hidden_tag() }}
+            {{form.hidden_tag()}}
             <section class="modal-card-body">
+                {% if not license %}
                 <div class="field">
-                    <label class="label">{{ form.license_id.label }}</label>
+                    <label class="label">{{ form.license_number.label }}</label>
+                    <div class="control" id="license-ctrl">
+                        {{ form.license_number(class="input", **{'hx-get': url_for('cmte.search_license', event_id=event_id), 'hx-trigger': 'keyup changed delay:500ms', 'hx-target': '#participant-form', 'hx-swap': 'innerHTML', 'hx-indicator': '#license-ctrl'}) }}
+                    </div>
+                    {% if not_found %}
+                    <span class="help is-danger">ไม่พบหมายเลขท.น. หรือใบอณุญาตหมดอายุ</span>
+                    {% endif %}
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.score.label }}</label>
                     <div class="control">
-                        {{ form.license_id(class="input") }}
+                        {{ form.score(class="input", disabled=True) }}
+                    </div>
+                </div>
+                {% else %}
+                <div class="field">
+                    <label class="label">{{ form.license_number.label }}</label>
+                    <div class="control" id="license-ctrl">
+                        {{ form.license_number(class="input", **{'hx-get': url_for('cmte.search_license', event_id=event_id), 'hx-trigger': 'keyup changed delay:500ms', 'hx-target': '#participant-form', 'hx-swap': 'innerHTML', 'hx-indicator': '#license-ctrl'}) }}
                     </div>
                 </div>
                 <div class="field">
-                    <label class="label">{{ form.title.label }}</label>
+                    <label class="label">Expiration Date</label>
                     <div class="control">
-                        {{ form.title(class="input") }}
+                        <input type="text" class="input" value="{{license.end_date}}" readonly>
                     </div>
                 </div>
                 <div class="field">
-                    <label class="label">{{ form.firstname.label }}</label>
+                    <label class="label">Member Name</label>
                     <div class="control">
-                        {{ form.firstname(class="input") }}
+                        <input type="text" class="input" value="{{license.member.th_fullname}}" readonly>
                     </div>
                 </div>
                 <div class="field">
-                    <label class="label">{{ form.middlename.label }}</label>
+                    <label class="label">{{ form.score.label }}</label>
                     <div class="control">
-                        {{ form.middlename(class="input", placeholder='Optional') }}
+                        {{ form.score(class="input") }}
                     </div>
                 </div>
-                <div class="field">
-                    <label class="label">{{ form.lastname.label }}</label>
-                    <div class="control">
-                        {{ form.lastname(class="input") }}
-                    </div>
-                </div>
+                {% endif %}
             </section>
             <footer class="modal-card-foot">
                 <div class="buttons">

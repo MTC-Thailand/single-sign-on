@@ -28,6 +28,7 @@
           <th>วันและเวลา</th>
           <th>ประเภท</th>
           <th>อัตราค่าธรรมเนียม</th>
+          <th>ผู้เข้าร่วม</th>
           <th>วันที่ยื่น</th>
           <th>วันที่อนุมัติ</th>
           <th></th>
@@ -39,6 +40,7 @@
             <td>{{evt.start_date|localdatetime}} - {{evt.end_date|localdatetime}}</td>
             <td>{{evt.event_type}}</td>
             <td>{{evt.fee_rate}}</td>
+            <td>{{evt.participants | length}}</td>
             <td>{{evt.submitted_datetime|localdatetime}}</td>
             <td>{{evt.approved_datetime|localdatetime}}</td>
             <td><a class="button is-small is-link is-outlined" href="{{url_for('cmte.preview_event', event_id=evt.id, next_url=request.url)}}">
