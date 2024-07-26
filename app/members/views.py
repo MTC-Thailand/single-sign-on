@@ -15,6 +15,8 @@ from sqlalchemy import create_engine
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm
 
+from app.members.models import *
+
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
 MYSQL_HOST = os.environ.get('MYSQL_HOST')

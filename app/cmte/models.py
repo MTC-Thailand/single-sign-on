@@ -137,3 +137,4 @@ class CMTEEventParticipationRecord(db.Model):
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
     event = db.relationship(CMTEEvent, backref=db.backref('participants'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
+    approved_date = db.Column('approved_date', db.Date())
