@@ -41,6 +41,7 @@ class CMTEEventType(db.Model):
     max_score = db.Column('max_score', db.Integer(), default=25)
     score_criteria = db.Column('score_criteria', db.String())
     fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'))
+    desc = db.Column('desc', db.Text(), info={'label': 'รายละเอียด'})
 
     def __str__(self):
         return self.name
