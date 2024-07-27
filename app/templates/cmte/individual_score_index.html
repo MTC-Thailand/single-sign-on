@@ -1,10 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนน</h1>
+                <table class="table is-fullwidth">
+                    <thead>
+                    <th>กิจกรรม</th>
+                    <th>รายละเอียด</th>
+                    <th>เกณฑ์การให้คะแนน</th>
+                    <th></th>
+                    </thead>
+                    <tbody>
+                    {% for et in event_types %}
+                    <tr>
+                        <td>{{et.name}}</td>
+                        <td>{{et.desc}}</td>
+                        <td>{{et.score_criteria}}</td>
+                        <td>
+                            <a class="button is-primary">
+                                ยื่นคะแนน
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
