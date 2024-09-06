@@ -16,10 +16,7 @@
                     </div>
                     {% for f_field in form.upload_files %}
                         <div class="field">
-                            <label class="label">{{f_field.label}} {{loop.index}}</label>
-                            <div class="control">
-                                {{f_field(class="input")}}
-                            </div>
+                            {{f_field()}}
                         </div>
                     {% endfor %}
                     <div class="field">

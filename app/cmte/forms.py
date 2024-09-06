@@ -20,7 +20,9 @@ class CMTEEventDocForm(ModelForm):
     class Meta:
         model = CMTEEventDoc
         only = ['note']
+
     upload_file = FileField('Document Upload')
+    note = TextAreaField('คำอธิบาย', render_kw={'class': 'textarea'})
 
 
 class CMTEEventForm(ModelForm):
