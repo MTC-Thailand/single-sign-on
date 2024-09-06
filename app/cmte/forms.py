@@ -1,8 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
-from wtforms.validators import NumberRange
+from wtforms.validators import NumberRange, DataRequired
 from wtforms_alchemy import model_form_factory, QuerySelectField
-from wtforms import FieldList, FormField, StringField, DecimalField
+from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField
 
 from app import db
 from app.cmte.models import *
@@ -35,3 +35,8 @@ class CMTEEventForm(ModelForm):
 class ParticipantForm(FlaskForm):
     license_number = StringField('License Number')
     score = DecimalField('Score', validators=[NumberRange(min=0)])
+
+
+class IndividualScoreForm(FlaskForm):
+    desc = TextAreaField('รายละเอียด', validators=[DataRequired()])
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)

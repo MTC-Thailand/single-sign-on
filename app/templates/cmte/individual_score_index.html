@@ -20,7 +20,7 @@
                         <td>{{et.desc}}</td>
                         <td>{{et.score_criteria}}</td>
                         <td>
-                            <a class="button is-primary">
+                            <a class="button is-primary" href="{{url_for('cmte.individual_score_form', event_type_id=et.id)}}">
                                 ยื่นคะแนน
                             </a>
                         </td>

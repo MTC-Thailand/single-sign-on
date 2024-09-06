@@ -12,7 +12,7 @@ from pytz import timezone
 
 from app import db
 from app.cmte import cmte_bp as cmte
-from app.cmte.forms import CMTEEventForm, ParticipantForm
+from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc
 from app.members.models import License
 
@@ -170,13 +170,15 @@ def edit_participants(event_id: int = None, rec_id: int = None):
                 rec.score = form.score.data
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
         else:
-            rec = CMTEEventParticipationRecord.query.filter_by(license_number=form.license_number.data, event_id=event_id).first()
+            rec = CMTEEventParticipationRecord.query.filter_by(license_number=form.license_number.data,
+                                                               event_id=event_id).first()
             if rec:
                 resp = make_response()
                 resp.headers['HX-Trigger'] = 'alertError'
                 return resp
             else:
-                rec = CMTEEventParticipationRecord(event_id=event_id, license_number=form.license_number.data, score=float(form.score.data))
+                rec = CMTEEventParticipationRecord(event_id=event_id, license_number=form.license_number.data,
+                                                   score=float(form.score.data))
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
         db.session.add(rec)
         db.session.commit()
@@ -311,8 +313,8 @@ def search_license():
     license_number = request.args.get('license_number')
     event_id = request.args.get('event_id')
     today = arrow.now('Asia/Bangkok').date()
-    license = License.query.filter_by(number=license_number)\
-        .filter(License.end_date>=today).first()
+    license = License.query.filter_by(number=license_number) \
+        .filter(License.end_date >= today).first()
     form = ParticipantForm(data={'license_number': license_number})
     if license:
         return render_template('cmte/modals/participant_form.html',
@@ -330,6 +332,14 @@ def search_license():
 
 @cmte.route('/individual-scores/index', methods=['GET'])
 def individual_score_index():
-    event_types = CMTEEventType.query\
+    event_types = CMTEEventType.query \
         .filter_by(for_group=False, is_sponsored=False).all()
     return render_template('cmte/individual_score_index.html', event_types=event_types)
+
+
+@cmte.route('/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
+def individual_score_form(event_type_id):
+    form = IndividualScoreForm()
+    if form.validate_on_submit():
+        pass
+    return render_template('cmte/individual_score_form.html', form=form)

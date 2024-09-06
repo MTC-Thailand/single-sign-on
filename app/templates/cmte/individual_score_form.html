@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคล</h1>
+                <form method="post">
+                    {{form.hidden_tag()}}
+                    <div class="field">
+                        <label class="label">{{form.desc.label}}</label>
+                        <div class="control">
+                            {{form.desc(class="textarea is-danger")}}
+                        </div>
+                    </div>
+                    {% for f_field in form.upload_files %}
+                        <div class="field">
+                            <label class="label">{{f_field.label}} {{loop.index}}</label>
+                            <div class="control">
+                                {{f_field(class="input")}}
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="field">
+                        <div class="control">
+                            <button type="submit" class="button is-success">Submit</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
