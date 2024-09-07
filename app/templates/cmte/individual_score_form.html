@@ -19,7 +19,10 @@
                             {{f_field()}}
                         </div>
                     {% endfor %}
-                    <div class="field">
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <a class="button is-light" href="{{url_for('cmte.individual_score_index')}}">Cancel</a>
+                        </div>
                         <div class="control">
                             <button type="submit" class="button is-success">Submit</button>
                         </div>
