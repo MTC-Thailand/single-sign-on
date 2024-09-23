@@ -133,6 +133,52 @@
                         </td>
                     </tr>
                     {% endif %}
+                    <tr>
+                        <td>สร้างรหัสกิจกรรม</td>
+                        <td>
+                            <h1 class="title" id="event-code">
+                                {{event.event_code}}
+                            </h1>
+                        </td>
+                        <td id="event-code-form">
+                            {% if event.event_code %}
+                            <a class="button is-light" hx-get="{{url_for('cmte.admin_edit_event_code', event_id=event.id)}}"
+                               hx-target="#event-code-form"
+                               hx-swap="innerHTML"
+                            >
+                                <span class="icon">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </span>
+                                <span>แก้ไขรหัส</span>
+                            </a>
+                            {% else %}
+                            <form hx-confirm="คุณต้องการใช้รหัสนี้สำหรับกิจกรรมหรือไม่"
+                                  hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                                  hx-indicator="#submit-btn"
+                                  hx-post="{{url_for('cmte.admin_edit_event_code', event_id=event.id)}}"
+                                  hx-target="#event-code"
+                                  hx-swap="innerHTML"
+                            >
+                                <div class="field has-addons">
+                                    <div class="control">
+                                        <div class="select">
+                                            {{form.code()}}
+                                        </div>
+                                        <p class="help is-danger">เมื่อบันทึกรหัสจะอัพเดตอัตโนมัติ</p>
+                                    </div>
+                                    <div class="control">
+                                        <button type="submit" id="submit-btn" class="button is-success">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-floppy-disk"></i>
+                                            </span>
+                                            <span>บันทึก</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
                     </tbody>
                 </table>
                 <div class="buttons is-centered">

@@ -4,7 +4,6 @@ from wtforms.validators import NumberRange, DataRequired
 from wtforms_alchemy import model_form_factory, QuerySelectField
 from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField
 
-from app import db
 from app.cmte.models import *
 
 BaseModelForm = model_form_factory(FlaskForm)
@@ -42,3 +41,8 @@ class ParticipantForm(FlaskForm):
 class IndividualScoreForm(FlaskForm):
     desc = TextAreaField('รายละเอียด', validators=[DataRequired()])
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
+
+
+class CMTEEventCodeForm(FlaskForm):
+    code = QuerySelectField('Code', query_factory=lambda: CMTEEventCode.query.all(),
+                            allow_blank=True, blank_text='เลือกรหัสกิจกรรม')

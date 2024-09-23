@@ -76,6 +76,19 @@ class CMTEEventFeeRate(db.Model):
             return f'{format} ไม่มีค่าธรรมเนียม'
 
 
+class CMTEEventCode(db.Model):
+    __tablename__ = 'cmte_event_codes'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    prefix = db.Column('prefix', db.String())
+    number = db.Column('number', db.Integer())
+
+    def __str__(self):
+        return f'{self.prefix}{self.number:04}'
+
+    def increment(self):
+        self.number = self.number + 1
+
+
 class CMTEEvent(db.Model):
     __tablename__ = 'cmte_events'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
@@ -102,6 +115,7 @@ class CMTEEvent(db.Model):
     payment_datetime = db.Column('payment_datetime', db.DateTime(timezone=True))
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
     cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
+    event_code = db.Column('event_code', db.String(), info={'label': 'Code'})
 
     # TODO: add a field for an approver
 

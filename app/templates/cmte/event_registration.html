@@ -88,6 +88,7 @@
                     <h5 class="title is-size-5">
                         เอกสารประกอบการพิจารณา
                     </h5>
+                    {% if event %}
                     <ul class="notification">
                         <label class="label">
                             เอกสารที่อัพโหลดแล้ว
@@ -104,6 +105,7 @@
                         </li>
                         {% endfor %}
                     </ul>
+                    {% endif %}
                     <div class="notification">
                         {% for upload_form in form.upload_files %}
                         <div class="file">

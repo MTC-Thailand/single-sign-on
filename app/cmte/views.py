@@ -12,7 +12,7 @@ from pytz import timezone
 
 from app import db
 from app.cmte import cmte_bp as cmte
-from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm
+from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc
 from app.members.models import License
 
@@ -108,7 +108,60 @@ def preview_event(event_id):
 def admin_preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
     next_url = request.args.get('next_url')
-    return render_template('cmte/admin/event_preview.html', event=event, next_url=next_url)
+    form = CMTEEventCodeForm()
+    return render_template('cmte/admin/event_preview.html',
+                           event=event, next_url=next_url, form=form)
+
+
+@cmte.route('/admin/events/<int:event_id>/code', methods=('GET', 'POST'))
+def admin_edit_event_code(event_id):
+    event = CMTEEvent.query.get(event_id)
+    form = CMTEEventCodeForm()
+    if request.method == 'GET':
+        template = f'''
+            <form hx-confirm="คุณต้องการใช้รหัสนี้สำหรับกิจกรรมหรือไม่"
+                  hx-headers='{{"X-CSRF-Token": "{generate_csrf()}" }}'
+                  hx-indicator="#submit-btn"
+                  hx-post="{url_for('cmte.admin_edit_event_code', event_id=event.id)}"
+                  hx-target="#event-code"
+                  hx-swap="innerHTML"
+            >
+                <div class="field has-addons">
+                    <div class="control">
+                        <div class="select">
+                            {form.code()}
+                        </div>
+                        <p class="help is-danger">เมื่อบันทึกรหัสจะอัพเดตอัตโนมัติ</p>
+                    </div>
+                    <div class="control">
+                        <button type="submit" id="submit-btn" class="button is-success">
+                            <span class="icon">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                            </span>
+                            <span>บันทึก</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        '''
+        return template
+    elif request.method == 'POST':
+        if form.validate_on_submit():
+            event_code = form.code.data
+            event.event_code = str(event_code)
+            event_code.increment()
+            db.session.add(event_code)
+            db.session.commit()
+        else:
+            return str(form.errors)
+    template = f'''
+    {str(event.event_code)}
+    <a class="button is-light" hx-swap-oob="true" hx-target="#event-code-form" hx-swap="innerHTML" hx-get="{url_for('cmte.admin_edit_event_code', event_id)}">
+        <span class="icon"><i class="fa-solid fa-pencil"></i></span>
+        <span>แก้ไข</span>
+    </a>
+    '''
+    return template
 
 
 @cmte.post('/events/<int:event_id>/submission')
