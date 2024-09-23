@@ -151,3 +151,13 @@ class CMTEEventParticipationRecord(db.Model):
     approved_date = db.Column('approved_date', db.Date())
     license = db.relationship('License', backref=db.backref('cmte_records'))
     score = db.Column('score', db.Numeric(), info={'label': 'Score'})
+
+
+class CMTEFeePaymentRecord(db.Model):
+    __tablename__ = 'cmte_fee_payment_records'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    payment_date = db.Column('payment_datetime', db.DateTime(timezone=True), nullable=False)
+    start_date = db.Column('start_date', db.Date(), nullable=False)
+    end_date = db.Column('end_date', db.Date(), nullable=False)
+    license_number = db.Column('license_number', db.ForeignKey('licenses.number'), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
+    license = db.relationship('License', backref=db.backref('cmte_fee_payment_records'))
