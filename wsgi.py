@@ -27,6 +27,7 @@ admin.add_view(ModelView(CMTEEventType, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventFormat, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventSponsor, db.session, category='CMTE Events'))
 admin.add_view(ModelView(CMTEEventFeeRate, db.session, category='CMTE Events'))
+admin.add_view(ModelView(CMTEEventCode, db.session, category='CMTE Events'))
 
 from app.members.models import Member, License
 
