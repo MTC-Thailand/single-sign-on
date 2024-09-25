@@ -46,3 +46,12 @@ class IndividualScoreForm(FlaskForm):
 class CMTEEventCodeForm(FlaskForm):
     code = QuerySelectField('Code', query_factory=lambda: CMTEEventCode.query.all(),
                             allow_blank=True, blank_text='เลือกรหัสกิจกรรม')
+
+
+class CMTEFeePaymentForm(ModelForm):
+    class Meta:
+        model = CMTEFeePaymentRecord
+        datetime_format = '%d/%m/%Y %H:%M'
+        only = ['payment_datetime', 'license_number']
+
+    license_number = StringField('License Number')

@@ -1,7 +1,7 @@
 import time
 import os
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime
 from io import BytesIO
 
 import arrow
@@ -12,8 +12,8 @@ from pytz import timezone
 
 from app import db
 from app.cmte import cmte_bp as cmte
-from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm
-from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc
+from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm
+from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord
 from app.members.models import License
 
 bangkok = timezone('Asia/Bangkok')
@@ -396,3 +396,32 @@ def individual_score_form(event_type_id):
     if form.validate_on_submit():
         pass
     return render_template('cmte/individual_score_form.html', form=form)
+
+
+@cmte.route('/admin/fee-payment-record-form', methods=['GET', 'POST'])
+@cmte.route('/admin/fee-payment-record-form/<int:record_id>', methods=['GET', 'POST'])
+def admin_edit_fee_payment_record(record_id=None):
+    form = CMTEFeePaymentForm()
+    today = datetime.today()
+    active_payments = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.end_date >= today).all()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            record = CMTEFeePaymentRecord()
+            license = License.query.filter_by(number=form.license_number.data).one()
+            if license:
+                if license.get_active_cmte_fee_payment():
+                    flash('Fee payment has been recorded and active.', 'warning')
+                    return redirect(url_for('member.admin_index'))
+
+                form.populate_obj(record)
+                record.start_date = license.start_date
+                record.end_date = license.end_date
+                db.session.add(record)
+                db.session.commit()
+                flash('Fee payment record has been created.', 'success')
+                return redirect(url_for('member.admin_index'))
+            else:
+                flash('Fee payment record update failed. No license number found.', 'danger')
+        else:
+            flash('Error updating fee payment record form.', 'danger')
+    return render_template('cmte/admin/fee_payment_form.html', form=form, active_payments=active_payments)

@@ -3,15 +3,26 @@
 {% block content %}
 <section class="section">
   <div class="container">
+    {% include "messages.html" %}
     <h1 class="title has-text-centered">Member Admin</h1>
-    <div class="grid">
-      <div class="cell box">
-        <a href="{{url_for('member.view_members')}}">
-          <span class="icon is-large">
-            <i class="fa-solid fa-users fa-lg"></i>
-          </span>
-          <span>ตรวจสอบข้อมูลสมาชิก</span>
-        </a>
+    <div class="columns">
+      <div class="column is-one-third is-offset-4 box">
+        <div class="menu">
+          <p class="menu-label">สมาชิก</p>
+          <ul class="menu-list">
+            <li>
+              <a href="{{url_for('member.view_members')}}">
+                ตรวจสอบข้อมูล
+              </a>
+            </li>
+            <li>
+              <a href="{{url_for('cmte.admin_edit_fee_payment_record')}}">
+                เพิ่มรายการชำระค่าธรรมเนียม CMTE
+              </a>
+            </li>
+          </ul>
+        </div>
+
       </div>
     </div>
   </div>

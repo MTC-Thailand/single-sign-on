@@ -24,7 +24,7 @@ class Member(db.Model):
     @property
     def valid_license(self):
         today = arrow.now('Asia/Bangkok').date()
-        return self.licenses.filter(License.end_date>=today).first()
+        return self.licenses.filter(License.end_date >= today).first()
 
     @property
     def th_fullname(self):
@@ -49,3 +49,8 @@ class License(db.Model):
 
     def __str__(self):
         return f'{self.number}: {self.end_date}'
+
+    def get_active_cmte_fee_payment(self):
+        record = self.cmte_fee_payment_records.filter_by(
+            start_date=self.start_date, end_date=self.end_date).first()
+        return record if record else None
