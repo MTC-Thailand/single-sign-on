@@ -338,5 +338,5 @@ class MemberInfo(Resource):
         total_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
 
         data['cmte_score'] = {'total': total_score, 'valid': valid_score}
-        data['active_cmte_payment'] = {'end_date': '2029-10-15', 'start_date': '2024-10-14', 'license_number': data['mem_id']}
+        data['active_cmte_payment'] = {'end_date': '2029-10-15', 'start_date': '2024-10-14'}
         return jsonify({'data': data})
