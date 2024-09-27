@@ -161,3 +161,8 @@ class CMTEFeePaymentRecord(db.Model):
     end_date = db.Column('end_date', db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
     license_number = db.Column('license_number', db.ForeignKey('licenses.number'), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
     license = db.relationship('License', backref=db.backref('cmte_fee_payment_records', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        return {'end_date': self.end_date.strftime('%Y-%m-%d'),
+                'start_date': self.start_date.strftime('%Y-%m-%d'),
+                'license_number': self.license_number}

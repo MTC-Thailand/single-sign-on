@@ -3,7 +3,9 @@ import os
 
 import pandas as pd
 from http import HTTPStatus
-from flask import jsonify, request
+
+import requests
+from flask import jsonify, request, make_response
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token
 from flask_restful import Resource
 from sqlalchemy import create_engine
@@ -77,6 +79,27 @@ class CMTEScore(Resource):
                                  'datetime': datetime.datetime.now().isoformat()}})
 
 
+BASE_URL = 'https://mtc.thaijobjob.com/api/user'
+INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
+
+
+def check_exp_date_from_inet(license_id):
+    try:
+        response = requests.get(f'{BASE_URL}/GetdataBylicenseAndfirstnamelastname',
+                                params={'search': license_id},
+                                headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+    except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
+        return
+    else:
+        try:
+            data_ = response.json().get('results', [])
+        except requests.exceptions.JSONDecodeError as e:
+            return
+        else:
+            for rec in data_:
+                return rec.get('end_date')
+
+
 class MemberInfo(Resource):
     @jwt_required()
     def get(self, pin):
@@ -139,6 +162,15 @@ class MemberInfo(Resource):
                                 valid:
                                     type: number
                                     description: คะแนนสำหรับต่ออายุใบอนุญาตในรอบปัจจุบัน
+                        active_cmte_payment:
+                            type: object
+                            properties:
+                                end_date:
+                                    type: string
+                                    description: วันที่หมดอายุ mock up
+                                start_date:
+                                    type: string
+                                    description: วันที่เริ่มต้น mock up
                         document_id:
                             type: integer
                             description: mailing address ที่อยู่สำหรับส่งเอกสาร, 1=current address, 2=work address, 3=home address
@@ -263,13 +295,12 @@ class MemberInfo(Resource):
         data['document_addr'] = data.pop('address_id_doc', None) or ''
         data['birthday'] = data['birthday'].isoformat() if data['birthday'] else None
 
-        work_office = {}
-        work_office['office_position'] = data.pop('position', None) or ''
-        work_office['office_name'] = data.pop('office_name', None) or ''
-        work_office['office_department'] = data.pop('department_w', None) or ''
-        work_office['function'] = data.pop('function_name', None) or ''
-        work_office['employer'] = data.pop('emp_owner_name', None) or ''
-        work_office['contract'] = data.pop('contract_name', None) or ''
+        work_office = {'office_position': data.pop('position', None) or '',
+                       'office_name': data.pop('office_name', None) or '',
+                       'office_department': data.pop('department_w', None) or '',
+                       'function': data.pop('function_name', None) or '',
+                       'employer': data.pop('emp_owner_name', None) or '',
+                       'contract': data.pop('contract_name', None) or ''}
         mem_id = data['mem_id']
         data['office'] = work_office
 
@@ -307,4 +338,5 @@ class MemberInfo(Resource):
         total_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
 
         data['cmte_score'] = {'total': total_score, 'valid': valid_score}
+        data['active_cmte_payment'] = {'end_date': '2029-10-15', 'start_date': '2024-10-14', 'license_number': data['mem_id']}
         return jsonify({'data': data})
