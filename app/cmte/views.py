@@ -36,6 +36,11 @@ def cmte_index():
     return render_template('cmte/index.html')
 
 
+@cmte.get('/admin')
+def admin_index():
+    return render_template('cmte/admin/index.html')
+
+
 @cmte.get('/events/registration')
 def register_event():
     form = CMTEEventForm()

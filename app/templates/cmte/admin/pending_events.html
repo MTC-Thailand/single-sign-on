@@ -13,7 +13,7 @@
             <li><a href="{{url_for('cmte.admin_approved_events')}}">อนุมัติแล้ว</a></li>
           </ul>
         </div>
-        <table class="table is-fullwidth">
+        <table id="events-table" class="table is-fullwidth">
           <tbody>
           {% for evt in events %}
           <tr>
@@ -46,10 +46,18 @@
           {% endif %}
         </div>
         <div class="buttons is-centered">
-          <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Home</a>
+          <a href="{{url_for('cmte.admin_index')}}" class="button is-light">Home</a>
         </div>
       </div>
     </div>
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script>
+  $(document).ready(function (){
+    $('#events-table').DataTable();
+  })
+</script>
 {% endblock %}
