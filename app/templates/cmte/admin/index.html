@@ -10,7 +10,16 @@
                 <article class="panel is-info">
                     <p class="panel-heading">Admin</p>
                     <a class="panel-block" href="{{url_for('cmte.pending_events')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-check"></i>
+                        </span>
                         อนุมัติกิจกรรม
+                    </a>
+                    <a class="panel-block" href="{{url_for('index')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-door-closed"></i>
+                        </span>
+                        ออก
                     </a>
                 </article>
             </div>
