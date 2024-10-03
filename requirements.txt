@@ -52,7 +52,6 @@ jmespath==1.0.1
 jsonschema==4.17.3
 lxml==5.2.1
 Mako==1.2.0
-mariadb==1.1.10
 MarkupSafe==2.0.1
 mistune==2.0.5
 msgpack==1.0.8
