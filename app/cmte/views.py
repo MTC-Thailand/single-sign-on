@@ -7,6 +7,7 @@ from io import BytesIO
 import arrow
 import boto3
 from flask import render_template, flash, redirect, url_for, make_response, request, send_file
+from flask_login import login_required
 from flask_wtf.csrf import generate_csrf
 from pytz import timezone
 
@@ -15,11 +16,13 @@ from app.cmte import cmte_bp as cmte
 from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord
 from app.members.models import License
+from app.roles import cmte_admin_permission
 
 bangkok = timezone('Asia/Bangkok')
 
 
 @cmte.route('/aws-s3/download/<key>', methods=['GET'])
+@login_required
 def download_file(key):
     download_filename = request.args.get('download_filename')
     s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
@@ -32,22 +35,28 @@ def download_file(key):
 
 
 @cmte.get('/')
+@login_required
 def cmte_index():
     return render_template('cmte/index.html')
 
 
 @cmte.get('/admin')
+@cmte_admin_permission.require()
+@login_required
 def admin_index():
-    return render_template('cmte/admin/index.html')
+    print(cmte_admin_permission)
+    return render_template('cmte/admin/index.html', cmte_admin_permission=cmte_admin_permission)
 
 
 @cmte.get('/events/registration')
+@login_required
 def register_event():
     form = CMTEEventForm()
     return render_template('cmte/event_registration.html', form=form)
 
 
 @cmte.get('/events/<int:event_id>/edit')
+@login_required
 def edit_event(event_id):
     event = CMTEEvent.query.get(event_id)
     form = CMTEEventForm(obj=event)
@@ -56,6 +65,7 @@ def edit_event(event_id):
 
 @cmte.post('/events/registration')
 @cmte.post('/events/<int:event_id>/edit')
+@login_required
 def create_event(event_id=None):
     form = CMTEEventForm()
     if event_id:
@@ -90,6 +100,7 @@ def create_event(event_id=None):
 
 
 @cmte.post('/fee-rates')
+@login_required
 def get_fee_rates():
     event_type_id = request.form.get('event_type', type=int)
     fee_rate_id = request.args.get('fee_rate_id', type=int)
@@ -103,6 +114,7 @@ def get_fee_rates():
 
 
 @cmte.get('/events/<int:event_id>/preview')
+@login_required
 def preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
     next_url = request.args.get('next_url')
@@ -110,6 +122,8 @@ def preview_event(event_id):
 
 
 @cmte.route('/admin/events/<int:event_id>/preview', methods=('GET', 'POST'))
+@cmte_admin_permission.require()
+@login_required
 def admin_preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
     next_url = request.args.get('next_url')
@@ -119,6 +133,8 @@ def admin_preview_event(event_id):
 
 
 @cmte.route('/admin/events/<int:event_id>/code', methods=('GET', 'POST'))
+@cmte_admin_permission.require()
+@login_required
 def admin_edit_event_code(event_id):
     event = CMTEEvent.query.get(event_id)
     form = CMTEEventCodeForm()
@@ -170,6 +186,7 @@ def admin_edit_event_code(event_id):
 
 
 @cmte.post('/events/<int:event_id>/submission')
+@login_required
 def submit_event(event_id):
     event = CMTEEvent.query.get(event_id)
     if not event.submitted_datetime:
@@ -185,6 +202,7 @@ def submit_event(event_id):
 
 
 @cmte.post('/events/<int:event_id>/payment')
+@login_required
 def process_payment(event_id):
     # mimic an ajax request to the payment system
     time.sleep(3)
@@ -200,6 +218,7 @@ def process_payment(event_id):
 
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
 @cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['GET', 'DELETE', 'POST'])
+@login_required
 def edit_participants(event_id: int = None, rec_id: int = None):
     form = ParticipantForm()
     if request.method == 'GET':
@@ -252,6 +271,7 @@ def edit_participants(event_id: int = None, rec_id: int = None):
 
 
 @cmte.get('/admin/events/pending')
+@login_required
 def pending_events():
     page = request.args.get('page', type=int, default=1)
     query = CMTEEvent.query.filter_by(approved_datetime=None).filter(CMTEEvent.payment_datetime != None).filter(
@@ -263,6 +283,8 @@ def pending_events():
 
 
 @cmte.get('/admin/events/approved')
+@cmte_admin_permission.require()
+@login_required
 def admin_approved_events():
     page = request.args.get('page', type=int, default=1)
     query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
@@ -273,11 +295,13 @@ def admin_approved_events():
 
 
 @cmte.get('/admin/events/load-pending/pages/<int:page_no>')
+@login_required
 def load_pending_events(page_no=1):
     events = CMTEEvent.query.filter_by(approved_datetime=None).offset(page_no * 10).limit(10)
 
 
 @cmte.post('/admin/events/<int:event_id>/approve')
+@login_required
 def approve_event(event_id):
     event = CMTEEvent.query.get(event_id)
     event.approved_datetime = arrow.now('Asia/Bangkok').datetime
@@ -293,6 +317,7 @@ def approve_event(event_id):
 
 
 @cmte.post('/admin/events/<int:event_id>/edit-cmte-points')
+@login_required
 def edit_cmte_points(event_id):
     event = CMTEEvent.query.get(event_id)
     cmte_points = request.form.get('cmte_points', type=float)
@@ -304,6 +329,7 @@ def edit_cmte_points(event_id):
 
 
 @cmte.get('/admin/events/<int:event_id>/edit-cmte-points')
+@login_required
 def get_cmte_point_input(event_id):
     event = CMTEEvent.query.get(event_id)
     template = f'''
@@ -327,6 +353,7 @@ def get_cmte_point_input(event_id):
 
 
 @cmte.get('/events/drafts')
+@login_required
 def show_draft_events():
     page = request.args.get('page', type=int, default=1)
     query = CMTEEvent.query.filter_by(submitted_datetime=None)
@@ -337,6 +364,7 @@ def show_draft_events():
 
 
 @cmte.get('/events/submitted')
+@login_required
 def show_submitted_events():
     page = request.args.get('page', type=int, default=1)
     query = CMTEEvent.query.filter(CMTEEvent.submitted_datetime != None).filter(CMTEEvent.approved_datetime == None)
@@ -346,6 +374,7 @@ def show_submitted_events():
 
 
 @cmte.get('/events/approved')
+@login_required
 def show_approved_events():
     page = request.args.get('page', type=int, default=1)
     query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
@@ -355,6 +384,7 @@ def show_approved_events():
 
 
 @cmte.delete('/admin/events/<int:event_id>/cancel')
+@login_required
 def cancel_event(event_id):
     time.sleep(3)
     event = CMTEEvent.query.get(event_id)
@@ -367,6 +397,7 @@ def cancel_event(event_id):
 
 
 @cmte.get('/search-license')
+@login_required
 def search_license():
     license_number = request.args.get('license_number')
     event_id = request.args.get('event_id')
@@ -389,6 +420,7 @@ def search_license():
 
 
 @cmte.route('/individual-scores/index', methods=['GET'])
+@login_required
 def individual_score_index():
     event_types = CMTEEventType.query \
         .filter_by(for_group=False, is_sponsored=False).all()
@@ -396,6 +428,7 @@ def individual_score_index():
 
 
 @cmte.route('/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
+@login_required
 def individual_score_form(event_type_id):
     form = IndividualScoreForm()
     if form.validate_on_submit():
@@ -405,6 +438,8 @@ def individual_score_form(event_type_id):
 
 @cmte.route('/admin/fee-payment-record-form', methods=['GET', 'POST'])
 @cmte.route('/admin/fee-payment-record-form/<int:record_id>', methods=['GET', 'POST'])
+@cmte_admin_permission.require()
+@login_required
 def admin_edit_fee_payment_record(record_id=None):
     form = CMTEFeePaymentForm()
     today = datetime.today()

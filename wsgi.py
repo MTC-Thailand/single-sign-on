@@ -1,4 +1,7 @@
 from flask_admin.contrib.sqla import ModelView
+from flask_login import current_user
+from flask_principal import identity_loaded, UserNeed
+
 from app import create_app, admin
 
 app = create_app()
@@ -18,6 +21,7 @@ class ClientAdminView(ModelView):
 
 admin.add_view(ModelView(User, db.session))
 admin.add_view(ClientAdminView(Client, db.session))
+admin.add_view(ModelView(Role, db.session, category='Permissions'))
 
 from app.cmte.models import *
 
@@ -34,3 +38,21 @@ from app.members.models import Member, License
 
 admin.add_view(ModelView(License, db.session, category='Members'))
 admin.add_view(ModelView(Member, db.session, category='Members', endpoint='members_'))
+
+
+@identity_loaded.connect_via(app)
+def on_identity_loaded(sender, identity):
+    # Set the identity user object
+    identity.user = current_user
+
+    # Add the UserNeed to the identity
+    if hasattr(current_user, 'id'):
+        identity.provides.add(UserNeed(current_user.id))
+
+    # Assuming the User model has a list of roles, update the
+    # identity with the roles that the user provides
+    if hasattr(current_user, 'roles'):
+        for role in current_user.roles:
+            identity.provides.add(role.to_tuple())
+
+    print('done loading roles')

@@ -1,6 +1,7 @@
 import os
 
 import arrow
+from flask_principal import Principal, PermissionDenied
 from pytz import timezone
 
 from flask import Flask, render_template
@@ -32,6 +33,7 @@ jwt = JWTManager()
 csrf = CSRFProtect()
 login_manager = LoginManager()
 login_manager.login_view = 'users.login'
+principal = Principal()
 
 
 from app.api import api_bp
@@ -64,6 +66,10 @@ def create_app():
     swagger.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    principal.init_app(app)
+
+    from app.roles import init_roles
+    init_roles(app)
 
     from app.user import user_bp
     app.register_blueprint(user_bp)
@@ -105,5 +111,17 @@ def create_app():
             return arrow.get(dt).humanize(locale='th', granularity='day')
         else:
             return None
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html', error=e), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        return render_template('errors/500.html', error=e), 500
+
+    @app.errorhandler(PermissionDenied)
+    def permission_denied(e):
+        return render_template('errors/403.html', error=e), 403
 
     return app

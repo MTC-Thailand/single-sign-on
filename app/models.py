@@ -26,6 +26,9 @@ class User(db.Model, UserMixin):
     def password(self, pw):
         self._password_hash = generate_password_hash(pw)
 
+    def __str__(self):
+        return self.username
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -61,3 +64,26 @@ class Client(db.Model):
 
     def generate_client_id(self):
         self.id = ''.join(secrets.choice(alphabet) for i in range(16))
+
+
+user_roles = db.Table('user_roles',
+                      db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
+                      db.Column('role_id', db.Integer(), db.ForeignKey('roles.id')))
+
+
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer(), primary_key=True)
+    role_need = db.Column('role_need', db.String(), nullable=True)
+    action_need = db.Column('action_need', db.String())
+    resource_id = db.Column('resource_id', db.Integer())
+
+    users = db.relationship('User',
+                            backref=db.backref('roles'),
+                            secondary=user_roles, lazy='dynamic')
+
+    def to_tuple(self):
+        return self.role_need, self.action_need, self.resource_id
+
+    def __str__(self):
+        return u'Role {}: can {} -> resource ID {}'.format(self.role_need, self.action_need, self.resource_id)
