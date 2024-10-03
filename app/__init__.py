@@ -74,6 +74,9 @@ def create_app():
     from app.cmte import cmte_bp as cmte_blueprint
     app.register_blueprint(cmte_blueprint)
 
+    from app.institutions import inst as institution_blueprint
+    app.register_blueprint(institution_blueprint)
+
     @app.route('/')
     def index():
         return render_template('index.html')
