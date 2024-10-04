@@ -3,10 +3,11 @@
 {% block content %}
 <section class="section">
     <div class="container">
-        <h1 class="title">Welcome to CMTE.</h1>
+        <h1 class="title">ระบบสารสนเทศการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
+        <h1 class="subtitle">ศูนย์การศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column is-one-third is-offset-4">
+            <div class="column">
                 <article class="panel is-danger">
                     <p class="panel-heading">สมาชิก</p>
                     <a class="panel-block" href="{{url_for('cmte.individual_score_index')}}">
@@ -16,6 +17,8 @@
                         ตรวจสอบคะแนน
                     </a>
                 </article>
+            </div>
+            <div class="column">
                 <article class="panel">
                     <p class="panel-heading">สถาบันการศึกษาต่อเนื่อง</p>
                     <a class="panel-block" href="{{url_for('cmte.register_event')}}">
@@ -25,6 +28,18 @@
                         รายการกิจกรรมทั้งหมด
                     </a>
                 </article>
+            </div>
+        </div>
+        <div class="columns">
+            <div class="column">
+                <div class="buttons is-centered">
+                    <a href="{{url_for('cmte.admin_index')}}" class="button is-warning is-outlined">
+                        <span class="icon">
+                            <i class="fas fa-user-cog"></i>
+                        </span>
+                        <span>CMTE Admin</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
