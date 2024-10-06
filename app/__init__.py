@@ -33,6 +33,11 @@ jwt = JWTManager()
 csrf = CSRFProtect()
 login_manager = LoginManager()
 login_manager.login_view = 'users.login'
+login_manager.blueprint_login_views = {
+    'member': 'member.login'
+}
+login_manager.login_message = 'กรุณาลงชื่อเข้าใช้งานระบบ'
+login_manager.login_message_category = 'info'
 principal = Principal()
 
 

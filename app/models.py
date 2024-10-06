@@ -1,3 +1,4 @@
+from flask import request
 from sqlalchemy import func
 
 from . import db, login_manager
@@ -6,6 +7,8 @@ import uuid
 import secrets
 import string
 from werkzeug.security import generate_password_hash
+
+from .members.models import Member
 
 alphabet = string.digits
 
@@ -32,6 +35,9 @@ class User(db.Model, UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
+    if request.blueprint == 'member':
+        return Member.query.get(int(user_id))
+
     return User.query.filter_by(id=user_id, is_activated=True).first()
 
 

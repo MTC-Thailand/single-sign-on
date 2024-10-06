@@ -8,14 +8,19 @@ from pprint import pprint
 import requests
 import pandas as pd
 
-from flask import render_template, make_response, jsonify
-from flask_login import login_required
+from flask import render_template, make_response, jsonify, current_app, flash, request, redirect, url_for, session
+from flask_login import login_required, login_user, current_user, logout_user
+from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine
+from werkzeug.security import check_password_hash
 
 from app.members import member_blueprint as member
-from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm
+from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm
 
 from app.members.models import *
+from app.models import User
+from app.cmte.forms import IndividualScoreForm
+from app.cmte.models import CMTEEventType
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
@@ -370,3 +375,66 @@ def view_member_info():
     else:
         print(form.errors)
     return render_template('members/member_info.html', form=form)
+
+
+@member.route('/login', methods=['GET', 'POST'])
+def login():
+    form = MemberLoginForm()
+    if form.validate_on_submit():
+        user = Member.query.filter_by(pid=form.pid.data).first()
+        if user:
+            login_user(user, remember=True)
+            identity_changed.send(current_app._get_current_object(), identity=Identity(user.id))
+            flash('Logged in successfully', 'success')
+            if request.args.get('next'):
+                return redirect(request.args.get('next'))
+            else:
+                return redirect(url_for('member.index'))
+        else:
+            flash('Username not found. Please check the information or contact the office.', 'danger')
+
+    return render_template('members/login.html', form=form)
+
+
+@member.route('/logout')
+def logout():
+    if current_user.is_authenticated:
+        logout_user()
+        for key in ('identity.name', 'identity.auth_type'):
+            session.pop(key, None)
+
+        # Tell Flask-Principal the user is anonymous
+        identity_changed.send(current_app._get_current_object(), identity=AnonymousIdentity())
+        flash('Logged out successfully', 'success')
+    else:
+        flash('User is not logged in.', 'warning')
+    return redirect(url_for('member.index'))
+
+
+@member.route('/')
+@login_required
+def index():
+    return render_template('members/index.html')
+
+
+@member.route('/cmte', methods=['GET'])
+@login_required
+def cmte_index():
+    return render_template('members/cmte/index.html')
+
+
+@member.route('/cmte/individual-scores/index', methods=['GET'])
+@login_required
+def individual_score_index():
+    event_types = CMTEEventType.query \
+        .filter_by(for_group=False, is_sponsored=False).all()
+    return render_template('members/cmte/individual_score_index.html', event_types=event_types)
+
+
+@member.route('/cmte/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
+@login_required
+def individual_score_form(event_type_id):
+    form = IndividualScoreForm()
+    if form.validate_on_submit():
+        pass
+    return render_template('members/cmte/individual_score_form.html', form=form)

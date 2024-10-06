@@ -35,7 +35,6 @@ def download_file(key):
 
 
 @cmte.get('/')
-@login_required
 def cmte_index():
     return render_template('cmte/index.html')
 
@@ -417,23 +416,6 @@ def search_license():
                                event_id=event_id,
                                form=form,
                                rec_id=None)
-
-
-@cmte.route('/individual-scores/index', methods=['GET'])
-@login_required
-def individual_score_index():
-    event_types = CMTEEventType.query \
-        .filter_by(for_group=False, is_sponsored=False).all()
-    return render_template('cmte/individual_score_index.html', event_types=event_types)
-
-
-@cmte.route('/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
-@login_required
-def individual_score_form(event_type_id):
-    form = IndividualScoreForm()
-    if form.validate_on_submit():
-        pass
-    return render_template('cmte/individual_score_form.html', form=form)
 
 
 @cmte.route('/admin/fee-payment-record-form', methods=['GET', 'POST'])

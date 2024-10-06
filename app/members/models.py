@@ -1,11 +1,12 @@
 from datetime import datetime, date
 
 import arrow
+from flask_login import UserMixin
 
 from app import db
 
 
-class Member(db.Model):
+class Member(db.Model, UserMixin):
     __tablename__ = 'members'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     number = db.Column(db.String(), unique=True, nullable=False)

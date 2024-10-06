@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, url_for, current_app, session
+from flask import render_template, flash, redirect, url_for, current_app, session, request
 from flask_login import login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from werkzeug.security import check_password_hash
@@ -22,7 +22,10 @@ def login():
                     flash('Logged in successfully', 'success')
                 else:
                     flash('User has not been activated.', 'danger')
-                return redirect(url_for('index'))
+                if request.args.get('next'):
+                    return redirect(request.args.get('next'))
+                else:
+                    return redirect(url_for('index'))
             else:
                 flash('Invalid username or password', 'danger')
         else:

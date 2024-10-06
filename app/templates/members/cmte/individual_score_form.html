@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include "members/cmte/nav.html" %}
 <section class="section">
     <div class="container">
         <div class="columns">
@@ -21,7 +22,7 @@
                     {% endfor %}
                     <div class="field is-grouped">
                         <div class="control">
-                            <a class="button is-light" href="{{url_for('cmte.individual_score_index')}}">Cancel</a>
+                            <a class="button is-light" href="{{url_for('member.individual_score_index')}}">Cancel</a>
                         </div>
                         <div class="control">
                             <button type="submit" class="button is-success">Submit</button>

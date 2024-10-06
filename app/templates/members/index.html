@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include "members/nav.html" %}
 <section class="section">
     <div class="container">
-        <h1 class="title">ระบบสารสนเทศการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
-        <h1 class="subtitle">ศูนย์การศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
+        <h1 class="title">ระบบสารสนเทศสมาชิกสภาเทคนิคการแพทย์</h1>
+        <h1 class="subtitle">Valid license {{current_user.valid_license}}</h1>
+        {{current_user.th_fullname}}
+        <a href="{{url_for('member.logout')}}">Log out</a>
+
         {% include "messages.html" %}
         <div class="columns">
             <div class="column is-one-third is-offset-1">
@@ -15,17 +19,6 @@
                     </a>
                     <a class="panel-block" href="{{url_for('cmte.register_event')}}">
                         ตรวจสอบคะแนน
-                    </a>
-                </article>
-            </div>
-            <div class="column is-one-third is-offset-2">
-                <article class="panel">
-                    <p class="panel-heading">สถาบันการศึกษาต่อเนื่อง</p>
-                    <a class="panel-block" href="{{url_for('cmte.register_event')}}">
-                        ขออนุมัติจัดกิจกรรมใหม่
-                    </a>
-                    <a class="panel-block" href="{{url_for('cmte.show_draft_events')}}">
-                        รายการกิจกรรมทั้งหมด
                     </a>
                 </article>
             </div>

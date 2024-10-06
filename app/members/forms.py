@@ -23,3 +23,11 @@ class AnonymousMemberSearchForm(FlaskForm):
     license_expire_date = DateField('วันหมดอายุใบอนุญาต',
                                     format='%Y-%m-%d', validators=[Optional()])
     password = PasswordField('รหัสผ่าน', validators=[DataRequired()])
+
+
+class MemberLoginForm(FlaskForm):
+    pid = StringField('รหัสบัตรประชาชน', validators=[DataRequired()])
+    telephone = StringField('หมายเลขโทรศัพท์', validators=[DataRequired()])
+    otp = PasswordField('OTP', validators=[DataRequired()])
+
+

@@ -1,6 +1,6 @@
 import datetime
 
-from app import db, models
+from app import db
 
 event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
                                 db.Column('event_type_id', db.Integer,
