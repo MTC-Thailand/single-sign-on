@@ -1,6 +1,5 @@
 import json
 
-import arrow
 import os
 from dateutil.relativedelta import relativedelta
 from pprint import pprint
@@ -12,13 +11,11 @@ from flask import render_template, make_response, jsonify, current_app, flash, r
 from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine
-from werkzeug.security import check_password_hash
 
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm
 
 from app.members.models import *
-from app.models import User
 from app.cmte.forms import IndividualScoreForm
 from app.cmte.models import CMTEEventType
 
@@ -438,3 +435,18 @@ def individual_score_form(event_type_id):
     if form.validate_on_submit():
         pass
     return render_template('members/cmte/individual_score_form.html', form=form)
+
+
+@member.route('/api/otp', methods=['POST', 'GET'])
+def get_login_otp():
+    url = 'https://mtc.thaijobjob.com/api/auth/login-mobile'
+    telephone = request.args.get('telephone').replace('-', '').replace(' ', '')
+    pid = request.args.get('pid')
+    if Member.query.filter_by(pid=pid, tel=telephone).first():
+        response = requests.post(f'{url}',
+                                 params={'id_card': pid, 'mobile_number': telephone},
+                                 headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+        print(response.text, pid, telephone)
+        return '<p class="help is-warning">กรุณากรอกรหัสที่ได้รับโดยทันที</p><input class="input" value="567900" id="otp" hx-swap-oob="true"/>'
+    else:
+        return '<p class="help is-danger">ไม่พบข้อมูลหมายเลขโทรศัพท์</p>'
