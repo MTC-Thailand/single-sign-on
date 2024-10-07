@@ -376,10 +376,25 @@ def view_member_info():
 
 @member.route('/login', methods=['GET', 'POST'])
 def login():
+    url = 'https://mtc.thaijobjob.com/api/auth/otp-confirm-login-mobile'
     form = MemberLoginForm()
     if form.validate_on_submit():
         user = Member.query.filter_by(pid=form.pid.data).first()
-        if user:
+        data = {
+            'otp': form.otp.data,
+            'license_no': user.license_number,
+            'action': 'confirm_otp_login',
+            'mobile_number': form.telephone.data,
+            'id_card': form.pid.data
+        }
+        mobile_ref_id = request.form.get('mobile_ref_id')
+        if mobile_ref_id:
+            data['mobile_ref_id'] = mobile_ref_id
+            data['action'] = 'confirm_otp_register'
+
+        response = requests.post(f'{url}', json=data,
+                                 headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+        if response.status_code == 200:
             login_user(user, remember=True)
             identity_changed.send(current_app._get_current_object(), identity=Identity(user.id))
             flash('Logged in successfully', 'success')
@@ -388,7 +403,7 @@ def login():
             else:
                 return redirect(url_for('member.index'))
         else:
-            flash('Username not found. Please check the information or contact the office.', 'danger')
+            flash('OTP not matched.', 'danger')
 
     return render_template('members/login.html', form=form)
 
@@ -442,11 +457,21 @@ def get_login_otp():
     url = 'https://mtc.thaijobjob.com/api/auth/login-mobile'
     telephone = request.args.get('telephone').replace('-', '').replace(' ', '')
     pid = request.args.get('pid')
-    if Member.query.filter_by(pid=pid, tel=telephone).first():
-        response = requests.post(f'{url}',
-                                 params={'id_card': pid, 'mobile_number': telephone},
-                                 headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
-        print(response.text, pid, telephone)
-        return '<p class="help is-warning">กรุณากรอกรหัสที่ได้รับโดยทันที</p><input class="input" value="567900" id="otp" hx-swap-oob="true"/>'
+    response = requests.post(f'{url}',
+                             json={'id_card': pid, 'mobile_number': telephone},
+                             headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+    if response.status_code == 200:
+        resp_data = response.json().get('results')
+        refcode = resp_data.get('refcode')
+        message = resp_data.get('message')
+        if message == 'confirm_otp_login':
+            return f'<p class="help is-warning">ระบบได้ทำการส่งรหัส OTP แล้วกรุณากรอกรหัสที่ได้รับโดยทันที รหัสอ้างอิง OTP <strong>{refcode}</strong>"<p/>'
+        elif message == 'confirm_otp_register':
+            mobile_ref_id = resp_data.get('mobile_ref_id')
+            return f'''<p class="help is-warning">
+            ระบบได้ทำการส่งรหัส OTP แล้ว รหัสอ้างอิง OTP <strong>{refcode}</strong>
+            <p/>
+            <input type="hidden" name="mobile_ref_id" value="{mobile_ref_id}">
+            '''
     else:
-        return '<p class="help is-danger">ไม่พบข้อมูลหมายเลขโทรศัพท์</p>'
+        return '<p class="help is-danger">Error!</p>'

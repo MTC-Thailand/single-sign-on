@@ -28,6 +28,12 @@ class Member(db.Model, UserMixin):
         return self.licenses.filter(License.end_date >= today).first()
 
     @property
+    def license_number(self):
+        if self.licenses:
+            return self.licenses[-1].number
+        return None
+
+    @property
     def th_fullname(self):
         return f'{self.th_firstname} {self.th_lastname}'
 
