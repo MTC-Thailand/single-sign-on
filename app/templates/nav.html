@@ -1,14 +1,14 @@
 <nav class="navbar is-link">
     <div class="container">
         <div class="navbar-brand">
-            <a class="navbar-item" href="{{url_for('member.index')}}">
-                ระบบสมาชิก
+            <a class="navbar-item">
+                ระบบสารสนเทศสมาชิกสภาเทคนิคการแพทย์
             </a>
             <span class="navbar-burger burger" data-target="navbarMenuHeroA">
                 <span></span>
                 <span></span>
                 <span></span>
-              </span>
+            </span>
         </div>
         <div id="navbarMenuHeroA" class="navbar-menu">
             <div class="navbar-end">
@@ -19,14 +19,6 @@
                     <span>หน้าหลัก</span>
                 </a>
                 {% if current_user.is_authenticated %}
-                <a class="navbar-item">
-                    <span class="icon">
-                        <i class="fas fa-user-circle"></i>
-                    </span>
-                   <span>
-                       {{ current_user.th_fullname }}
-                   </span>
-                </a>
                 <a class="navbar-item" href="{{ url_for('member.logout') }}">
                     <span class="icon">
                         <i class="fas fa-sign-out-alt"></i>

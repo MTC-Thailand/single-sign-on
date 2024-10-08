@@ -4,16 +4,11 @@
 {% include "members/nav.html" %}
 <section class="section">
     <div class="container">
-        <h1 class="title">ระบบสารสนเทศสมาชิกสภาเทคนิคการแพทย์</h1>
-        <h1 class="subtitle">Valid license {{current_user.valid_license}}</h1>
-        {{current_user.th_fullname}}
-        <a href="{{url_for('member.logout')}}">Log out</a>
-
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column is-one-third is-offset-1">
+            <div class="column is-one-third is-offset-4">
                 <article class="panel is-danger">
-                    <p class="panel-heading">สมาชิก</p>
+                    <p class="panel-heading">CMTE</p>
                     <a class="panel-block" href="{{url_for('member.individual_score_index')}}">
                         ขออนุมัติคะแนนรายบุคคล
                     </a>
@@ -21,18 +16,6 @@
                         ตรวจสอบคะแนน
                     </a>
                 </article>
-            </div>
-        </div>
-        <div class="columns">
-            <div class="column">
-                <div class="buttons is-centered">
-                    <a href="{{url_for('cmte.admin_index')}}" class="button is-warning is-outlined">
-                        <span class="icon">
-                            <i class="fas fa-user-cog"></i>
-                        </span>
-                        <span>CMTE Admin</span>
-                    </a>
-                </div>
             </div>
         </div>
     </div>

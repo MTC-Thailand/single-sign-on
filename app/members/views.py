@@ -18,6 +18,7 @@ from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, Membe
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm
 from app.cmte.models import CMTEEventType
+from app import admin_permission
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
@@ -126,8 +127,10 @@ def search_test(license_id):
 
 
 @member.route('/admin')
+@admin_permission.require()
 @login_required
 def admin_index():
+    print(admin_permission)
     return render_template('members/admin/index.html')
 
 

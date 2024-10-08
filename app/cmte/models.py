@@ -18,10 +18,11 @@ event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
 class CMTEEventSponsor(db.Model):
     __tablename__ = 'cmte_event_sponsors'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column('name', db.String(), nullable=False)
-    affiliation = db.Column('affiliation', db.String())
-    address = db.Column('address', db.Text())
-    telephone = db.Column('telephone', db.String())
+    name = db.Column('name', db.String(), nullable=False, info={'label': 'ชื่อสถาบัน'})
+    affiliation = db.Column('affiliation', db.String(), info={'label': 'สังกัด'})
+    address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
+    telephone = db.Column('telephone', db.String(), info={'label': 'หมายเลขโทรศัพท์'})
+    registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
     expire_datetime = db.Column('expire_datetime', db.DateTime(timezone=True))
 
 
@@ -51,7 +52,7 @@ class CMTESponsorMember(UserMixin, db.Model):
         self._password_hash = generate_password_hash(pw)
 
     def __str__(self):
-        return self.name
+        return f'{self.firstname} {self.lastname}'
 
 
 class CMTEEventCategory(db.Model):

@@ -68,3 +68,8 @@ class CMTESponsorMemberForm(ModelForm):
 class CMTESponsorMemberLoginForm(ModelForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('รหัสผ่าน', validators=[DataRequired()])
+
+
+class CMTEEventSponsorForm(ModelForm):
+    class Meta:
+        model = CMTEEventSponsor

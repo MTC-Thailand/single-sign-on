@@ -1,6 +1,9 @@
 <nav class="navbar is-link">
     <div class="container">
         <div class="navbar-brand">
+            <a class="navbar-item" href="{{url_for('cmte.cmte_index')}}">
+                ศูนย์การศึกษาต่อเนื่องเทคนิคการแพทย์
+            </a>
             <span class="navbar-burger burger" data-target="navbarMenuHeroA">
                 <span></span>
                 <span></span>
@@ -9,7 +12,7 @@
         </div>
         <div id="navbarMenuHeroA" class="navbar-menu">
             <div class="navbar-end">
-                <a class="navbar-item" href="{{ url_for('cmte.cmte_index') }}">
+                <a class="navbar-item" href="{{ url_for('index') }}">
                     <span class="icon">
                         <i class="fas fa-house-user"></i>
                     </span>
@@ -21,7 +24,7 @@
                         <i class="fas fa-user-circle"></i>
                     </span>
                    <span>
-                       {{ current_user.th_fullname }}
+                       {{ current_user }}
                    </span>
                 </a>
                 <a class="navbar-item" href="{{ url_for('member.logout') }}">

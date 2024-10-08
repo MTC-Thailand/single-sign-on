@@ -1,7 +1,7 @@
 import os
 
 import arrow
-from flask_principal import Principal, PermissionDenied
+from flask_principal import Principal, PermissionDenied, Identity
 from pytz import timezone
 
 from flask import Flask, render_template
@@ -50,6 +50,12 @@ api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
 api.add_resource(MemberInfo, '/members/<string:pin>/info')
 api.add_resource(RefreshToken, '/auth/refresh')
 
+from flask_principal import Permission, RoleNeed
+
+admin_permission = Permission(RoleNeed('Admin'))
+cmte_admin_permission = Permission(RoleNeed('CMTEAdmin'))
+cmte_sponsor_admin_permission = Permission(RoleNeed('CMTESponsorAdmin'))
+
 
 def create_app():
     app = Flask(__name__)
@@ -59,7 +65,7 @@ def create_app():
     if database_url.startswith('postgresql'):
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] =\
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
             os.environ.get('DATABASE_URL').replace('postgres', 'postgresql')
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
