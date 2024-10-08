@@ -20,7 +20,7 @@ class Member(db.Model, UserMixin):
     tel = db.Column(db.String(), unique=True)
 
     def __str__(self):
-        return self.number
+        return self.th_fullname
 
     @property
     def valid_license(self):
@@ -40,6 +40,10 @@ class Member(db.Model, UserMixin):
     @property
     def en_fullname(self):
         return f'{self.en_firstname} {self.en_lastname}'
+
+    @property
+    def unique_id(self):
+        return f'mtc-member-{self.id}'
 
 
 class License(db.Model):

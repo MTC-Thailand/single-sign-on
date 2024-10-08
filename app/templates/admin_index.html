@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "admin_nav.html" %}
+<section class="section">
+    <div class="container">
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column is-one-third is-offset-4">
+                <article class="panel is-info">
+                    <p class="panel-heading">Main</p>
+                    <a class="panel-block" href="{{url_for('users.register_user')}}">
+                        ลงทะเบียนบัญชีผู้ดูแลระบบ
+                    </a>
+                    <a class="panel-block" href="{{url_for('member.admin_index')}}">
+                        จัดการสมาชิก
+                    </a>
+                    <a class="panel-block" href="{{url_for('cmte.admin_index')}}">
+                        จัดการระบบการศึกษาต่อเนื่อง
+                    </a>
+                </article>
+                <article class="panel is-light">
+                    <p class="panel-heading">API Clients</p>
+                    <a class="panel-block" href="{{url_for('users.register_client')}}">
+                        ลงทะเบียนบัญชีผู้ใช้ระบบ
+                    </a>
+                </article>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

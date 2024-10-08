@@ -6,7 +6,7 @@ from io import BytesIO
 
 import arrow
 import boto3
-from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app
+from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app, session
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
@@ -55,6 +55,7 @@ def admin_index():
 @cmte_sponsor_admin_permission.require()
 def register_event():
     if not sponsor_event_management_permission.can():
+        print(sponsor_event_management_permission.can(), current_user)
         return render_template('errors/sponsor_expired.html')
     form = CMTEEventForm()
     return render_template('cmte/event_registration.html', form=form)
@@ -475,17 +476,21 @@ def sponsor_member_login():
     form = CMTESponsorMemberLoginForm()
     if form.validate_on_submit():
         user = CMTESponsorMember.query.filter_by(email=form.email.data).first()
-        if user and user.verify_password(form.password.data):
-            login_user(user, remember=False)
-            identity = Identity(user.id)
-            identity_changed.send(current_app._get_current_object(), identity=identity)
-            identity.provides.add(('CMTEOrgAdmin', '', ''))
-        flash('Logged in successfully', 'success')
-        if request.args.get('next'):
-            return redirect(request.args.get('next'))
+        if user:
+            if user.verify_password(form.password.data):
+                session['login_as'] = 'cmte_sponsor_admin'
+                login_user(user, remember=False)
+                identity = Identity(user.unique_id)
+                identity_changed.send(current_app._get_current_object(), identity=identity)
+                flash('Logged in successfully', 'success')
+                if request.args.get('next'):
+                    return redirect(request.args.get('next'))
+                else:
+                    return redirect(url_for('cmte.cmte_index'))
+            else:
+                flash('Wrong password.', 'danger')
         else:
-            return redirect(url_for('cmte.cmte_index'))
-
+            flash('Your account is not registered.', 'danger')
     return render_template('cmte/sponsor/login_form.html', form=form)
 
 

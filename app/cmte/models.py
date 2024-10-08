@@ -54,6 +54,10 @@ class CMTESponsorMember(UserMixin, db.Model):
     def __str__(self):
         return f'{self.firstname} {self.lastname}'
 
+    @property
+    def unique_id(self):
+        return f'sponsor-member-{self.id}'
+
 
 class CMTEEventCategory(db.Model):
     __tablename__ = 'cmte_event_categories'

@@ -35,6 +35,10 @@ class User(db.Model, UserMixin):
     def __str__(self):
         return self.username
 
+    @property
+    def unique_id(self):
+        return f'admin-{self.id}'
+
 
 class Client(db.Model):
     __tablename__ = 'clients'

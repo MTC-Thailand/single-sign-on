@@ -1,9 +1,9 @@
 from flask import render_template, flash, redirect, url_for, current_app, session, request
-from flask_login import login_user, current_user, logout_user
+from flask_login import login_user, current_user, logout_user, login_required
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from werkzeug.security import check_password_hash
 
-from app import db
+from app import db, admin_permission
 from app.models import User, Client
 from app.user import user_bp as user
 from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm
@@ -18,7 +18,7 @@ def login():
             if check_password_hash(user._password_hash, form.password.data):
                 login_user(user, remember=True)
                 if user.is_activated:
-                    identity_changed.send(current_app._get_current_object(), identity=Identity(user.id))
+                    identity_changed.send(current_app._get_current_object(), identity=Identity(user.unique_id))
                     flash('Logged in successfully', 'success')
                 else:
                     flash('User has not been activated.', 'danger')
@@ -38,7 +38,7 @@ def login():
 def logout():
     if current_user.is_authenticated:
         logout_user()
-        for key in ('identity.name', 'identity.auth_type'):
+        for key in ('identity.name', 'identity.auth_type', 'login_as'):
             session.pop(key, None)
 
         # Tell Flask-Principal the user is anonymous
@@ -73,7 +73,6 @@ def register_user():
     if form.validate_on_submit():
         user = User()
         form.populate_obj(user)
-        print(form.new_password.data)
         user.password = form.new_password.data
         db.session.add(user)
         db.session.commit()
@@ -83,3 +82,9 @@ def register_user():
             flash('{}: {}'.format(field, form.errors[field]), 'danger')
     return render_template('user/user_registration_form.html', form=form)
 
+
+@user.route('/index')
+@login_required
+@admin_permission.require()
+def admin_index():
+    return render_template('admin_index.html')

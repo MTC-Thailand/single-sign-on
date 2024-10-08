@@ -1,6 +1,8 @@
+from flask import session
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
 from flask_principal import identity_loaded, UserNeed, RoleNeed, ActionNeed
+import arrow
 
 from app import create_app, admin
 
@@ -42,9 +44,9 @@ admin.add_view(ModelView(Member, db.session, category='Members', endpoint='membe
 
 @login_manager.user_loader
 def load_user(user_id):
-    if request.blueprint == 'member':
+    if session.get('login_as') == 'member':
         return Member.query.get(int(user_id))
-    elif request.blueprint == 'cmte':
+    elif session.get('login_as') == 'cmte_sponsor_admin':
         return CMTESponsorMember.query.get(int(user_id))
 
     return User.query.filter_by(id=user_id, is_activated=True).first()
@@ -56,17 +58,16 @@ def on_identity_loaded(sender, identity):
     identity.user = current_user
 
     # Add the UserNeed to the identity
-    if hasattr(current_user, 'id'):
-        identity.provides.add(UserNeed(current_user.id))
+    if hasattr(current_user, 'unique_id'):
+        identity.provides.add(UserNeed(current_user.unique_id))
 
     # Assuming the User model has a list of roles, update the
     # identity with the roles that the user provides
-    if hasattr(current_user, 'roles'):
+    if isinstance(current_user, User):
         for role in current_user.roles:
-            identity.provides.add(role.to_tuple())
-
-    if isinstance(current_user, CMTESponsorMember):
+            identity.provides.add(RoleNeed(role.role_need))
+    elif isinstance(current_user, CMTESponsorMember):
         identity.provides.add(RoleNeed('CMTESponsorAdmin'))
-        if (current_user.sponsor.expire_date and
-                current_user.sponsor.expire_date > datetime.today().date()):
+        if current_user.sponsor.expire_date > arrow.now('Asia/Bangkok').date():
+            print('sponsor is valid')
             identity.provides.add(ActionNeed('manageEvents'))

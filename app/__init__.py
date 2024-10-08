@@ -35,7 +35,7 @@ login_manager = LoginManager()
 login_manager.login_view = 'users.login'
 login_manager.blueprint_login_views = {
     'member': 'member.login',
-    'cmte': 'cmte.sponsor_member_login'
+    'cmte': 'cmte.sponsor_member_login',
 }
 login_manager.login_message = 'กรุณาลงชื่อเข้าใช้งานระบบ'
 login_manager.login_message_category = 'info'
@@ -55,7 +55,7 @@ from flask_principal import Permission, RoleNeed
 admin_permission = Permission(RoleNeed('Admin'))
 cmte_admin_permission = Permission(RoleNeed('CMTEAdmin'))
 cmte_sponsor_admin_permission = Permission(RoleNeed('CMTESponsorAdmin'))
-sponsor_event_management_permission = Permission(ActionNeed('manageEvent'))
+sponsor_event_management_permission = Permission(ActionNeed('manageEvents'))
 
 
 def create_app():

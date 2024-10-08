@@ -127,10 +127,9 @@ def search_test(license_id):
 
 
 @member.route('/admin')
-@admin_permission.require()
 @login_required
 def admin_index():
-    print(admin_permission)
+    print(admin_permission.can())
     return render_template('members/admin/index.html')
 
 
@@ -398,8 +397,9 @@ def login():
         response = requests.post(f'{url}', json=data,
                                  headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
         if response.status_code == 200:
+            session['login_as'] = 'member'
             login_user(user, remember=True)
-            identity_changed.send(current_app._get_current_object(), identity=Identity(user.id))
+            identity_changed.send(current_app._get_current_object(), identity=Identity(user.unique_id))
             flash('Logged in successfully', 'success')
             if request.args.get('next'):
                 return redirect(request.args.get('next'))
@@ -430,12 +430,6 @@ def logout():
 @login_required
 def index():
     return render_template('members/index.html')
-
-
-@member.route('/cmte', methods=['GET'])
-@login_required
-def cmte_index():
-    return render_template('members/cmte/index.html')
 
 
 @member.route('/cmte/individual-scores/index', methods=['GET'])

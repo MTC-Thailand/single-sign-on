@@ -1,58 +1,39 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include "nav.html" %}
 <section class="hero is-medium is-link">
   <div class="hero-body">
     <p class="title">ระบบสารสนเทศสภาเทคนิคการแพทย์</p>
     <div class="grid">
       <div class="cell box has-text-centered">
+        <a href="{{url_for('member.index')}}">
         <figure class="image is-128x128 is-inline-block">
-          <a href="{{url_for('member.index')}}">
             <img src="{{url_for('static', filename='study.png')}}" />
-          </a>
         </figure>
+        </a>
         <h1 class="title is-size-4 has-text-dark mt-4">สมาชิก</h1>
       </div>
       <div class="cell box has-text-centered">
+        <a href="{{url_for('cmte.cmte_index')}}">
         <figure class="image is-128x128 is-inline-block">
-          <a href="{{url_for('cmte.cmte_index')}}">
             <img src="{{url_for('static', filename='education.png')}}" />
-          </a>
         </figure>
+        </a>
         <h1 class="title is-size-4 has-text-dark mt-4">
           สถาบันจัดฝึกอบรมการศึกษาต่อเนื่อง
         </h1>
       </div>
       <div class="cell box has-text-centered">
+        <a href="{{url_for('users.admin_index')}}">
         <figure class="image is-128x128 is-inline-block">
           <img src="{{url_for('static', filename='classroom.png')}}" />
         </figure>
+        </a>
         <h1 class="title is-size-4 has-text-dark mt-4">
           เจ้าหน้าที่
         </h1>
       </div>
-    </div>
-  </div>
-</section>
-<section class="section">
-  <div class="columns">
-    <div class="column has-text-centered">
-      {% if current_user.is_authenticated %}
-      <p>
-        Welcome {{ current_user.username }}!
-      </p>
-      <div class="buttons is-centered">
-        <a href="{{url_for('users.register_user')}}" class="button is-primary">Register Admin</a>
-        <a href="{{url_for('member.admin_index')}}" class="button is-primary">Member Admin</a>
-        <a href="{{url_for('cmte.admin_index')}}" class="button is-warning">CMTE Admin</a>
-        <a href="{{url_for('users.register_client')}}" class="button is-primary">Register client</a>
-        <a href="{{url_for('users.logout')}}" class="button is-danger">Log out</a>
-      </div>
-      {% else %}
-      <a href="{{url_for('inst.index')}}" class="button is-warning">Institutions</a>
-      <a href="{{url_for('users.register_user')}}" class="button is-warning">Register Admin</a>
-      <a href="{{url_for('users.login')}}" class="button is-primary">Log in</a>
-      {% endif %}
     </div>
   </div>
 </section>
