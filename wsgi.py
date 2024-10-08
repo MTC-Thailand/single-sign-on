@@ -1,6 +1,6 @@
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
-from flask_principal import identity_loaded, UserNeed
+from flask_principal import identity_loaded, UserNeed, RoleNeed, ActionNeed
 
 from app import create_app, admin
 
@@ -66,4 +66,7 @@ def on_identity_loaded(sender, identity):
             identity.provides.add(role.to_tuple())
 
     if isinstance(current_user, CMTESponsorMember):
-        identity.provides.add(('CMTEOrgAdmin', '', ''))
+        identity.provides.add(RoleNeed('CMTESponsorAdmin'))
+        if (current_user.sponsor.expire_date and
+                current_user.sponsor.expire_date > datetime.today().date()):
+            identity.provides.add(ActionNeed('manageEvents'))

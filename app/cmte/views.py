@@ -12,7 +12,7 @@ from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from pytz import timezone
 
-from app import db
+from app import db, sponsor_event_management_permission
 from app.cmte import cmte_bp as cmte
 from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm, \
     CMTESponsorMemberForm, CMTESponsorMemberLoginForm, CMTEEventSponsorForm
@@ -54,6 +54,8 @@ def admin_index():
 @login_required
 @cmte_sponsor_admin_permission.require()
 def register_event():
+    if not sponsor_event_management_permission.can():
+        return render_template('errors/sponsor_expired.html')
     form = CMTEEventForm()
     return render_template('cmte/event_registration.html', form=form)
 
@@ -509,6 +511,8 @@ def register_sponsor_member():
 @login_required
 @cmte_sponsor_admin_permission.require()
 def register_sponsor():
+    if current_user.sponsor:
+        return redirect(url_for('cmte.manage_sponsor', sponsor_id=current_user.sponsor_id))
     form = CMTEEventSponsorForm()
     if request.method == 'POST':
         if form.validate_on_submit():
@@ -517,8 +521,16 @@ def register_sponsor():
             sponsor.members.append(current_user)
             db.session.add(sponsor)
             db.session.commit()
-            flash(f'ลงทะเบียนเรียบร้อยแล้ว กรุณาลงชื่อเข้าใช้งาน', 'success')
-            return redirect(url_for('cmte.sponsor_member_login'))
+            flash(f'ลงทะเบียนเรียบร้อย', 'success')
+            return redirect(url_for('cmte.cmte_index'))
         else:
             flash(f'Errors: {form.errors}', 'danger')
     return render_template('cmte/sponsor/sponsor_form.html', form=form)
+
+
+@cmte.route('/sponsors/<int:sponsor_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def manage_sponsor(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor)

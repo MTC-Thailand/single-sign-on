@@ -23,7 +23,7 @@ class CMTEEventSponsor(db.Model):
     address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
     telephone = db.Column('telephone', db.String(), info={'label': 'หมายเลขโทรศัพท์'})
     registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
-    expire_datetime = db.Column('expire_datetime', db.DateTime(timezone=True))
+    expire_date = db.Column('expire_date', db.Date())
 
 
 class CMTESponsorMember(UserMixin, db.Model):

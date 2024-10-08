@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Sponsor Detail{% endblock %}
+
+{% block content %}
+{% include "cmte/nav.html" %}
+<section class="section">
+  <h1 class="title has-text-centered">สถาบันฝึกอบรม</h1>
+  {% include "messages.html" %}
+  <div class="columns">
+    <div class="column">
+      <table class="table is-fullwidth is-striped is-bordered">
+        <thead>
+        </thead>
+        <tbody>
+        <tr>
+          <td><strong>ชื่อ</strong></td>
+          <td>{{sponsor.name}}</td>
+        </tr>
+        <tr>
+          <td><strong>สังกัด</strong></td>
+          <td>{{sponsor.affiliation}}</td>
+        </tr>
+        <tr>
+          <td><strong>ที่อยู่</strong></td>
+          <td>{{sponsor.address}}</td>
+        </tr>
+        <tr>
+          <td><strong>โทรศัพท์</strong></td>
+          <td>{{sponsor.telephone}}</td>
+        </tr>
+        <tr>
+          <td><strong>สมาชิก</strong></td>
+          <td>
+            <ul>
+              {% for member in sponsor.members %}
+              <li>{{member}}</li>
+              {% endfor %}
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>วันที่ขึ้นทะเบียน</strong></td>
+          <td>{{sponsor.registered_datetime|localdatetime or 'รอการตรวจสอบและอนุมัติ'}}</td>
+        </tr>
+        <tr>
+          <td><strong>วันที่หมดอายุ</strong></td>
+          <td>{{sponsor.expire_datetime|localdatetime or 'รอการตรวจสอบและอนุมัติ'}}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,7 +1,7 @@
 import os
 
 import arrow
-from flask_principal import Principal, PermissionDenied, Identity
+from flask_principal import Principal, PermissionDenied, Identity, ActionNeed
 from pytz import timezone
 
 from flask import Flask, render_template
@@ -55,6 +55,7 @@ from flask_principal import Permission, RoleNeed
 admin_permission = Permission(RoleNeed('Admin'))
 cmte_admin_permission = Permission(RoleNeed('CMTEAdmin'))
 cmte_sponsor_admin_permission = Permission(RoleNeed('CMTESponsorAdmin'))
+sponsor_event_management_permission = Permission(ActionNeed('manageEvent'))
 
 
 def create_app():
