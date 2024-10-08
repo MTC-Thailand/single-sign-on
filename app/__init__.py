@@ -40,7 +40,6 @@ login_manager.login_message = 'กรุณาลงชื่อเข้าใ�
 login_manager.login_message_category = 'info'
 principal = Principal()
 
-
 from app.api import api_bp
 
 api = Api(api_bp, decorators=[csrf.exempt])
@@ -59,7 +58,8 @@ def create_app():
     if database_url.startswith('postgresql'):
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres', 'postgresql')
+        app.config['SQLALCHEMY_DATABASE_URI'] =\
+            os.environ.get('DATABASE_URL').replace('postgres', 'postgresql')
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -73,17 +73,14 @@ def create_app():
     csrf.init_app(app)
     principal.init_app(app)
 
-    from app.roles import init_roles
-    init_roles(app)
-
-    from app.user import user_bp
-    app.register_blueprint(user_bp)
-
     from app.members import member_blueprint
     app.register_blueprint(member_blueprint)
 
     from app.cmte import cmte_bp as cmte_blueprint
     app.register_blueprint(cmte_blueprint)
+
+    from app.user import user_bp
+    app.register_blueprint(user_bp)
 
     from app.institutions import inst as institution_blueprint
     app.register_blueprint(institution_blueprint)

@@ -1,4 +1,7 @@
+from sqlite3 import ProgrammingError
+
 from flask import request
+from flask_principal import Permission
 from sqlalchemy import func
 
 from . import db, login_manager
@@ -31,14 +34,6 @@ class User(db.Model, UserMixin):
 
     def __str__(self):
         return self.username
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    if request.blueprint == 'member':
-        return Member.query.get(int(user_id))
-
-    return User.query.filter_by(id=user_id, is_activated=True).first()
 
 
 class Client(db.Model):

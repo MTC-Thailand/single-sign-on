@@ -55,4 +55,15 @@ def on_identity_loaded(sender, identity):
         for role in current_user.roles:
             identity.provides.add(role.to_tuple())
 
-    print('done loading roles')
+
+@login_manager.user_loader
+def load_user(user_id):
+    if request.blueprint == 'member':
+        return Member.query.get(int(user_id))
+
+    return User.query.filter_by(id=user_id, is_activated=True).first()
+
+
+from app.roles import init_roles
+
+init_roles(app)
