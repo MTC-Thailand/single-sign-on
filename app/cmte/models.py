@@ -1,5 +1,9 @@
 import datetime
 
+from flask_login import UserMixin
+from sqlalchemy_utils import EmailType
+from werkzeug.security import generate_password_hash
+
 from app import db
 
 event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
@@ -18,6 +22,32 @@ class CMTEEventSponsor(db.Model):
     address = db.Column('address', db.Text())
     telephone = db.Column('telephone', db.String())
     expire_datetime = db.Column('expire_datetime', db.DateTime(timezone=True))
+
+
+class CMTESponsorMember(UserMixin, db.Model):
+    __tablename__ = 'cmte_sponsor_members'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column('title', db.String())
+    firstname = db.Column('firstname', db.String())
+    lastname = db.Column('lastname', db.String())
+    email = db.Column('email', EmailType())
+    _password_hash = db.Column(db.String(255))
+    mobile_phone = db.Column('mobile_phone', db.String())
+    telephone = db.Column('telephone', db.String())
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor, backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
+    is_coordinator = db.Column('is_coordinator', db.Boolean(), default=False)
+
+    @property
+    def password(self):
+        raise ValueError
+
+    @password.setter
+    def password(self, pw):
+        self._password_hash = generate_password_hash(pw)
+
+    def __str__(self):
+        return self.name
 
 
 class CMTEEventCategory(db.Model):

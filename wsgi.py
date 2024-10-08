@@ -60,6 +60,8 @@ def on_identity_loaded(sender, identity):
 def load_user(user_id):
     if request.blueprint == 'member':
         return Member.query.get(int(user_id))
+    elif request.blueprint == 'cmte':
+        return CMTESponsorMember.query.get(int(user_id))
 
     return User.query.filter_by(id=user_id, is_activated=True).first()
 
