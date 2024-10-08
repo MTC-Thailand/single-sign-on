@@ -1,8 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
-from wtforms.validators import NumberRange, DataRequired
+from wtforms.validators import NumberRange, DataRequired, EqualTo, Email
 from wtforms_alchemy import model_form_factory, QuerySelectField
-from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField
+from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField
 
 from app.cmte.models import *
 
@@ -55,3 +55,16 @@ class CMTEFeePaymentForm(ModelForm):
         only = ['payment_datetime', 'license_number']
 
     license_number = StringField('License Number')
+
+
+class CMTESponsorMemberForm(ModelForm):
+    class Meta:
+        model = CMTESponsorMember
+
+    password = PasswordField('รหัสผ่าน', validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
+    confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
+
+
+class CMTESponsorMemberLoginForm(ModelForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('รหัสผ่าน', validators=[DataRequired()])

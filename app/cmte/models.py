@@ -2,7 +2,8 @@ import datetime
 
 from flask_login import UserMixin
 from sqlalchemy_utils import EmailType
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
+from wtforms.validators import DataRequired
 
 from app import db
 
@@ -27,16 +28,19 @@ class CMTEEventSponsor(db.Model):
 class CMTESponsorMember(UserMixin, db.Model):
     __tablename__ = 'cmte_sponsor_members'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column('title', db.String())
-    firstname = db.Column('firstname', db.String())
-    lastname = db.Column('lastname', db.String())
-    email = db.Column('email', EmailType())
+    title = db.Column('title', db.String(), info={'label': 'คำนำหน้า'})
+    firstname = db.Column('firstname', db.String(), info={'label': 'ชื่อ', 'validators': [DataRequired()]})
+    lastname = db.Column('lastname', db.String(), info={'label': 'นามสกุล', 'validators': [DataRequired()]})
+    email = db.Column('email', EmailType(), info={'label': 'E-mail', 'validators': [DataRequired()]})
     _password_hash = db.Column(db.String(255))
-    mobile_phone = db.Column('mobile_phone', db.String())
-    telephone = db.Column('telephone', db.String())
+    mobile_phone = db.Column('mobile_phone', db.String(), info={'label': 'โทรศัพท์มือถือ'})
+    telephone = db.Column('telephone', db.String(), info={'label': 'โทรศัพท์'})
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship(CMTEEventSponsor, backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
     is_coordinator = db.Column('is_coordinator', db.Boolean(), default=False)
+
+    def verify_password(self, password):
+        return check_password_hash(self._password_hash, password)
 
     @property
     def password(self):

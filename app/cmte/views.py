@@ -6,17 +6,20 @@ from io import BytesIO
 
 import arrow
 import boto3
-from flask import render_template, flash, redirect, url_for, make_response, request, send_file
-from flask_login import login_required
+from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app
+from flask_login import login_required, login_user
+from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from pytz import timezone
 
 from app import db
 from app.cmte import cmte_bp as cmte
-from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm
-from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord
+from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm, \
+    CMTESponsorMemberForm, CMTESponsorMemberLoginForm
+from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, \
+    CMTESponsorMember
 from app.members.models import License
-from app.roles import cmte_admin_permission
+from app.roles import cmte_admin_permission, cmte_org_admin_permission
 
 bangkok = timezone('Asia/Bangkok')
 
@@ -48,6 +51,7 @@ def admin_index():
 
 
 @cmte.get('/events/registration')
+@cmte_org_admin_permission.require()
 @login_required
 def register_event():
     form = CMTEEventForm()
@@ -447,3 +451,40 @@ def admin_edit_fee_payment_record(record_id=None):
         else:
             flash('Error updating fee payment record form.', 'danger')
     return render_template('cmte/admin/fee_payment_form.html', form=form, active_payments=active_payments)
+
+
+@cmte.route('/sponsors/members/login', methods=['GET', 'POST'])
+def sponsor_member_login():
+    form = CMTESponsorMemberLoginForm()
+    if form.validate_on_submit():
+        user = CMTESponsorMember.query.filter_by(email=form.email.data).first()
+        if user and user.verify_password(form.password.data):
+            login_user(user, remember=False)
+            identity = Identity(user.id)
+            identity_changed.send(current_app._get_current_object(), identity=identity)
+            identity.provides.add(('CMTEOrgAdmin', '', ''))
+        flash('Logged in successfully', 'success')
+        if request.args.get('next'):
+            return redirect(request.args.get('next'))
+        else:
+            return redirect(url_for('cmte.cmte_index'))
+
+    return render_template('cmte/sponsor/login_form.html', form=form)
+
+
+@cmte.route('/sponsors/members/register', methods=['GET', 'POST'])
+def register_sponsor_member():
+    form = CMTESponsorMemberForm()
+    if form.validate_on_submit():
+        member = CMTESponsorMember.query.filter_by(email=form.email.data).first()
+        if not member:
+            member = CMTESponsorMember()
+            form.populate_obj(member)
+            member.password = form.password.data
+            db.session.add(member)
+            db.session.commit()
+            flash(f'ลงทะเบียนเรียบร้อยแล้ว กรุณาลงชื่อเข้าใช้งาน', 'success')
+            return redirect(url_for('cmte.sponsor_member_login'))
+        else:
+            flash(f'{form.email.data} มีการลงทะเบียนแล้ว หากลืมรหัสผ่านกรุณาติดต่อเจ้าหน้าที่', 'warning')
+    return render_template('cmte/sponsor/member_form.html', form=form)

@@ -1,31 +1,24 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include "cmte/nav.html" %}
 <section class="section">
     <div class="container">
         <h1 class="title">ระบบสารสนเทศการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
         <h1 class="subtitle">ศูนย์การศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column is-one-third is-offset-1">
-                <article class="panel is-danger">
-                    <p class="panel-heading">สมาชิก</p>
-                    <a class="panel-block" href="{{url_for('member.individual_score_index')}}">
-                        ขออนุมัติคะแนนรายบุคคล
-                    </a>
-                    <a class="panel-block" href="{{url_for('cmte.register_event')}}">
-                        ตรวจสอบคะแนน
-                    </a>
-                </article>
-            </div>
-            <div class="column is-one-third is-offset-2">
-                <article class="panel">
+            <div class="column is-one-third is-offset-4">
+                <article class="panel is-info">
                     <p class="panel-heading">สถาบันการศึกษาต่อเนื่อง</p>
+                    <a class="panel-block" href="{{url_for('cmte.register_event')}}">
+                        ลงทะเบียน / จัดการข้อมูลสถาบัน
+                    </a>
                     <a class="panel-block" href="{{url_for('cmte.register_event')}}">
                         ขออนุมัติจัดกิจกรรมใหม่
                     </a>
                     <a class="panel-block" href="{{url_for('cmte.show_draft_events')}}">
-                        รายการกิจกรรมทั้งหมด
+                        รายการกิจกรรม
                     </a>
                 </article>
             </div>

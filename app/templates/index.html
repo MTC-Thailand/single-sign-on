@@ -1,10 +1,42 @@
 {% extends "base.html" %}
 
 {% block content %}
+<section class="hero is-medium is-link">
+  <div class="hero-body">
+    <p class="title">ระบบสารสนเทศสภาเทคนิคการแพทย์</p>
+    <div class="grid">
+      <div class="cell box has-text-centered">
+        <figure class="image is-128x128 is-inline-block">
+          <a href="{{url_for('member.index')}}">
+            <img src="{{url_for('static', filename='study.png')}}" />
+          </a>
+        </figure>
+        <h1 class="title is-size-4 has-text-dark mt-4">สมาชิก</h1>
+      </div>
+      <div class="cell box has-text-centered">
+        <figure class="image is-128x128 is-inline-block">
+          <a href="{{url_for('cmte.cmte_index')}}">
+            <img src="{{url_for('static', filename='education.png')}}" />
+          </a>
+        </figure>
+        <h1 class="title is-size-4 has-text-dark mt-4">
+          สถาบันจัดฝึกอบรมการศึกษาต่อเนื่อง
+        </h1>
+      </div>
+      <div class="cell box has-text-centered">
+        <figure class="image is-128x128 is-inline-block">
+          <img src="{{url_for('static', filename='classroom.png')}}" />
+        </figure>
+        <h1 class="title is-size-4 has-text-dark mt-4">
+          เจ้าหน้าที่
+        </h1>
+      </div>
+    </div>
+  </div>
+</section>
 <section class="section">
   <div class="columns">
     <div class="column has-text-centered">
-      {% include "messages.html" %}
       {% if current_user.is_authenticated %}
       <p>
         Welcome {{ current_user.username }}!
