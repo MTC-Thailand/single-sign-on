@@ -13,7 +13,7 @@ import pandas as pd
 from flask import render_template, make_response, jsonify, current_app, flash, request, redirect, url_for, session
 from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_
 
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm
@@ -443,6 +443,14 @@ def individual_score_index():
     return render_template('members/cmte/individual_score_index.html', event_types=event_types)
 
 
+@member.route('/cmte/individual-score-group/index', methods=['GET'])
+@login_required
+def individual_score_group_index():
+    event_types = CMTEEventType.query \
+        .filter_by(for_group=True, is_sponsored=False).all()
+    return render_template('members/cmte/individual_score_group_index.html', event_types=event_types)
+
+
 @member.route('/cmte/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
 @login_required
 def individual_score_form(event_type_id):
@@ -462,6 +470,7 @@ def individual_score_form(event_type_id):
                                  region_name=os.environ.get('BUCKETEER_AWS_REGION'))
         for doc_form in form.upload_files:
             _file = doc_form.upload_file.data
+            print(_file)
             if _file:
                 filename = _file.filename
                 key = uuid.uuid4()
@@ -475,6 +484,59 @@ def individual_score_form(event_type_id):
         flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
         return redirect(url_for('member.index'))
     return render_template('members/cmte/individual_score_form.html', form=form)
+
+
+@member.route('/cmte/individual-score-group/<int:event_type_id>/form', methods=['GET', 'POST'])
+@login_required
+def individual_score_group_form(event_type_id):
+    form = IndividualScoreForm()
+    s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                             aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                             region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+    all_docs = []
+    for doc_form in form.upload_files:
+        _file = doc_form.upload_file.data
+        if _file:
+            filename = _file.filename
+            key = uuid.uuid4()
+            s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+            all_docs.append((key, filename, doc_form.note.data))
+    if form.validate_on_submit():
+        for license_number in request.form.getlist('licenses'):
+            record = CMTEEventParticipationRecord()
+            form.populate_obj(record)
+            record.individual = True
+            record.license_number = license_number
+            record.event_type_id = event_type_id
+            record.create_datetime = arrow.now('Asia/Bangkok').datetime
+            for key, filename, note in all_docs:
+                doc = CMTEEventDoc(record=record, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = note
+                db.session.add(doc)
+            db.session.add(record)
+        db.session.commit()
+        flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
+        return redirect(url_for('member.index'))
+    return render_template('members/cmte/individual_score_group_form.html', form=form)
+
+
+@member.route('/api/members')
+@login_required
+def get_members():
+    term = request.args.get('term')
+    search = f'%{term}%'
+    members = []
+    for member in Member.query.filter(or_(Member.th_firstname.like(search),
+                                      Member.th_lastname.like(search))):
+        members.append({
+            'id': member.license_number,
+            'text': member.th_fullname
+        })
+
+    print(members)
+
+    return jsonify({'results': members})
 
 
 @member.route('/api/otp', methods=['POST', 'GET'])

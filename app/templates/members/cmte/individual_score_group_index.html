@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "members/cmte/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนน</h1>
+                <table class="table is-fullwidth">
+                    <thead>
+                    <th>กิจกรรม</th>
+                    <th>รายละเอียด</th>
+                    <th>เกณฑ์การให้คะแนน</th>
+                    <th></th>
+                    </thead>
+                    <tbody>
+                    {% for et in event_types %}
+                    <tr>
+                        <td>{{et.name}}</td>
+                        <td>{{et.desc}}</td>
+                        <td>{{et.score_criteria}}</td>
+                        <td>
+                            <a class="button is-primary" href="{{url_for('member.individual_score_group_form', event_type_id=et.id)}}">
+                                ยื่นคะแนน
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <h1 class="title has-text-centered is-size-4">รายการยื่นขออนุมัติคะแนนส่วนบุคคลที่รอการอนุมัติ</h1>
+                <table class="table is-fullwidth">
+                    <thead>
+                    <th>รายละเอียด</th>
+                    <th>วันที่ยื่น</th>
+                    </thead>
+                    <tbody>
+                        {% for rec in current_user.valid_license.pending_individual_cmte_records %}
+                        <tr>
+                            <td>{{rec.desc}}</td>
+                            <td>{{rec.create_datetime|localdatetime}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="columns">
+            <div class="column">
+                <div class="buttons is-centered">
+                    <a href="{{url_for('member.index')}}" class="button is-light">
+                        <span class="icon">
+                            <i class="fas fa-chevron-left"></i>
+                        </span>
+                        <span>กลับ</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

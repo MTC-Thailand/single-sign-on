@@ -16,6 +16,12 @@
                             {{form.desc(class="textarea is-danger")}}
                         </div>
                     </div>
+                    <div class="field">
+                        <label class="label">รายชื่อสมาชิก</label>
+                        <div class="control">
+                            <select multiple="multiple" name="licenses" class="js-example-basic-multiple"></select>
+                        </div>
+                    </div>
                     {% for f_field in form.upload_files %}
                         <div class="field">
                             {{f_field()}}
@@ -34,4 +40,20 @@
         </div>
     </div>
 </section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script>
+    $(document).ready(function() {
+        $('.js-example-basic-multiple').select2({
+            width: "100%",
+            ajax: {
+                url: {{url_for('member.get_members')|tojson|safe}},
+                dataType: 'json'
+                // Additional AJAX parameters go here; see the end of this chapter for the full code of this example
+            }
+        }
+        );
+    });
+</script>
 {% endblock %}
