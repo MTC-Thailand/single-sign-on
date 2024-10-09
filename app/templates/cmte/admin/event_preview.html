@@ -64,7 +64,8 @@
                         <td><strong>อัตราค่าธรรมเนียมขออนุมัติจัดกิจกรรม</strong></td>
                         <td>{{event.fee_rate}}</td>
                         {% if event.payment_datetime %}
-                        <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}</td>
+                        <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}
+                        </td>
                         {% else %}
                         <td></td>
                         {% endif %}

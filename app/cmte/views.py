@@ -219,7 +219,7 @@ def process_payment(event_id):
     event = CMTEEvent.query.get(event_id)
     if request.method == 'POST':
         if form.validate_on_submit():
-            doc = CMTEEventDoc.query.filter(event_id=event_id, is_payment_slip=True).first()
+            doc = CMTEEventDoc.query.filter_by(event_id=event_id, is_payment_slip=True).first()
             if doc:
                 db.session.delete(doc)
                 db.session.commit()

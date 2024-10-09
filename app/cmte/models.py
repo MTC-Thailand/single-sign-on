@@ -168,6 +168,10 @@ class CMTEEvent(db.Model):
             return True
         return False
 
+    @property
+    def payment_slip(self):
+        return self.docs.filter_by(is_payment_slip=True).first()
+
 
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
