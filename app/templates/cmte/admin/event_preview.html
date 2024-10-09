@@ -65,6 +65,14 @@
                         <td>{{event.fee_rate}}</td>
                         {% if event.payment_datetime %}
                         <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}
+                            {% if event.payment_slip %}
+                            <a class="button is-small" href="{{url_for('cmte.download_file', key=event.payment_slip.key, download_filename=event.payment_slip.filename)}}">
+                                <span class="icon">
+                                    <i class="fas fa-cloud-download-alt"></i>
+                                </span>
+                                <span>download slip</span>
+                            </a>
+                            {% endif %}
                         </td>
                         {% else %}
                         <td></td>

@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import timedelta, datetime
 from io import BytesIO
+import pandas as pd
 
 import arrow
 import boto3
@@ -15,7 +16,8 @@ from pytz import timezone
 from app import db, sponsor_event_management_permission
 from app.cmte import cmte_bp as cmte
 from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm, \
-    CMTESponsorMemberForm, CMTESponsorMemberLoginForm, CMTEEventSponsorForm, CMTEPaymentForm
+    CMTESponsorMemberForm, CMTESponsorMemberLoginForm, CMTEEventSponsorForm, CMTEPaymentForm, \
+    CMTEParticipantFileUploadForm
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, \
     CMTESponsorMember, CMTEEventSponsor
 from app.members.models import License
@@ -125,9 +127,35 @@ def get_fee_rates():
 @login_required
 @cmte_sponsor_admin_permission.require()
 def preview_event(event_id):
+    form = CMTEParticipantFileUploadForm()
     event = CMTEEvent.query.get(event_id)
     next_url = request.args.get('next_url')
-    return render_template('cmte/event_preview.html', event=event, next_url=next_url)
+    return render_template('cmte/event_preview.html', event=event, next_url=next_url, form=form)
+
+
+@cmte.post('/events/<int:event_id>/participants')
+@login_required
+@cmte_sponsor_admin_permission.require()
+def add_participants(event_id):
+    form = CMTEParticipantFileUploadForm()
+    event = CMTEEvent.query.get(event_id)
+    _file = form.upload_file.data
+    df = pd.read_excel(_file, sheet_name='Sheet1')
+    for idx, row in df.iterrows():
+        license_number = str(row['license_number'])
+        score = float(row['score'])
+        rec = CMTEEventParticipationRecord.query.filter_by(license_number=license_number,
+                                                           event_id=event_id).first()
+        if not rec:
+            rec = CMTEEventParticipationRecord()
+            rec.license_number = license_number
+            rec.event_id = event_id
+        rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+        rec.score = event.cmte_points if score > event.cmte_points else score
+        db.session.add(rec)
+    db.session.commit()
+    flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
+    return redirect(url_for('cmte.preview_event', event_id=event_id))
 
 
 @cmte.route('/admin/events/<int:event_id>/preview', methods=('GET', 'POST'))

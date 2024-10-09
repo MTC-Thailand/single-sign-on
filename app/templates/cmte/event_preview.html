@@ -56,6 +56,11 @@
                         <td></td>
                     </tr>
                     <tr>
+                        <td><strong>หน่วยคะแนนที่อนุมัติ</strong></td>
+                        <td>{{event.cmte_points or 'ยังไม่กำหนด'}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
                         <td><strong>Website</strong></td>
                         <td><a href="{{event.website}}">{{event.website or 'ไม่ระบุ'}}</a></td>
                         <td></td>
@@ -64,8 +69,23 @@
                         <td><strong>อัตราค่าธรรมเนียมขออนุมัติจัดกิจกรรม</strong></td>
                         <td>{{event.fee_rate}}</td>
                         {% if event.payment_datetime %}
-                        <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}</td>
+                        <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}
+                            {% if event.payment_slip %}
+                            <a class="button is-small" href="{{url_for('cmte.download_file', key=event.payment_slip.key, download_filename=event.payment_slip.filename)}}">
+                                <span class="icon">
+                                    <i class="fas fa-cloud-download-alt"></i>
+                                </span>
+                                <span>download slip</span>
+                           </a>
+                            <a class="button is-small" href="{{url_for('cmte.process_payment', event_id=event.id)}}">
+                                <span class="icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </span>
+                                <span>upload slip</span>
+                            </a>
+                            {% endif %}
                         {% else %}
+                        </td>
                         <td></td>
                         {% endif %}
                     </tr>
@@ -125,6 +145,19 @@
                         </span>
                         <span>เพิ่มรายชื่อผู้เข้าร่วม</span>
                     </a>
+                    หรือ
+                    <form class="notification is-light" method="post" action="{{url_for('cmte.add_participants', event_id=event.id)}}" enctype="multipart/form-data">
+                        {{form.hidden_tag()}}
+                        <div class="field">
+                            <label class="label">Upload รายชื่อ</label>
+                            <div class="control">
+                                {{form.upload_file()}}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <input type="submit" value="Upload" class="button is-small is-success">
+                        </div>
+                    </form>
                     {% endif %}
                 </div>
                 <h1 class="title is-size-4">รายชื่อผู้เข้าร่วม</h1>

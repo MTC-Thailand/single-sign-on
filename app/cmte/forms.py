@@ -77,3 +77,7 @@ class CMTEEventSponsorForm(ModelForm):
 
 class CMTEPaymentForm(FlaskForm):
     upload_file = FormField(CMTEEventDocForm, default=CMTEEventDoc)
+
+
+class CMTEParticipantFileUploadForm(FlaskForm):
+    upload_file = FileField('Participants')
