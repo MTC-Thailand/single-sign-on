@@ -31,10 +31,12 @@
                 </a>
                 {% else %}
                 <a class="navbar-item" href="{{ url_for('users.register_user') }}">
-                    <span class="icon">
-                        <i class="fas fa-user-cog"></i>
-                    </span>
-                    <span>Register Admin</span>
+                    <button class="button is-link">
+                        <span class="icon">
+                            <i class="fas fa-user-cog"></i>
+                        </span>
+                        <span>Register Admin</span>
+                    </button>
                 </a>
                 {% endif %}
 <!--                <a class="navbar-item" href="/">-->

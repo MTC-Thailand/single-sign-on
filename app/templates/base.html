@@ -18,20 +18,22 @@
 {% block content %}
 {% endblock %}
 {% block footer %}
-<div class="container">
-    <h1 class="title is-size-6 has-text-centered has-text-danger">
-        ระบบสมาชิกจะเริ่มทดลองใช้งานตั้งแต่วันที่ 15 ตุลาคม 2567 เป็นต้นไป
-    </h1>
-    {% if config['DEBUG'] %}
-    <article class="message is-warning">
-        <div class="message-header">
-            DEBUG MODE
-        </div>
-        <div class="message-body">
-            <strong>Template file:</strong> {{ self._TemplateReference__context.name }}
-        </div>
-    </article>
-    {% endif %}
+<div class="section">
+    <div class="container">
+        <h1 class="title is-size-6 has-text-centered has-text-danger">
+            ระบบสมาชิกจะเริ่มทดลองใช้งานตั้งแต่วันที่ 15 ตุลาคม 2567 เป็นต้นไป
+        </h1>
+        {% if config['DEBUG'] %}
+        <article class="message is-warning">
+            <div class="message-header">
+                DEBUG MODE
+            </div>
+            <div class="message-body">
+                <strong>Template file:</strong> {{ self._TemplateReference__context.name }}
+            </div>
+        </article>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
 {% block scripts %}
