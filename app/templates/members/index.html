@@ -6,16 +6,47 @@
     <div class="container">
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column is-one-third is-offset-4">
-                <article class="panel is-danger">
-                    <p class="panel-heading">CMTE</p>
-                    <a class="panel-block" href="{{url_for('member.individual_score_index')}}">
-                        ขออนุมัติคะแนนรายบุคคล
-                    </a>
-                    <a class="panel-block" href="{{url_for('cmte.register_event')}}">
-                        ตรวจสอบคะแนน
-                    </a>
-                </article>
+            <div class="column is-one-fifth">
+                <aside class="menu">
+                    <p class="menu-label">Administration</p>
+                    <ul class="menu-list">
+                        <li><a>ข้อมูลส่วนตัว</a></li>
+                        <li>
+                            <a>การศึกษาต่อเนื่อง (CMTE)</a>
+                            <ul>
+                                <li><a>ตรวจสอบหน่วยคะแนน</a></li>
+                                <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
+                                <li><a>รายการกิจกรรม</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </aside>
+
+            </div>
+            <div class="column is-two-fifths">
+                <div class="box">
+                    <div class="has-text-centered">
+                        <figure class="image is-128x128 is-inline-block">
+                            <img src="{{url_for('static', filename='doctor.png')}}">
+                        </figure>
+                        <h1 class="title">{{current_user.th_fullname}}</h1>
+                        <h1 class="subtitle">ท.น.{{current_user.license_number}}</h1>
+                    </div>
+                    <table class="table is-fullwidth mt-4">
+                        <tr>
+                            <td><strong>ใบอนุญาตหมดอายุ</strong></td>
+                            <td>{{current_user.valid_license.end_date|localdate}} ({{current_user.valid_license.end_date|humanizedate}})</td>
+                        </tr>
+                        <tr>
+                            <td><strong>สถานะใบอนุญาต</strong></td>
+                            <td>ปกติ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>หน่วยคะแนน CMTE</strong></td>
+                            <td>150</td>
+                        </tr>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

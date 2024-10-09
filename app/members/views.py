@@ -1,6 +1,9 @@
 import json
 
 import os
+import uuid
+
+import boto3
 from dateutil.relativedelta import relativedelta
 from pprint import pprint
 
@@ -17,7 +20,7 @@ from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, Membe
 
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm
-from app.cmte.models import CMTEEventType
+from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc
 from app import admin_permission
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
@@ -443,9 +446,34 @@ def individual_score_index():
 @member.route('/cmte/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
 @login_required
 def individual_score_form(event_type_id):
+    if not current_user.valid_license.get_active_cmte_fee_payment():
+        flash('กรุณาชำระค่าธรรมเนียมการยื่นขอคะแนนส่วนบุคคลก่อนดำเนินการต่อ', 'warning')
+        return redirect(url_for('member.index'))
     form = IndividualScoreForm()
     if form.validate_on_submit():
-        pass
+        record = CMTEEventParticipationRecord()
+        form.populate_obj(record)
+        record.individual = True
+        record.license = current_user.valid_license
+        record.event_type_id = event_type_id
+        record.create_datetime = arrow.now('Asia/Bangkok').datetime
+        s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                 aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                 region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+        for doc_form in form.upload_files:
+            _file = doc_form.upload_file.data
+            if _file:
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTEEventDoc(record=record, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = doc_form.note.data
+                db.session.add(doc)
+        db.session.add(record)
+        db.session.commit()
+        flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
+        return redirect(url_for('member.index'))
     return render_template('members/cmte/individual_score_form.html', form=form)
 
 

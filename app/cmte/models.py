@@ -169,6 +169,26 @@ class CMTEEvent(db.Model):
         return False
 
 
+class CMTEEventParticipationRecord(db.Model):
+    __tablename__ = 'cmte_event_participation_records'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    license_number = db.Column('license_number', db.ForeignKey('licenses.number'), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
+    event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
+    event = db.relationship(CMTEEvent, backref=db.backref('participants'))
+    create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
+    approved_date = db.Column('approved_date', db.Date())
+    license = db.relationship('License', backref=db.backref('cmte_records', lazy='dynamic'))
+    score = db.Column('score', db.Numeric(), info={'label': 'Score'})
+    desc = db.Column('description', db.Text(), info={'label': 'รายละเอียดกิจกรรม'})
+    individual = db.Column('individual', db.Boolean(), default=False)
+    event_type_id = db.Column('event_type_id', db.ForeignKey('cmte_event_types.id'))
+    score_valid_until = db.Column('score_valid_until', db.Date())
+
+    @property
+    def is_valid(self):
+        return self.score_valid_until < self.license.end_date
+
+
 class CMTEEventDoc(db.Model):
     __tablename__ = 'cmte_event_docs'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
@@ -178,18 +198,9 @@ class CMTEEventDoc(db.Model):
     filename = db.Column('filename', db.Text(), nullable=False)
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
     note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
-
-
-class CMTEEventParticipationRecord(db.Model):
-    __tablename__ = 'cmte_event_participation_records'
-    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    license_number = db.Column('license_number', db.ForeignKey('licenses.number'), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
-    event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
-    event = db.relationship(CMTEEvent, backref=db.backref('participants'))
-    create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
-    approved_date = db.Column('approved_date', db.Date())
-    license = db.relationship('License', backref=db.backref('cmte_records'))
-    score = db.Column('score', db.Numeric(), info={'label': 'Score'})
+    record_id = db.Column('record_id', db.ForeignKey('cmte_event_participation_records.id'))
+    record = db.relationship(CMTEEventParticipationRecord,
+                             backref=db.backref('docs', cascade='all, delete-orphan'))
 
 
 class CMTEFeePaymentRecord(db.Model):

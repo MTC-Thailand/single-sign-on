@@ -29,16 +29,31 @@
                     {% endfor %}
                     </tbody>
                 </table>
+                <h1 class="title has-text-centered is-size-4">รายการยื่นขออนุมัติคะแนนส่วนบุคคลที่รอการอนุมัติ</h1>
+                <table class="table is-fullwidth">
+                    <thead>
+                    <th>รายละเอียด</th>
+                    <th>วันที่ยื่น</th>
+                    </thead>
+                    <tbody>
+                        {% for rec in current_user.valid_license.pending_individual_cmte_records %}
+                        <tr>
+                            <td>{{rec.desc}}</td>
+                            <td>{{rec.create_datetime|localdatetime}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
         <div class="columns">
             <div class="column">
                 <div class="buttons is-centered">
-                    <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">
+                    <a href="{{url_for('member.index')}}" class="button is-light">
                         <span class="icon">
-                            <i class="far fa-hand-point-left"></i>
+                            <i class="fas fa-chevron-left"></i>
                         </span>
-                        <span>back</span>
+                        <span>กลับ</span>
                     </a>
                 </div>
             </div>

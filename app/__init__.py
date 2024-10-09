@@ -118,7 +118,7 @@ def create_app():
     @app.template_filter("humanizedate")
     def humanize_date(dt):
         if dt:
-            return arrow.get(dt).humanize(locale='th', granularity='day')
+            return arrow.get(dt).humanize(locale='th', granularity=['year', 'day'])
         else:
             return None
 
