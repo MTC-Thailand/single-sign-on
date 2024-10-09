@@ -14,7 +14,7 @@
                         <li>
                             <a>การศึกษาต่อเนื่อง (CMTE)</a>
                             <ul>
-                                <li><a>ตรวจสอบหน่วยคะแนน</a></li>
+                                <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved')}}">ตรวจสอบหน่วยคะแนน</a></li>
                                 <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
                                 <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
                                 <li><a>รายการกิจกรรม</a></li>
@@ -44,7 +44,7 @@
                         </tr>
                         <tr>
                             <td><strong>หน่วยคะแนน CMTE</strong></td>
-                            <td>150</td>
+                            <td>{{valid_cmte_scores}}</td>
                         </tr>
                     </table>
                 </div>

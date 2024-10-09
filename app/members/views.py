@@ -13,7 +13,7 @@ import pandas as pd
 from flask import render_template, make_response, jsonify, current_app, flash, request, redirect, url_for, session
 from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
-from sqlalchemy import create_engine, or_
+from sqlalchemy import create_engine, or_, func
 
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm
@@ -432,7 +432,10 @@ def logout():
 @member.route('/')
 @login_required
 def index():
-    return render_template('members/index.html')
+    valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score))\
+        .filter(CMTEEventParticipationRecord.approved_date != None,
+                CMTEEventParticipationRecord.score_valid_until==current_user.valid_license.end_date).scalar()
+    return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores)
 
 
 @member.route('/cmte/individual-scores/index', methods=['GET'])
@@ -521,6 +524,47 @@ def individual_score_group_form(event_type_id):
     return render_template('members/cmte/individual_score_group_form.html', form=form)
 
 
+@member.route('/cmte/scores', methods=['GET', 'POST'])
+@login_required
+def summarize_cmte_scores():
+    filter = request.args.get('filter', '')
+    records = []
+    query = CMTEEventParticipationRecord.query.filter_by(license_number=current_user.license_number)
+    if filter == 'pending':
+        query = query.filter_by(approved_date=None)
+    elif filter == 'approved':
+        query = query.filter(CMTEEventParticipationRecord.approved_date != None)
+    elif filter == 'approved_valid':
+        query = query.filter(CMTEEventParticipationRecord.approved_date != None,
+                             CMTEEventParticipationRecord.score_valid_until==current_user.valid_license.end_date)
+    query = query.order_by(CMTEEventParticipationRecord.create_datetime.desc())
+
+    for record in query:
+        if record.event:
+            event_title = record.event.title
+        else:
+            event_type = CMTEEventType.query.get(record.event_type_id)
+            event_title = event_type.name
+        records.append({
+            'ชื่อกิจกรรม': event_title,
+            'รายละเอียด': record.desc or '',
+            'เริ่ม': record.event.start_date.strftime('%d/%m/%Y') if record.event else '',
+            'สิ้นสุด': record.event.end_date.strftime('%d/%m/%Y') if record.event else '',
+            'หน่วยคะแนนรวม': record.event.cmte_points if record.event else '',
+            'หน่วยคะแนนที่ได้รับ': record.score or '',
+            'สถาบันฝึกอบรม': record.event.sponsor if record.event else '',
+            'วันที่อนุมัติ': record.approved_date.strftime('%d/%m/%Y') if record.approved_date else '',
+            'วันหมดอายุ': record.score_valid_until.strftime('%d/%m/%Y') if record.score_valid_until else '',
+            'วันที่บันทึก': record.create_datetime.strftime('%d/%m/%Y'),
+        })
+    df = pd.DataFrame.from_dict(records)
+    pending_record_counts = current_user.valid_license.pending_cmte_records.count()
+    score_table = df.to_html(index=False, classes='table table-striped')
+    return render_template('members/cmte/score_summary.html',
+                           pending_record_counts=pending_record_counts,
+                           score_table=score_table, filter=filter)
+
+
 @member.route('/api/members')
 @login_required
 def get_members():
@@ -528,7 +572,7 @@ def get_members():
     search = f'%{term}%'
     members = []
     for member in Member.query.filter(or_(Member.th_firstname.like(search),
-                                      Member.th_lastname.like(search))):
+                                          Member.th_lastname.like(search))):
         members.append({
             'id': member.license_number,
             'text': member.th_fullname
