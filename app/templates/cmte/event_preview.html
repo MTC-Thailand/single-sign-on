@@ -154,8 +154,18 @@
                                 {{form.upload_file()}}
                             </div>
                         </div>
-                        <div class="field">
-                            <input type="submit" value="Upload" class="button is-small is-success">
+                        <div class="field is-grouped">
+                            <div class="control">
+                                <input type="submit" value="Upload" class="button is-small is-success">
+                            </div>
+                            <div class="control">
+                                <a class="button is-small is-light" href="{{url_for('cmte.get_participants_template_file')}}">
+                                    <span class="icon">
+                                        <i class="fas fa-file-download"></i>
+                                    </span>
+                                    <span>template file</span>
+                                </a>
+                            </div>
                         </div>
                     </form>
                     {% endif %}

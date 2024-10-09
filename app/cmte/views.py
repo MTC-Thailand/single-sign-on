@@ -1,3 +1,4 @@
+import io
 import time
 import os
 import uuid
@@ -156,6 +157,17 @@ def add_participants(event_id):
     db.session.commit()
     flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
     return redirect(url_for('cmte.preview_event', event_id=event_id))
+
+
+@cmte.get('/events/participants/template-file')
+@login_required
+@cmte_sponsor_admin_permission.require()
+def get_participants_template_file():
+    df = pd.DataFrame({'name': [], 'license_number': [], 'score': []})
+    output = io.BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+    return send_file(output, download_name=f'cmte_point_template.xlsx')
 
 
 @cmte.route('/admin/events/<int:event_id>/preview', methods=('GET', 'POST'))
