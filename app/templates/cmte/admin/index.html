@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include "cmte/admin_nav.html" %}
 <section class="section">
     <div class="container">
-        <h1 class="title">Welcome to CMTE.</h1>
         {% include "messages.html" %}
         <div class="columns">
             <div class="column is-one-third is-offset-4">
@@ -14,6 +14,12 @@
                             <i class="fas fa-check"></i>
                         </span>
                         อนุมัติกิจกรรม
+                    </a>
+                    <a class="panel-block" href="{{url_for('cmte.admin_edit_fee_payment_record')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </span>
+                        เพิ่มรายการชำระค่าธรรมเนียมรายบุคคล
                     </a>
                     <a class="panel-block" href="{{url_for('index')}}">
                         <span class="panel-icon">

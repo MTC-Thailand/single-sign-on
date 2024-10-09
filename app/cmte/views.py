@@ -15,7 +15,7 @@ from pytz import timezone
 from app import db, sponsor_event_management_permission
 from app.cmte import cmte_bp as cmte
 from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm, \
-    CMTESponsorMemberForm, CMTESponsorMemberLoginForm, CMTEEventSponsorForm
+    CMTESponsorMemberForm, CMTESponsorMemberLoginForm, CMTEEventSponsorForm, CMTEPaymentForm
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, \
     CMTESponsorMember, CMTEEventSponsor
 from app.members.models import License
@@ -55,7 +55,6 @@ def admin_index():
 @cmte_sponsor_admin_permission.require()
 def register_event():
     if not sponsor_event_management_permission.can():
-        print(sponsor_event_management_permission.can(), current_user)
         return render_template('errors/sponsor_expired.html')
     form = CMTEEventForm()
     return render_template('cmte/event_registration.html', form=form)
@@ -86,6 +85,7 @@ def create_event(event_id=None):
         event.fee_rate_id = event_type_fee_rate_id
         event.start_date = arrow.get(event.start_date, 'Asia/Bangkok').datetime
         event.end_date = arrow.get(event.end_date, 'Asia/Bangkok').datetime
+        event.sponsor = current_user.sponsor
         s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                  aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                  region_name=os.environ.get('BUCKETEER_AWS_REGION'))
@@ -211,20 +211,37 @@ def submit_event(event_id):
     return resp
 
 
-@cmte.post('/events/<int:event_id>/payment')
+@cmte.route('/events/<int:event_id>/payment', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.require()
 def process_payment(event_id):
-    # mimic an ajax request to the payment system
-    time.sleep(3)
+    form = CMTEPaymentForm()
     event = CMTEEvent.query.get(event_id)
-    event.payment_datetime = arrow.now('Asia/Bangkok').datetime
-    db.session.add(event)
-    db.session.commit()
-    resp = make_response()
-    flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
-    resp.headers['HX-Redirect'] = url_for('cmte.preview_event', event_id=event_id)
-    return resp
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            doc = CMTEEventDoc.query.filter(event_id=event_id, is_payment_slip=True).first()
+            if doc:
+                db.session.delete(doc)
+                db.session.commit()
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            _file = form.upload_file.upload_file.data
+            if _file:
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTEEventDoc(event=event, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = form.upload_file.note.data
+                doc.is_payment_slip = True
+                db.session.add(doc)
+            event.payment_datetime = arrow.now('Asia/Bangkok').datetime
+            db.session.add(event)
+            db.session.commit()
+            flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('cmte.preview_event', event_id=event_id))
+    return render_template('cmte/event_payment_form.html', event=event, form=form)
 
 
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
@@ -284,7 +301,7 @@ def edit_participants(event_id: int = None, rec_id: int = None):
 
 @cmte.get('/admin/events/pending')
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_admin_permission.require()
 def pending_events():
     page = request.args.get('page', type=int, default=1)
     query = CMTEEvent.query.filter_by(approved_datetime=None).filter(CMTEEvent.payment_datetime != None).filter(

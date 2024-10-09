@@ -418,7 +418,7 @@ def login():
 def logout():
     if current_user.is_authenticated:
         logout_user()
-        for key in ('identity.name', 'identity.auth_type'):
+        for key in ('identity.name', 'identity.auth_type', 'login_as'):
             session.pop(key, None)
 
         # Tell Flask-Principal the user is anonymous

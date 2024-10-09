@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include "cmte/nav.html" %}
 <section class="section">
   <div class="container">
-    <h1 class="title">Welcome to CMTE.</h1>
     {% include "messages.html" %}
     <div class="columns">
       <div class="column">
@@ -70,9 +70,6 @@
             </span>
           </button>
           {% endif %}
-        </div>
-        <div class="buttons is-centered">
-          <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Home</a>
         </div>
       </div>
     </div>

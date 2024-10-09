@@ -1,0 +1,49 @@
+<nav class="navbar is-link">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="{{ url_for('index') }}">
+                    <span class="icon">
+                        <i class="fas fa-house-user"></i>
+                    </span>
+                <span>Home</span>
+            </a>
+            <span class="navbar-burger burger" data-target="navbarMenuHeroA">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+        </div>
+        <div id="navbarMenuHeroA" class="navbar-menu">
+            <div class="navbar-end">
+                <a class="navbar-item" href="{{url_for('cmte.admin_index')}}">
+                    <span class="icon">
+                        <i class="fas fa-bars"></i>
+                    </span>
+                    <span>เมนูหลัก</span>
+                </a>
+                {% if current_user.is_authenticated %}
+                <a class="navbar-item">
+                    <span class="icon">
+                        <i class="fas fa-user-cog"></i>
+                    </span>
+                    <span>
+                       {{ current_user }}
+                   </span>
+                </a>
+                <a class="navbar-item" href="{{ url_for('member.logout') }}">
+                    <span class="icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </span>
+                    <span>ออกจากระบบ</span>
+                </a>
+                {% endif %}
+                <!--                <a class="navbar-item" href="/">-->
+                <!--                       <span class="icon">-->
+                <!--                           <i class="fa-solid fa-circle-info"></i>-->
+                <!--                       </span>-->
+                <!--                    <span>แจ้งปัญหา/ขอความช่วยเหลือ</span>-->
+                <!--                </a>-->
+            </div>
+        </div>
+    </div>
+</nav>

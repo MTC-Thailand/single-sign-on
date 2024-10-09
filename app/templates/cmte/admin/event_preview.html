@@ -6,9 +6,10 @@
 {% endblock %}
 
 {% block content %}
+{% include "cmte/admin_nav.html" %}
 <section class="section">
     <div class="container">
-        <h1 class="title">Event Registration Preview</h1>
+        <h1 class="title has-text-centered">Event Registration Preview</h1>
         {% include "messages.html" %}
         <div class="columns">
             <div class="column">
@@ -181,14 +182,6 @@
                     </tr>
                     </tbody>
                 </table>
-                <div class="buttons is-centered">
-                    <a href="{{next_url}}" class="button is-light">
-                        <span class="icon">
-                            <i class="fa-solid fa-chevron-left"></i>
-                        </span>
-                        <span>กลับ</span>
-                    </a>
-                </div>
             </div>
         </div>
     </div>

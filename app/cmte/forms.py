@@ -73,3 +73,7 @@ class CMTESponsorMemberLoginForm(ModelForm):
 class CMTEEventSponsorForm(ModelForm):
     class Meta:
         model = CMTEEventSponsor
+
+
+class CMTEPaymentForm(FlaskForm):
+    upload_file = FormField(CMTEEventDocForm, default=CMTEEventDoc)

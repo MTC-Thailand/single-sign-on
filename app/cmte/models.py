@@ -201,6 +201,7 @@ class CMTEEventDoc(db.Model):
     record_id = db.Column('record_id', db.ForeignKey('cmte_event_participation_records.id'))
     record = db.relationship(CMTEEventParticipationRecord,
                              backref=db.backref('docs', cascade='all, delete-orphan'))
+    is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
 
 
 class CMTEFeePaymentRecord(db.Model):
