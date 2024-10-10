@@ -22,7 +22,7 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTESponsorMemberLoginForm,
                             CMTEEventSponsorForm,
                             CMTEPaymentForm,
-                            CMTEParticipantFileUploadForm)
+                            CMTEParticipantFileUploadForm, CMTEFeePaymentForm, CMTEAdminEventForm, CMTEEventCodeForm)
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, \
     CMTESponsorMember, CMTEEventSponsor
 from app.members.models import License
@@ -48,13 +48,6 @@ def download_file(key):
 @cmte.get('/')
 def cmte_index():
     return render_template('cmte/index.html')
-
-
-@cmte.get('/admin')
-@login_required
-@cmte_admin_permission.require()
-def admin_index():
-    return render_template('cmte/admin/index.html', cmte_admin_permission=cmte_admin_permission)
 
 
 @cmte.get('/events/registration')
@@ -600,3 +593,28 @@ def register_sponsor():
 def manage_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
     return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor)
+
+
+@cmte.route('/admin/events', methods=['GET', 'POST'])
+@cmte.route('/admin/events/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def admin_event_edit(event_id=None):
+    if event_id:
+        event = CMTEEvent.query.get(event_id)
+        form = CMTEAdminEventForm(obj=event)
+    else:
+        event = None
+        form = CMTEAdminEventForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            if not event:
+                event = CMTEEvent()
+            form.populate_obj(event)
+            db.session.add(event)
+            db.session.commit()
+            flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
+            return redirect(url_for('users.cmte_admin_index'))
+        else:
+            flash(f'Error {form.errors}', 'danger')
+    return render_template('cmte/admin/admin_event_form.html', form=form)

@@ -25,6 +25,9 @@ class CMTEEventSponsor(db.Model):
     registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
     expire_date = db.Column('expire_date', db.Date())
 
+    def __str__(self):
+        return self.name
+
 
 class CMTESponsorMember(UserMixin, db.Model):
     __tablename__ = 'cmte_sponsor_members'
@@ -139,8 +142,8 @@ class CMTEEvent(db.Model):
     event_type = db.relationship('CMTEEventType', backref=db.backref('events'))
     start_date = db.Column('start_date', db.DateTime(timezone=True), info={'label': 'เริ่มต้น'})
     end_date = db.Column('end_date', db.DateTime(timezone=True), info={'label': 'สิ้นสุด'})
-    submitted_datetime = db.Column('submitted_datetime', db.DateTime(timezone=True))
-    approved_datetime = db.Column('approved_datetime', db.DateTime(timezone=True))
+    submitted_datetime = db.Column('submitted_datetime', db.DateTime(timezone=True), info={'label': 'วันที่ยื่นขอ'})
+    approved_datetime = db.Column('approved_datetime', db.DateTime(timezone=True), info={'label': 'วันที่อนุมัติ'})
     cancelled_datetime = db.Column('cancelled_datetime', db.DateTime(timezone=True))
     sponsor_id = db.Column('sponsor_id', db.Integer, db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship('CMTEEventSponsor', backref=db.backref('events'))

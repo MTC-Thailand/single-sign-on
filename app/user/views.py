@@ -3,7 +3,7 @@ from flask_login import login_user, current_user, logout_user, login_required
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from werkzeug.security import check_password_hash
 
-from app import db, admin_permission
+from app import db, admin_permission, cmte_admin_permission
 from app.models import User, Client
 from app.user import user_bp as user
 from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm
@@ -84,7 +84,12 @@ def register_user():
 
 
 @user.route('/index')
-@login_required
-@admin_permission.require()
 def admin_index():
     return render_template('admin_index.html')
+
+
+@user.get('/cmte/admin')
+@login_required
+@cmte_admin_permission.require()
+def cmte_admin_index():
+    return render_template('cmte/admin/index.html')

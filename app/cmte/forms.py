@@ -33,6 +33,17 @@ class CMTEEventForm(ModelForm):
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
 
 
+class CMTEAdminEventForm(ModelForm):
+    class Meta:
+        model = CMTEEvent
+        datetime_format = '%d/%m/%Y %H:%M'
+        date_format = '%d/%m/%Y'
+
+    event_type = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
+    sponsor = QuerySelectField('สถาบันฝึกอบรม', query_factory=lambda: CMTEEventSponsor.query.all())
+
+
 class ParticipantForm(FlaskForm):
     license_number = StringField('License Number')
     score = DecimalField('Score', validators=[NumberRange(min=0)])

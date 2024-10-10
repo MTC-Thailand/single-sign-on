@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+{% include "cmte/nav.html" %}
+<section class="section">
+    <div class="container">
+        <h1 class="title has-text-centered">Event Registration</h1>
+        <h1 class="subtitle has-text-centered">ลงทะเบียนกิจกรรมเพื่อขออนุมัติคะแนน</h1>
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column is-two-thirds is-offset-2 box">
+                <form method="post" hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }' enctype="multipart/form-data">
+                    {{form.hidden_tag()}}
+                    <h5 class="title is-size-5">
+                        ข้อมูลกิจกรรม
+                    </h5>
+                    <div class="field">
+                        <label class="label">{{form.sponsor.label}}</label>
+                        {{form.sponsor(class="js-example-basic-single")}}
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.title.label}}</label>
+                        <div class="control">
+                            {{form.title(class="input")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.event_type.label}}</label>
+                        <div class="select">
+                            {% if event %}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates', fee_rate_id=event.fee_rate_id), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {% else %}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates'), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">ค่าธรรมเนียม</label>
+                        <div id="feeRateSelectField"></div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.start_date.label}}</label>
+                        <div class="control">
+                            {{form.start_date(class="input", type="text", required=True)}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.end_date.label}}</label>
+                        <div class="control">
+                            {{form.end_date(class="input", type="text", required=True)}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.venue.label}}</label>
+                        <div class="control">
+                            {{form.venue(class="textarea", placeholder="Optional")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.website.label}}</label>
+                        <div class="control">
+                            {{form.website(class="textarea", placeholder="Optional")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.submitted_datetime.label}}</label>
+                        <div class="control">
+                            {{form.submitted_datetime(class="input", type="text")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.approved_datetime.label}}</label>
+                        <div class="control">
+                            {{form.approved_datetime(class="input", type="text")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.cmte_points.label}}</label>
+                        <div class="control">
+                            {{form.cmte_points(class="input")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.event_code.label}}</label>
+                        <div class="control">
+                            {{form.event_code(class="input")}}
+                        </div>
+                    </div>
+                    <h5 class="title is-size-5">
+                        ข้อมูลสำหรับติดต่อประสานงานกิจกรรม
+                    </h5>
+                    <div class="notification">
+                        <div class="field">
+                            <label class="label">{{form.coord_name.label}}</label>
+                            <div class="control">
+                                {{form.coord_name(class="input", required=True)}}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">{{form.coord_email.label}}</label>
+                            <div class="control">
+                                {{form.coord_email(class="input", required=True)}}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">{{form.coord_phone.label}}</label>
+                            <div class="control">
+                                {{form.coord_phone(class="input", required=True)}}
+                            </div>
+                        </div>
+                    </div>
+                    <h5 class="title is-size-5">
+                        เอกสารประกอบการพิจารณา
+                    </h5>
+                    {% if event %}
+                    <ul class="notification">
+                        <label class="label">
+                            เอกสารที่อัพโหลดแล้ว
+                        </label>
+                        {% for doc in event.docs %}
+                        <li>
+                            {{doc.filename}}
+                            <a>
+                                <span class="icon">
+                                    <i class="fa-solid fa-trash-can has-text-danger"></i>
+                                </span>
+                            </a>
+                            <p class="help">{{doc.note}}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    <div class="notification">
+                        {% for upload_form in form.upload_files %}
+                        <div class="file">
+                            <label class="file-label">
+                                {{upload_form.upload_file()}}
+                            </label>
+                        </div>
+                        <div class="field">
+                            <label class="label">{{upload_form.note.label}}</label>
+                            <div class="control">
+                                {{upload_form.note(class="textarea", placeholder="Optional")}}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="field">
+                        <div class="is-grouped is-grouped-centered">
+                            <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Cancel</a>
+                            <button type="submit" class="button is-success">Submit</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script>
+    $(function() {
+        $('.js-example-basic-single').select2({
+            width: "100%",
+        });
+        htmx.trigger('#event_type', 'change')
+        $("input[name='start_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if not form.start_date.data %}
+            startDate: moment().startOf('hour'),
+            {% else %}
+            startDate: {{form.start_date.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            {% endif %}
+            timePicker: true,
+            timePicker24Hour: true,
+            timePickerIncrement: 30,
+            singleDatePicker: true,
+            locale: {
+                format: 'DD/MM/YYYY HH:mm'
+            }
+        })
+        $("input[name='end_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if not form.end_date.data %}
+            startDate: moment().startOf('hour').add(6, 'hours'),
+            {% else %}
+            startDate: {{form.end_date.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            {% endif %}
+            timePicker: true,
+            timePicker24Hour: true,
+            timePickerIncrement: 30,
+            singleDatePicker: true,
+            locale: {
+                format: 'DD/MM/YYYY HH:mm'
+            }
+        })
+        $("input[name='approved_datetime']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if not form.approved_datetime.data %}
+            startDate: moment().startOf('hour'),
+            {% else %}
+            startDate: {{form.approved_datetime.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            {% endif %}
+            timePicker: true,
+            timePicker24Hour: true,
+            timePickerIncrement: 30,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY HH:mm'
+        }
+    })
+        $("input[name='submitted_datetime']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if not form.submitted_datetime.data %}
+            startDate: moment().startOf('hour'),
+            {% else %}
+            startDate: {{form.submitted_datetime.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            {% endif %}
+            timePicker: true,
+            timePicker24Hour: true,
+            timePickerIncrement: 30,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY HH:mm'
+        }
+    })
+    });
+</script>
+{% endblock %}
