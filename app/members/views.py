@@ -16,7 +16,7 @@ from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine, or_, func
 
 from app.members import member_blueprint as member
-from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm
+from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm
 
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm
@@ -383,6 +383,7 @@ def view_member_info():
 def login():
     url = 'https://mtc.thaijobjob.com/api/auth/otp-confirm-login-mobile'
     form = MemberLoginForm()
+    old_form = MemberLoginOldForm()
     if form.validate_on_submit():
         user = Member.query.filter_by(pid=form.pid.data).first()
         data = {
@@ -411,7 +412,7 @@ def login():
         else:
             flash('OTP not matched.', 'danger')
 
-    return render_template('members/login.html', form=form)
+    return render_template('members/login.html', form=form, old_form=old_form)
 
 
 @member.route('/logout')
@@ -606,3 +607,28 @@ def get_login_otp():
             '''
     else:
         return '<p class="help is-danger">Error!</p>'
+
+
+@member.post('/login/old-form')
+def old_form_login():
+    form = MemberLoginOldForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            username = form.username.data
+            password = form.password.data
+            user = Member.query.filter_by(username=username).first()
+            if user:
+                if user.check_password(password):
+                    session['login_as'] = 'member'
+                    login_user(user, remember=True)
+                    identity_changed.send(current_app._get_current_object(), identity=Identity(user.unique_id))
+                    flash('Logged in successfully', 'success')
+                    if request.args.get('next'):
+                        return redirect(request.args.get('next'))
+                    else:
+                        return redirect(url_for('member.index'))
+                else:
+                    flash('Wrong password.','danger')
+            else:
+                flash('Username not found.', 'danger')
+    return redirect(url_for('member.login'))

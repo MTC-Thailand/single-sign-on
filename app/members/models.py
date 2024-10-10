@@ -18,6 +18,8 @@ class Member(db.Model, UserMixin):
     pid = db.Column(db.String(), nullable=False, unique=True)
     email = db.Column(db.String(), unique=True)
     tel = db.Column(db.String(), unique=True)
+    username = db.Column(db.String())
+    password = db.Column(db.String())
 
     def __str__(self):
         return self.th_fullname
@@ -44,6 +46,9 @@ class Member(db.Model, UserMixin):
     @property
     def unique_id(self):
         return f'mtc-member-{self.id}'
+
+    def check_password(self, password):
+        return self.password == password
 
 
 class License(db.Model):

@@ -5,10 +5,11 @@
 {% block content %}
 {% include "members/nav.html" %}
 <section class="section">
+    {% include "messages.html" %}
     <div class="columns">
-        <div class="column is-one-third is-offset-4 box">
-            {% include "messages.html" %}
-            <form method="post">
+        <div class="column is-one-third is-offset-2">
+            <h1 class="title is-size-6">Log In ด้วยระบบ Single Sign-On</h1>
+            <form method="post" class="notification is-light">
                 {{form.hidden_tag()}}
                 <div class="field">
                     <label class="label">{{form.pid.label}}</label>
@@ -46,8 +47,33 @@
                 </div>
             </form>
         </div>
-        <div class="column">
-
+        <div class="column is-one-third">
+            <h1 class="title is-size-6">Log In ด้วย username และ password</h1>
+            <form class="notification is-warning is-light" method="post" action="{{url_for('member.old_form_login')}}">
+                {{old_form.hidden_tag()}}
+                <div class="field">
+                    <label class="label">{{old_form.username.label}}</label>
+                    <div class="control">
+                        {{old_form.username(class="input")}}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{old_form.password.label}}</label>
+                    <div class="control">
+                        {{old_form.password(class="input")}}
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="control">
+                        <input type="submit" value="Log In" class="button is-success">
+                    </div>
+                </div>
+            </form>
+            <p class="has-text-danger notification is-light is-danger">
+                <strong>
+                    ระบบลงชื่อด้วย username และ password จะยุติการใช้งานในปี 2568
+                </strong>
+            </p>
         </div>
     </div>
 </section>

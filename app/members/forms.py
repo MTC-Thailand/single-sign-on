@@ -31,3 +31,6 @@ class MemberLoginForm(FlaskForm):
     otp = PasswordField('OTP', validators=[DataRequired()])
 
 
+class MemberLoginOldForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])

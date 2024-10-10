@@ -16,9 +16,13 @@ from pytz import timezone
 
 from app import db, sponsor_event_management_permission
 from app.cmte import cmte_bp as cmte
-from app.cmte.forms import CMTEEventForm, ParticipantForm, IndividualScoreForm, CMTEEventCodeForm, CMTEFeePaymentForm, \
-    CMTESponsorMemberForm, CMTESponsorMemberLoginForm, CMTEEventSponsorForm, CMTEPaymentForm, \
-    CMTEParticipantFileUploadForm
+from app.cmte.forms import (CMTEEventForm,
+                            ParticipantForm,
+                            CMTESponsorMemberForm,
+                            CMTESponsorMemberLoginForm,
+                            CMTEEventSponsorForm,
+                            CMTEPaymentForm,
+                            CMTEParticipantFileUploadForm)
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, \
     CMTESponsorMember, CMTEEventSponsor
 from app.members.models import License
