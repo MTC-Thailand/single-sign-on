@@ -455,7 +455,7 @@ def show_submitted_events():
 @cmte_sponsor_admin_permission.require()
 def show_approved_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
+    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).order_by(CMTEEvent.start_datetime)
     events = query.paginate(page=page, per_page=20)
     next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
     return render_template('cmte/approved_events.html', events=events.items, next_url=next_url)
