@@ -74,6 +74,8 @@ def load_from_mtc(firstname=None, lastname=None, license_id=None):
         FROM member WHERE member.fname='{firstname}' AND member.lname='{lastname}';
         '''
         data = pd.read_sql_query(query, con=engine)
+        if data.empty:
+            return None
         data = data.squeeze().to_dict()
 
         query = f'''
@@ -235,6 +237,11 @@ def search_member():
                 else:
                     if not data_:
                         data_ = load_from_mtc(form.firstname.data, form.lastname.data)
+                        if data_ is None:
+                            message = '<h1 class="title has-text-danger">ไม่พบข้อมูลในระบบ</h1>'
+                            resp = make_response(message)
+                            resp.headers['HX-Trigger-After-Swap'] = json.dumps({"stopLoading": "#submit-btn"})
+                            return resp
                     for rec in data_:
                         exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
                         delta = exp_date - arrow.now()

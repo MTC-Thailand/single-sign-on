@@ -1,8 +1,12 @@
+import os
+
 from flask import session
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
 from flask_principal import identity_loaded, UserNeed, RoleNeed, ActionNeed
 import arrow
+from sqlalchemy import create_engine
+import pandas as pd
 
 from app import create_app, admin
 
@@ -74,3 +78,16 @@ def on_identity_loaded(sender, identity):
         if current_user.sponsor.expire_date > arrow.now('Asia/Bangkok').date():
             print('sponsor is valid')
             identity.provides.add(ActionNeed('manageEvents'))
+
+
+HOST = os.environ.get('MYSQL_HOST')
+DATABASE = os.environ.get('MYSQL_DATABASE')
+PASSWORD = os.environ.get('MYSQL_PASSWORD')
+USER = os.environ.get('MYSQL_USER')
+engine = create_engine(f'mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DATABASE}?charset=utf8')
+
+
+@app.cli.command('load-sponsor-admin-accounts')
+def load_sponsor_admin_accounts():
+    df = pd.read_sql_query(f'SELECT * FROM training_center;', con=engine)
+    print(df)

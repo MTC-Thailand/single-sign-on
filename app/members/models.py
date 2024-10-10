@@ -10,8 +10,10 @@ class Member(db.Model, UserMixin):
     __tablename__ = 'members'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     number = db.Column(db.String(), unique=True, nullable=False)
+    th_title = db.Column('th_title', db.String())
     th_firstname = db.Column(db.String(), nullable=False)
     th_lastname = db.Column(db.String(), nullable=False)
+    en_title = db.Column('en_title', db.String())
     en_firstname = db.Column(db.String(), nullable=False)
     en_lastname = db.Column(db.String(), nullable=False)
     dob = db.Column(db.Date())
