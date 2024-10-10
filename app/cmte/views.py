@@ -131,9 +131,9 @@ def preview_event(event_id):
     return render_template('cmte/event_preview.html', event=event, next_url=next_url, form=form)
 
 
-@cmte.post('/events/<int:event_id>/participants')
+@cmte.post('/events/<int:event_id>/participants/upload')
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def add_participants(event_id):
     form = CMTEParticipantFileUploadForm()
     event = CMTEEvent.query.get(event_id)
@@ -153,6 +153,8 @@ def add_participants(event_id):
         db.session.add(rec)
     db.session.commit()
     flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
+    if request.args.get('source') == 'admin':
+        return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
     return redirect(url_for('cmte.preview_event', event_id=event_id))
 
 
@@ -174,8 +176,9 @@ def admin_preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
     next_url = request.args.get('next_url')
     form = CMTEEventCodeForm()
+    participant_form = CMTEParticipantFileUploadForm()
     return render_template('cmte/admin/event_preview.html',
-                           event=event, next_url=next_url, form=form)
+                           event=event, next_url=next_url, form=form, participant_form=participant_form)
 
 
 @cmte.route('/admin/events/<int:event_id>/code', methods=('GET', 'POST'))
@@ -284,7 +287,7 @@ def process_payment(event_id):
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
 @cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['GET', 'DELETE', 'POST'])
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def edit_participants(event_id: int = None, rec_id: int = None):
     form = ParticipantForm()
     if request.method == 'GET':
@@ -305,7 +308,8 @@ def edit_participants(event_id: int = None, rec_id: int = None):
         rec = CMTEEventParticipationRecord.query.get(rec_id)
         db.session.delete(rec)
         db.session.commit()
-        flash('ลบรายการเรียบร้อยแล้ว', 'success')
+        resp = make_response()
+        return resp
     if form.validate_on_submit():
         if rec_id:
             rec = CMTEEventParticipationRecord.query.get(rec_id)
@@ -332,7 +336,7 @@ def edit_participants(event_id: int = None, rec_id: int = None):
 
     if request.headers.get('HX-Request') == 'true':
         resp = make_response()
-        resp.headers['HX-Redirect'] = url_for('cmte.preview_event', event_id=event_id)
+        resp.headers['HX-Refresh'] = 'true'
         return resp
 
 

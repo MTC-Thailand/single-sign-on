@@ -201,6 +201,89 @@
                 </div>
             </div>
         </div>
+        <div class="columns">
+            <div class="column">
+                <div class="buttons is-centered">
+                    <a class="button is-success" hx-get="{{url_for('cmte.edit_participants', event_id=event.id)}}"
+                       hx-target="#participant-form"
+                       hx-swap="innerHTML"
+                    >
+                        <span class="icon">
+                            <i class="fa-solid fa-user-plus"></i>
+                        </span>
+                        <span>เพิ่มรายชื่อผู้เข้าร่วม</span>
+                    </a>
+                    หรือ
+                    <form class="notification is-light" method="post" action="{{url_for('cmte.add_participants', event_id=event.id, source='admin')}}" enctype="multipart/form-data">
+                        {{participant_form.hidden_tag()}}
+                        <div class="field">
+                            <label class="label">Upload รายชื่อ</label>
+                            <div class="control">
+                                {{participant_form.upload_file()}}
+                                <p class="help is-danger">กรุณาใช้ template file ในการส่งข้อมูล</p>
+                            </div>
+                        </div>
+                        <div class="field is-grouped">
+                            <div class="control">
+                                <input type="submit" value="Upload" class="button is-small is-success">
+                            </div>
+                            <div class="control">
+                                <a class="button is-small is-light" href="{{url_for('cmte.get_participants_template_file')}}">
+                                    <span class="icon">
+                                        <i class="fas fa-file-download"></i>
+                                    </span>
+                                    <span>template file</span>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="columns">
+            <div class="column">
+                <div id="participant-form"></div>
+                <h1 class="title is-size-4">รายชื่อผู้เข้าร่วม</h1>
+                <div id="participant-table">
+                    <table class="table">
+                        <thead>
+                        <th>ชื่อ</th>
+                        <th>หมายเลขใบอนุญาต (ท.น.)</th>
+                        <th>คะแนนที่ได้รับ</th>
+                        <th>เพิ่มเมื่อ</th>
+                        <th></th>
+                        </thead>
+                        <tbody>
+                        {% for rec in event.participants %}
+                        <tr>
+                            <td>{{rec.license.member.th_fullname}}</td>
+                            <td>{{rec.license_number}}</td>
+                            <td>{{rec.score}}</td>
+                            <td>{{rec.create_datetime|localdatetime}}</td>
+                            <td>
+                                <a class="icon"
+                                   hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
+                                   hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                                   hx-target="closest tr"
+                                   hx-delete="{{url_for('cmte.edit_participants', rec_id=rec.id, event_id=rec.event.id, _method='DELETE')}}">
+                                    <span class="icon">
+                                        <i class="fa-solid fa-trash-can has-text-danger"></i>
+                                    </span>
+                                </a>
+                                <a class="icon" hx-get="{{url_for('cmte.edit_participants', rec_id=rec.id, event_id=rec.event.id, _method='GET')}}"
+                                   hx-target="#participant-form" hx-swap="innerHTML">
+                                    <span class="icon">
+                                        <i class="fa-solid fa-pencil has-text-dark"></i>
+                                    </span>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}
