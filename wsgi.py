@@ -84,10 +84,24 @@ HOST = os.environ.get('MYSQL_HOST')
 DATABASE = os.environ.get('MYSQL_DATABASE')
 PASSWORD = os.environ.get('MYSQL_PASSWORD')
 USER = os.environ.get('MYSQL_USER')
-engine = create_engine(f'mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DATABASE}?charset=utf8')
+DEST_DATABASE = os.environ.get('DATABASE_URL')
+src_engine = create_engine(f'mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DATABASE}?charset=utf8')
+dest_engine = create_engine(DEST_DATABASE)
 
 
 @app.cli.command('load-sponsor-admin-accounts')
 def load_sponsor_admin_accounts():
-    df = pd.read_sql_query(f'SELECT * FROM training_center;', con=engine)
+    df = pd.read_sql_query(f'SELECT * FROM training_center;', con=src_engine)
     print(df)
+
+
+@app.cli.command('load-members')
+def load_members():
+    query = f'''SELECT mem_id AS old_mem_id, title_id AS th_title,
+    fname AS th_firstname, lname AS th_lastname, e_title AS en_title,
+    e_fname AS en_firstname, e_lname AS en_lastname, persion_id AS pid,
+    login_user AS username, login_password AS password, mobilesms AS tel,
+    birthday as dob, email_member AS email, mem_id_txt AS number FROM member
+    WHERE mem_id < 50000;'''
+    df = pd.read_sql_query(query, con=src_engine)
+    df.to_sql('members', con=dest_engine, if_exists='append', index=False)

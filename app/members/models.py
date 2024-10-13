@@ -10,6 +10,8 @@ class Member(db.Model, UserMixin):
     __tablename__ = 'members'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     number = db.Column(db.String(), unique=True, nullable=False)
+    code = db.Column(db.String())
+    old_mem_id = db.Column('old_mem_id', db.Integer())
     th_title = db.Column('th_title', db.String())
     th_firstname = db.Column(db.String(), nullable=False)
     th_lastname = db.Column(db.String(), nullable=False)
@@ -18,7 +20,7 @@ class Member(db.Model, UserMixin):
     en_lastname = db.Column(db.String(), nullable=False)
     dob = db.Column(db.Date())
     pid = db.Column(db.String(), nullable=False, unique=True)
-    email = db.Column(db.String(), unique=True)
+    email = db.Column(db.String())
     tel = db.Column(db.String(), unique=True)
     username = db.Column(db.String())
     password = db.Column(db.String())
