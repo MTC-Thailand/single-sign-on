@@ -566,7 +566,10 @@ def summarize_cmte_scores():
             'วันที่บันทึก': record.create_datetime.strftime('%d/%m/%Y'),
         })
     df = pd.DataFrame.from_dict(records)
-    pending_record_counts = current_user.valid_license.pending_cmte_records.count()
+    if current_user.valid_license:
+        pending_record_counts = current_user.valid_license.pending_cmte_records.count()
+    else:
+        pending_record_counts = 0
     score_table = df.to_html(index=False, classes='table table-striped')
     return render_template('members/cmte/score_summary.html',
                            pending_record_counts=pending_record_counts,
