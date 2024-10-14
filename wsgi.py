@@ -154,3 +154,32 @@ def load_training_centers():
     df = pd.read_sql_query(query, con=src_engine)
     df['telephone'] = df.telephone.map(lambda x: x.replace('-', '') if x else x)
     df.to_sql('cmte_event_sponsors', dest_engine, if_exists='append', index=False)
+
+
+@app.cli.command('load-training-center-members')
+def load_training_center_members():
+    query = f'''SELECT user_id AS old_user_id, user_password AS password,
+    fname AS firstname, lname AS lastname, user_email AS email,
+    mobile_phone AS telephone, training_center_id AS training_center_id
+    FROM user;'''
+    df = pd.read_sql_query(query, con=src_engine)
+    for idx, row in df.iterrows():
+        user_id = row['old_user_id']
+        member = CMTESponsorMember.query.filter_by(old_user_id=user_id).first()
+        sponsor = CMTEEventSponsor.query.filter_by(old_id=row['training_center_id']).first()
+        if not sponsor:
+            continue
+        if not member:
+            member = CMTESponsorMember(old_user_id=user_id,
+                                       firstname=row['firstname'],
+                                       lastname=row['lastname'],
+                                       email=row['email'],
+                                       telephone=row['telephone'],
+                                       sponsor=sponsor
+                                       )
+            member.password = row['password']
+            db.session.add(member)
+            db.session.commit()
+            print(f'{member.email} has been added!')
+        else:
+            print(f'{member.email} already exists!')

@@ -35,6 +35,7 @@ class CMTEEventSponsor(db.Model):
 class CMTESponsorMember(UserMixin, db.Model):
     __tablename__ = 'cmte_sponsor_members'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    old_user_id = db.Column('old_user_id', db.Integer())
     title = db.Column('title', db.String(), info={'label': 'คำนำหน้า'})
     firstname = db.Column('firstname', db.String(), info={'label': 'ชื่อ', 'validators': [DataRequired()]})
     lastname = db.Column('lastname', db.String(), info={'label': 'นามสกุล', 'validators': [DataRequired()]})
