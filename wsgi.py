@@ -75,9 +75,10 @@ def on_identity_loaded(sender, identity):
             identity.provides.add(RoleNeed(role.role_need))
     elif isinstance(current_user, CMTESponsorMember):
         identity.provides.add(RoleNeed('CMTESponsorAdmin'))
+        # TODO: modify this after adding expire date
         if current_user.sponsor.expire_date > arrow.now('Asia/Bangkok').date():
             print('sponsor is valid')
-            identity.provides.add(ActionNeed('manageEvents'))
+        identity.provides.add(ActionNeed('manageEvents'))
 
 
 HOST = os.environ.get('MYSQL_HOST')
