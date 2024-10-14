@@ -76,8 +76,8 @@ def on_identity_loaded(sender, identity):
     elif isinstance(current_user, CMTESponsorMember):
         identity.provides.add(RoleNeed('CMTESponsorAdmin'))
         # TODO: modify this after adding expire date
-        if current_user.sponsor.expire_date > arrow.now('Asia/Bangkok').date():
-            print('sponsor is valid')
+        # if current_user.sponsor.expire_date > arrow.now('Asia/Bangkok').date():
+        #     print('sponsor is valid')
         identity.provides.add(ActionNeed('manageEvents'))
 
 
