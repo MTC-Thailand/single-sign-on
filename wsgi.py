@@ -184,3 +184,11 @@ def load_training_center_members():
             print(f'{member.email} has been added!')
         else:
             print(f'{member.email} already exists!')
+
+
+@app.cli.command('load-cpd-types')
+def load_cpd_types():
+    query = f'''SELECT cpd_type_no AS old_id, type_name AS name,
+    type_detail AS 'desc', max_score AS max_score FROM cpd_type;'''
+    df = pd.read_sql_query(query, con=src_engine)
+    df.to_sql('cmte_event_types', dest_engine, if_exists='append', index=False)

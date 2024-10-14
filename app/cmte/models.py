@@ -78,6 +78,7 @@ class CMTEEventCategory(db.Model):
 class CMTEEventType(db.Model):
     __tablename__ = 'cmte_event_types'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    old_id = db.Column('old_id', db.Integer)
     name = db.Column('name', db.String(255), unique=True, nullable=False)
     for_group = db.Column('for_group', db.Boolean(), default=False)
     is_sponsored = db.Column('is_sponsored', db.Boolean(), default=False)
@@ -91,6 +92,16 @@ class CMTEEventType(db.Model):
 
     def __str__(self):
         return self.name
+
+
+class CMTEEventActivity(db.Model):
+    __tablename__ = 'cmte_event_activities'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    old_id = db.Column('old_id', db.Integer)
+    name = db.Column('name', db.String(255), unique=True, nullable=False)
+    type_id = db.Column('type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
+    en_name = db.Column('en_name', db.String(255))
+    detail = db.Column('detail', db.Text())
 
 
 class CMTEEventFormat(db.Model):
