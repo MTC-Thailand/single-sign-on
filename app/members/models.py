@@ -34,6 +34,10 @@ class Member(db.Model, UserMixin):
         return self.licenses.filter(License.end_date >= today).first()
 
     @property
+    def current_license(self):
+        return self.licenses.order_by(License.end_date).first()
+
+    @property
     def license_number(self):
         if self.licenses:
             return self.licenses[-1].number
@@ -65,6 +69,7 @@ class License(db.Model):
     member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
     member = db.relationship(Member, backref=db.backref('licenses',
                                                         lazy='dynamic',
+                                                        cascade="all, delete-orphan",
                                                         order_by='License.end_date.desc()'))
 
     def __str__(self):

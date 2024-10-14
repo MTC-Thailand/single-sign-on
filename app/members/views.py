@@ -442,7 +442,7 @@ def logout():
 def index():
     valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score))\
         .filter(CMTEEventParticipationRecord.approved_date != None,
-                CMTEEventParticipationRecord.score_valid_until==current_user.valid_license.end_date).scalar()
+                CMTEEventParticipationRecord.score_valid_until==current_user.current_license.end_date).scalar()
     return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores)
 
 
