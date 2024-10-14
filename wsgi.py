@@ -89,9 +89,9 @@ USER = os.environ.get('MYSQL_USER')
 # PASSWORD = 'Intrinity0'
 # USER = 'root'
 if os.environ.get('DATABASE_URL').startswith('postgresql'):
-    DEST_DATABASE = os.environ.get('DATABASE_URL').replace('postgres', 'postgresql')
-else:
     DEST_DATABASE = os.environ.get('DATABASE_URL')
+else:
+    DEST_DATABASE = os.environ.get('DATABASE_URL').replace('postgres', 'postgresql')
 
 src_engine = create_engine(f'mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DATABASE}?charset=utf8')
 dest_engine = create_engine(DEST_DATABASE)
