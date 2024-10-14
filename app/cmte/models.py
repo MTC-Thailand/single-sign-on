@@ -18,9 +18,12 @@ event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
 class CMTEEventSponsor(db.Model):
     __tablename__ = 'cmte_event_sponsors'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    old_id = db.Column(db.Integer)
     name = db.Column('name', db.String(), nullable=False, info={'label': 'ชื่อสถาบัน'})
+    code = db.Column('code', db.String(), info={'label': 'รหัสสถาบัน'})
     affiliation = db.Column('affiliation', db.String(), info={'label': 'สังกัด'})
     address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
+    zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
     telephone = db.Column('telephone', db.String(), info={'label': 'หมายเลขโทรศัพท์'})
     registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
     expire_date = db.Column('expire_date', db.Date())
