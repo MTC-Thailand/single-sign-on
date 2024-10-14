@@ -143,3 +143,14 @@ def load_licenses():
                 print(f'{license.number} already exists!')
         else:
             print(f'Member {mem_id} is not matched!')
+
+
+@app.cli.command('load-training-centers')
+def load_training_centers():
+    query = f'''SELECT training_center_id AS old_id, training_center_name AS name,
+    training_center_code AS code, training_center_add AS address,
+    training_center_zipcode AS zipcode, training_center_tel as telephone
+    FROM training_center;'''
+    df = pd.read_sql_query(query, con=src_engine)
+    df['telephone'] = df.telephone.map(lambda x: x.replace('-', '') if x else x)
+    df.to_sql('cmte_event_sponsors', dest_engine, if_exists='append', index=False)
