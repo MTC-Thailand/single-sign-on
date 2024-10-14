@@ -84,6 +84,10 @@ HOST = os.environ.get('MYSQL_HOST')
 DATABASE = os.environ.get('MYSQL_DATABASE')
 PASSWORD = os.environ.get('MYSQL_PASSWORD')
 USER = os.environ.get('MYSQL_USER')
+# HOST = '127.0.0.1'
+# DATABASE = 'testdb'
+# PASSWORD = 'Intrinity0'
+# USER = 'root'
 DEST_DATABASE = os.environ.get('DATABASE_URL')
 src_engine = create_engine(f'mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DATABASE}?charset=utf8')
 dest_engine = create_engine(DEST_DATABASE)
@@ -97,11 +101,41 @@ def load_sponsor_admin_accounts():
 
 @app.cli.command('load-members')
 def load_members():
+    # TODO: remove duplicated PID
+    # TODO: add back unique constraints to some fields
     query = f'''SELECT mem_id AS old_mem_id, title_id AS th_title,
     fname AS th_firstname, lname AS th_lastname, e_title AS en_title,
     e_fname AS en_firstname, e_lname AS en_lastname, persion_id AS pid,
     login_user AS username, login_password AS password, mobilesms AS tel,
-    birthday as dob, email_member AS email, mem_id_txt AS number FROM member
-    WHERE mem_id < 50000;'''
+    birthday as dob, email_member AS email, mem_id_txt AS number
+    FROM member
+    WHERE mem_id_txt IS NOT NULL AND mem_id < 50000;'''
     df = pd.read_sql_query(query, con=src_engine)
-    df.to_sql('members', con=dest_engine, if_exists='append', index=False)
+    df['dob'] = df.dob.apply(lambda dt: None if dt == '0000-00-00' else dt)
+    df.to_sql('members', dest_engine, if_exists='append', index=False)
+
+
+@app.cli.command('load-licenses')
+def load_licenses():
+    query = f'''SELECT mem_id AS mem_id, appr_date AS issue_date,
+    lic_b_date AS start_date, lic_exp_date AS end_date, CAST(lic_id AS CHAR) AS number
+    FROM lic_mem;'''
+    df = pd.read_sql_query(query, con=src_engine)
+    for idx, row in df.iterrows():
+        mem_id = row['mem_id']
+        member = Member.query.filter_by(old_mem_id=mem_id).first()
+        license = License.query.filter_by(number=row['number']).first()
+        if member:
+            if license is None:
+                license = License(issue_date=row['issue_date'],
+                                  start_date=row['start_date'],
+                                  end_date=row['end_date'],
+                                  member=member,
+                                  number=row['number'])
+                db.session.add(license)
+                db.session.commit()
+                print(f'{license.number} has been added!')
+            else:
+                print(f'{license.number} already exists!')
+        else:
+            print(f'Member {mem_id} is not matched!')
