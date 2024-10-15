@@ -44,7 +44,8 @@ class CMTESponsorMember(UserMixin, db.Model):
     mobile_phone = db.Column('mobile_phone', db.String(), info={'label': 'โทรศัพท์มือถือ'})
     telephone = db.Column('telephone', db.String(), info={'label': 'โทรศัพท์'})
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
-    sponsor = db.relationship(CMTEEventSponsor, backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
     is_coordinator = db.Column('is_coordinator', db.Boolean(), default=False)
 
     def verify_password(self, password):
@@ -105,6 +106,9 @@ class CMTEEventActivity(db.Model):
     event_type = db.relationship('CMTEEventType', backref=db.backref('activities',
                                                                      lazy='dynamic',
                                                                      cascade='all, delete-orphan'))
+
+    def __str__(self):
+        return self.name
 
 
 class CMTEEventFormat(db.Model):
@@ -202,7 +206,8 @@ class CMTEEvent(db.Model):
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    license_number = db.Column('license_number', db.ForeignKey('licenses.number'), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
+    license_number = db.Column('license_number', db.ForeignKey('licenses.number'),
+                               info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
     event = db.relationship(CMTEEvent, backref=db.backref('participants'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
@@ -238,11 +243,14 @@ class CMTEEventDoc(db.Model):
 class CMTEFeePaymentRecord(db.Model):
     __tablename__ = 'cmte_fee_payment_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    payment_datetime = db.Column('payment_datetime', db.DateTime(timezone=True), nullable=False, info={'label': 'วันที่ชำระ'})
+    payment_datetime = db.Column('payment_datetime', db.DateTime(timezone=True), nullable=False,
+                                 info={'label': 'วันที่ชำระ'})
     start_date = db.Column('start_date', db.Date(), nullable=False, info={'label': 'วันเริ่มต้น'})
     end_date = db.Column('end_date', db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
-    license_number = db.Column('license_number', db.ForeignKey('licenses.number'), info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
-    license = db.relationship('License', backref=db.backref('cmte_fee_payment_records', lazy='dynamic', cascade='all, delete-orphan'))
+    license_number = db.Column('license_number', db.ForeignKey('licenses.number'),
+                               info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
+    license = db.relationship('License', backref=db.backref('cmte_fee_payment_records', lazy='dynamic',
+                                                            cascade='all, delete-orphan'))
 
     def to_dict(self):
         return {'end_date': self.end_date.strftime('%Y-%m-%d'),
