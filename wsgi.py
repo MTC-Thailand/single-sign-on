@@ -1,5 +1,7 @@
 import os
+from datetime import timedelta
 
+import click
 from flask import session
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
@@ -249,3 +251,45 @@ def load_cpd_events():
             print(f'{event.title} has been added!')
         else:
             print(f'{event.title} already exists!')
+
+
+@app.cli.command('load-cpd-event-records')
+@click.argument('year')
+def load_cpd_event_records(year):
+    query = f'''
+    SELECT w_title AS title, w_bdate AS start_date,
+    w_edate AS end_date, act_no AS activity_id, cpd_type_no AS type_id,
+    train_id AS sponsor_id, mem_id, w_appr_date AS approved_date, cpd_score
+    FROM cpd_work WHERE day(w_edate) > 0 AND day(w_bdate) > 0 AND month(w_edate) > 0
+    AND month(w_bdate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0 AND year(w_bdate) > 0
+    AND train_id > 0 AND day(w_appr_date) > 0 AND month(w_appr_date) > 0 AND
+    year(w_bdate) = {year}
+    LIMIT 300
+    ;
+    '''
+    df = pd.read_sql_query(query, con=src_engine)
+    print(df.head())
+    for idx, row in df.iterrows():
+        member = Member.query.filter_by(old_mem_id=row['mem_id']).first()
+        license = member.current_license
+        if not license:
+            print(member.old_mem_id, 'no license found.')
+            continue
+        event_type = CMTEEventType.query.filter_by(old_id=row['type_id']).first()
+        activity = CMTEEventActivity.query.filter_by(old_id=row['activity_id']).first()
+        event = CMTEEvent.query.filter_by(title=row['title'],
+                                          start_date=row['start_date'],
+                                          event_type=event_type,
+                                          activity=activity,
+                                          end_date=row['end_date']).first()
+        if row['end_date'] > license.start_date:
+            score_valid_until = license.end_date
+        else:
+            score_valid_until = license.start_date - timedelta(days=1)
+        record = CMTEEventParticipationRecord(license=license,
+                                              event=event,
+                                              score=row['cpd_score'],
+                                              approved_date=row['approved_date'],
+                                              score_valid_until=score_valid_until)
+        db.session.add(record)
+        db.session.commit()
