@@ -255,7 +255,8 @@ def load_cpd_events():
 
 @app.cli.command('load-cpd-event-records')
 @click.argument('year')
-def load_cpd_event_records(year):
+@click.argument('month')
+def load_cpd_event_records(year, month):
     query = f'''
     SELECT w_title AS title, w_bdate AS start_date,
     w_edate AS end_date, act_no AS activity_id, cpd_type_no AS type_id,
@@ -263,8 +264,7 @@ def load_cpd_event_records(year):
     FROM cpd_work WHERE day(w_edate) > 0 AND day(w_bdate) > 0 AND month(w_edate) > 0
     AND month(w_bdate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0 AND year(w_bdate) > 0
     AND train_id > 0 AND day(w_appr_date) > 0 AND month(w_appr_date) > 0 AND
-    year(w_bdate) = {year}
-    LIMIT 300
+    year(w_bdate) = {year} and month(w_bdate) = {month}
     ;
     '''
     df = pd.read_sql_query(query, con=src_engine)
