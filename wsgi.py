@@ -192,3 +192,28 @@ def load_cpd_types():
     type_detail AS 'desc', max_score AS max_score FROM cpd_type;'''
     df = pd.read_sql_query(query, con=src_engine)
     df.to_sql('cmte_event_types', dest_engine, if_exists='append', index=False)
+
+
+@app.cli.command('load-cpd-activities')
+def load_cpd_activities():
+    query = f'''SELECT act_no AS old_id, cpd_type_no AS cpd_type_id,
+    act_t_name AS name, act_e_name AS en_name, act_detail AS detail FROM cpd_activi;'''
+    df = pd.read_sql_query(query, con=src_engine)
+    for idx, row in df.iterrows():
+        cpd_type_id = row['cpd_type_id']
+        event_type = CMTEEventType.query.filter_by(old_id=cpd_type_id).first()
+        activity = CMTEEventActivity.query.filter_by(old_id=row['old_id']).first()
+        if not event_type:
+            continue
+        if not activity:
+            activity = CMTEEventActivity(old_id=row['old_id'],
+                                       name=row['name'],
+                                       en_name=row['en_name'],
+                                       detail=row['detail'],
+                                       event_type=event_type
+                                       )
+            db.session.add(activity)
+            db.session.commit()
+            print(f'{activity.name} has been added!')
+        else:
+            print(f'{activity.name} already exists!')

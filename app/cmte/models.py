@@ -102,6 +102,9 @@ class CMTEEventActivity(db.Model):
     type_id = db.Column('type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
     en_name = db.Column('en_name', db.String(255))
     detail = db.Column('detail', db.Text())
+    event_type = db.relationship('CMTEEventType', backref=db.backref('activities',
+                                                                     lazy='dynamic',
+                                                                     cascade='all, delete-orphan'))
 
 
 class CMTEEventFormat(db.Model):
