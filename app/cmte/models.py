@@ -152,12 +152,17 @@ class CMTEEventCode(db.Model):
 class CMTEEvent(db.Model):
     __tablename__ = 'cmte_events'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    old_id = db.Column('old_id', db.Integer)
     main_event_id = db.Column('parent_id', db.Integer, db.ForeignKey('cmte_events.id'))
     sub_events = db.relationship('CMTEEvent', backref=db.backref('main_event', remote_side=[id]))
     title = db.Column('title', db.String(), nullable=False, info={'label': 'ชื่อกิจกรรม'})
     venue = db.Column('venue', db.Text(), info={'label': 'สถานที่จัดงาน'})
     event_type_id = db.Column('event_type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
     event_type = db.relationship('CMTEEventType', backref=db.backref('events'))
+    activity_id = db.Column('activity_id', db.Integer, db.ForeignKey('cmte_event_activities.id'))
+    activity = db.relationship(CMTEEventActivity, backref=db.backref('events',
+                                                                     lazy='dynamic',
+                                                                     cascade='all, delete-orphan'))
     start_date = db.Column('start_date', db.DateTime(timezone=True), info={'label': 'เริ่มต้น'})
     end_date = db.Column('end_date', db.DateTime(timezone=True), info={'label': 'สิ้นสุด'})
     submitted_datetime = db.Column('submitted_datetime', db.DateTime(timezone=True), info={'label': 'วันที่ยื่นขอ'})
@@ -219,6 +224,7 @@ class CMTEEventDoc(db.Model):
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     event_id = db.Column('event_id', db.Integer, db.ForeignKey('cmte_events.id'))
     event = db.relationship(CMTEEvent, backref=db.backref('docs', cascade='all, delete-orphan', lazy='dynamic'))
+
     key = db.Column('key', db.Text(), nullable=False)
     filename = db.Column('filename', db.Text(), nullable=False)
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))

@@ -207,13 +207,45 @@ def load_cpd_activities():
             continue
         if not activity:
             activity = CMTEEventActivity(old_id=row['old_id'],
-                                       name=row['name'],
-                                       en_name=row['en_name'],
-                                       detail=row['detail'],
-                                       event_type=event_type
-                                       )
+                                         name=row['name'],
+                                         en_name=row['en_name'],
+                                         detail=row['detail'],
+                                         event_type=event_type
+                                         )
             db.session.add(activity)
             db.session.commit()
             print(f'{activity.name} has been added!')
         else:
             print(f'{activity.name} already exists!')
+
+
+@app.cli.command('load-cpd-events')
+def load_cpd_events():
+    query = f'''
+    SELECT DISTINCT w_title AS title, w_bdate AS start_date,
+    w_edate AS end_date, act_no AS activity_id, cpd_type_no AS type_id,
+    train_id AS sponsor_id
+    FROM cpd_work WHERE day(w_edate) > 0 AND day(w_bdate) > 0 AND month(w_edate) > 0
+    AND month(w_bdate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0 AND year(w_bdate) > 0
+    AND train_id > 0
+    GROUP BY w_title, w_bdate, w_edate, train_id;
+    '''
+    df = pd.read_sql_query(query, con=src_engine)
+    print(df.head())
+    for idx, row in df.iterrows():
+        event_type = CMTEEventType.query.filter_by(old_id=row['type_id']).first()
+        activity = CMTEEventActivity.query.filter_by(old_id=row['activity_id']).first()
+        sponsor = CMTEEventSponsor.query.filter_by(old_id=row['sponsor_id']).first()
+        event = CMTEEvent.query.filter_by(title=row['title'],
+                                          start_date=row['start_date'],
+                                          end_date=row['end_date']).first()
+        if not activity and not event_type:
+            continue
+        if not event:
+            event = CMTEEvent(title=row['title'], event_type=event_type, activity=activity,
+                              start_date=row['start_date'], end_date=row['end_date'])
+            db.session.add(event)
+            db.session.commit()
+            print(f'{event.title} has been added!')
+        else:
+            print(f'{event.title} already exists!')
