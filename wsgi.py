@@ -327,3 +327,18 @@ def load_cpd_event_individual_records(year, month):
         db.session.add(record)
         db.session.commit()
         print('.', end='', flush=True)
+
+
+@app.cli.command('load-cpd-payment')
+def load_cpd_payment():
+    query = f'''SELECT lic_id, lic_exp_date, lic_b_date FROM pay_cmte_lic;'''
+    df = pd.read_sql_query(query, con=src_engine)
+    print(df.head())
+    for idx, row in df.iterrows():
+        record = CMTEFeePaymentRecord(license_number=str(int(row['lic_id'])),
+                                      payment_datetime=row['lic_b_date'],
+                                      start_date=row['lic_b_date'],
+                                      end_date=row['lic_exp_date'])
+        db.session.add(record)
+        db.session.commit()
+        print('.', end='', flush=True)
