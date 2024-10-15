@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 
 import click
+import numpy as np
 from flask import session
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
@@ -224,28 +225,33 @@ def load_cpd_activities():
 @app.cli.command('load-cpd-events')
 def load_cpd_events():
     query = f'''
-    SELECT DISTINCT w_title AS title, w_bdate AS start_date,
-    w_edate AS end_date, act_no AS activity_id, cpd_type_no AS type_id,
-    train_id AS sponsor_id
-    FROM cpd_work WHERE day(w_edate) > 0 AND day(w_bdate) > 0 AND month(w_edate) > 0
-    AND month(w_bdate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0 AND year(w_bdate) > 0
-    AND train_id > 0
-    GROUP BY w_title, w_bdate, w_edate, train_id;
+    SELECT train_id, train_name_head AS title, begin_date, place_name_open AS venue,
+    end_date, act_no AS activity_id, cpd_score,
+    appr_date, exp_date, place_name_open, training_center_id AS sponsor_id
+    FROM training_subject WHERE day(begin_date) > 0 AND day(begin_date) > 0 AND month(begin_date) > 0
+    AND month(begin_date) > 0 AND month(end_date) > 0 AND year(end_date) > 0 AND year(end_date) > 0
     '''
+    print('Reading from db...')
     df = pd.read_sql_query(query, con=src_engine)
+    df.replace({pd.NaT: None}, inplace=True)
     print(df.head())
     for idx, row in df.iterrows():
-        event_type = CMTEEventType.query.filter_by(old_id=row['type_id']).first()
         activity = CMTEEventActivity.query.filter_by(old_id=row['activity_id']).first()
         sponsor = CMTEEventSponsor.query.filter_by(old_id=row['sponsor_id']).first()
-        event = CMTEEvent.query.filter_by(title=row['title'],
-                                          start_date=row['start_date'],
-                                          end_date=row['end_date']).first()
-        if not activity and not event_type:
+        if not activity or not sponsor:
             continue
+
+        event = CMTEEvent.query.filter_by(old_id=row['train_id']).first()
         if not event:
-            event = CMTEEvent(title=row['title'], event_type=event_type, activity=activity,
-                              start_date=row['start_date'], end_date=row['end_date'])
+            event = CMTEEvent(title=row['title'],
+                              old_id=row['train_id'],
+                              activity=activity,
+                              venue=row['venue'],
+                              start_date=row['begin_date'],
+                              end_date=row['end_date'],
+                              approved_datetime=row['appr_date'],
+                              cmte_points=row['cpd_score'],
+                              sponsor=sponsor)
             db.session.add(event)
             db.session.commit()
             print(f'{event.title} has been added!')
@@ -258,9 +264,8 @@ def load_cpd_events():
 @click.argument('month')
 def load_cpd_event_records(year, month):
     query = f'''
-    SELECT w_title AS title, w_bdate AS start_date,
-    w_edate AS end_date, act_no AS activity_id, cpd_type_no AS type_id,
-    train_id AS sponsor_id, mem_id, w_appr_date AS approved_date, cpd_score
+    SELECT train_id AS event_id, w_edate AS end_date, w_bdate AS start_date,
+    mem_id, w_appr_date AS approved_datetime, cpd_score
     FROM cpd_work WHERE day(w_edate) > 0 AND day(w_bdate) > 0 AND month(w_edate) > 0
     AND month(w_bdate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0 AND year(w_bdate) > 0
     AND train_id > 0 AND day(w_appr_date) > 0 AND month(w_appr_date) > 0 AND
@@ -273,15 +278,9 @@ def load_cpd_event_records(year, month):
         member = Member.query.filter_by(old_mem_id=row['mem_id']).first()
         license = member.current_license
         if not license:
-            print(member.old_mem_id, 'no license found.')
+            print(member.old_mem_id, 'No license found.')
             continue
-        event_type = CMTEEventType.query.filter_by(old_id=row['type_id']).first()
-        activity = CMTEEventActivity.query.filter_by(old_id=row['activity_id']).first()
-        event = CMTEEvent.query.filter_by(title=row['title'],
-                                          start_date=row['start_date'],
-                                          event_type=event_type,
-                                          activity=activity,
-                                          end_date=row['end_date']).first()
+        event = CMTEEvent.query.filter_by(old_id=row['event_id']).first()
         if row['end_date'] > license.start_date:
             score_valid_until = license.end_date
         else:
@@ -289,7 +288,8 @@ def load_cpd_event_records(year, month):
         record = CMTEEventParticipationRecord(license=license,
                                               event=event,
                                               score=row['cpd_score'],
-                                              approved_date=row['approved_date'],
+                                              approved_date=row['approved_datetime'],
                                               score_valid_until=score_valid_until)
         db.session.add(record)
         db.session.commit()
+        print('.', end='', flush=True)
