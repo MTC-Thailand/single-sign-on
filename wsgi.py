@@ -319,6 +319,7 @@ def load_cpd_event_individual_records(year, month):
         else:
             score_valid_until = license.start_date - timedelta(days=1)
         record = CMTEEventParticipationRecord(license=license,
+                                              individual=True,
                                               score=row['cpd_score'],
                                               approved_date=row['approved_datetime'],
                                               score_valid_until=score_valid_until)
