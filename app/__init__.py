@@ -1,11 +1,11 @@
 import os
 
 import arrow
-from flask_principal import Principal, PermissionDenied, Identity, ActionNeed
+from flask_principal import Principal, PermissionDenied, ActionNeed
+from flask_restful import Api
 from pytz import timezone
 
 from flask import Flask, render_template
-from flask_restful import Api
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
@@ -16,8 +16,6 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 
 load_dotenv()
-
-from app.api.views import CMTEScore, Login, RefreshToken, MemberInfo
 
 
 class MyAdminIndexView(AdminIndexView):
@@ -41,21 +39,16 @@ login_manager.login_message = 'กรุณาลงชื่อเข้าใ�
 login_manager.login_message_category = 'info'
 principal = Principal()
 
-from app.api import api_bp
-
-api = Api(api_bp, decorators=[csrf.exempt])
-
-api.add_resource(Login, '/auth/login')
-api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
-api.add_resource(MemberInfo, '/members/<string:pin>/info')
-api.add_resource(RefreshToken, '/auth/refresh')
-
 from flask_principal import Permission, RoleNeed
 
 admin_permission = Permission(RoleNeed('Admin'))
 cmte_admin_permission = Permission(RoleNeed('CMTEAdmin'))
 cmte_sponsor_admin_permission = Permission(RoleNeed('CMTESponsorAdmin'))
 sponsor_event_management_permission = Permission(ActionNeed('manageEvents'))
+
+from app.api import api_bp
+
+api = Api(api_bp, decorators=[csrf.exempt])
 
 
 def create_app():
@@ -75,7 +68,6 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    app.register_blueprint(api_bp)
     swagger.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
@@ -92,6 +84,15 @@ def create_app():
 
     from app.institutions import inst as institution_blueprint
     app.register_blueprint(institution_blueprint)
+
+    from app.api.views import Login, CMTEScore, MemberInfo, RefreshToken
+
+    api.add_resource(Login, '/auth/login')
+    api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
+    api.add_resource(MemberInfo, '/members/<string:pin>/info')
+    api.add_resource(RefreshToken, '/auth/refresh')
+
+    app.register_blueprint(api_bp)
 
     @app.route('/')
     def index():

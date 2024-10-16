@@ -77,7 +77,7 @@ class License(db.Model):
 
     def get_active_cmte_fee_payment(self):
         record = self.cmte_fee_payment_records.filter_by(end_date=self.end_date).first()
-        return record if record else None
+        return record
 
     @property
     def pending_individual_cmte_records(self):

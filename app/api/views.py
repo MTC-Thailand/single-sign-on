@@ -11,6 +11,8 @@ from flask_restful import Resource
 from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
 
+from app.members.models import Member
+
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
 MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
@@ -337,6 +339,9 @@ class MemberInfo(Resource):
             '''
         total_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
 
+        member = Member.query.filter_by(pid=pin).first()
+        cmte_fee_payment_record = member.current_license.get_active_cmte_fee_payment()
+        data['active_cmte_payment'] = cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {}
+
         data['cmte_score'] = {'total': total_score, 'valid': valid_score}
-        data['active_cmte_payment'] = {'end_date': '2029-10-15', 'start_date': '2024-10-14'}
         return jsonify({'data': data})
