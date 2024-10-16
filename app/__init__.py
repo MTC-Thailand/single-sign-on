@@ -85,6 +85,9 @@ def create_app():
     from app.institutions import inst as institution_blueprint
     app.register_blueprint(institution_blueprint)
 
+    from app.admin import webadmin as webadmin_blueprint
+    app.register_blueprint(webadmin_blueprint)
+
     from app.api.views import Login, CMTEScore, MemberInfo, RefreshToken
 
     api.add_resource(Login, '/auth/login')
