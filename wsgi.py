@@ -263,11 +263,11 @@ def load_cpd_events():
 def load_cpd_event_records(year, month):
     query = f'''
     SELECT train_id AS event_id, w_edate AS end_date, w_bdate AS start_date,
-    mem_id, w_appr_date AS approved_datetime, cpd_score
-    FROM cpd_work WHERE day(w_edate) > 0 AND day(w_bdate) > 0 AND month(w_edate) > 0
-    AND month(w_bdate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0 AND year(w_bdate) > 0
-    AND train_id > 0 AND day(w_appr_date) > 0 AND month(w_appr_date) > 0 AND
-    year(w_bdate) = {year} and month(w_bdate) = {month}
+    mem_id, w_appr_date AS approved_datetime, cpd_score FROM cpd_work
+    WHERE ((day(w_edate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0) or w_edate is null)
+    AND day(w_bdate) > 0 AND month(w_bdate) = {month} AND year(w_bdate) = {year}
+    AND ((day(w_appr_date) > 0 AND month(w_appr_date) > 0) OR w_appr_date IS NULL)
+    AND train_id > 0
     ;
     '''
     df = pd.read_sql_query(query, con=src_engine)
@@ -279,7 +279,8 @@ def load_cpd_event_records(year, month):
             print(member.old_mem_id, 'No license found.')
             continue
         event = CMTEEvent.query.filter_by(old_id=row['event_id']).first()
-        if row['end_date'] > license.start_date:
+        end_date = row['end_date'] or row['start_date']
+        if end_date > license.start_date:
             score_valid_until = license.end_date
         else:
             score_valid_until = license.start_date - timedelta(days=1)
@@ -300,10 +301,11 @@ def load_cpd_event_individual_records(year, month):
     query = f'''
     SELECT train_id AS event_id, w_edate AS end_date, w_bdate AS start_date,
     mem_id, w_appr_date AS approved_datetime, cpd_score
-    FROM cpd_work WHERE day(w_edate) > 0 AND day(w_bdate) > 0 AND month(w_edate) > 0
-    AND month(w_bdate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0 AND year(w_bdate) > 0
-    AND train_id = 0 AND day(w_appr_date) > 0 AND month(w_appr_date) > 0 AND
-    year(w_bdate) = {year} and month(w_bdate) = {month}
+    FROM cpd_work
+    WHERE ((day(w_edate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0) or w_edate is null)
+    AND day(w_bdate) > 0 AND month(w_bdate) = {month} AND year(w_bdate) = {year}
+    AND ((day(w_appr_date) > 0 AND month(w_appr_date) > 0) OR w_appr_date IS NULL)
+    AND train_id = 0
     ;
     '''
     df = pd.read_sql_query(query, con=src_engine)
@@ -314,7 +316,8 @@ def load_cpd_event_individual_records(year, month):
         if not license:
             print(member.old_mem_id, 'No license found.')
             continue
-        if row['end_date'] > license.start_date:
+        end_date = row['end_date'] or row['start_date']
+        if end_date > license.start_date:
             score_valid_until = license.end_date
         else:
             score_valid_until = license.start_date - timedelta(days=1)
