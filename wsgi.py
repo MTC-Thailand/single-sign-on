@@ -226,35 +226,31 @@ def load_cpd_events():
     SELECT train_id, train_name_head AS title, begin_date, place_name_open AS venue,
     end_date, act_no AS activity_id, cpd_score,
     appr_date, exp_date, place_name_open, training_center_id AS sponsor_id
-    FROM training_subject WHERE day(begin_date) > 0 AND day(begin_date) > 0 AND month(begin_date) > 0
-    AND month(begin_date) > 0 AND month(end_date) > 0 AND year(end_date) > 0 AND year(end_date) > 0
+    FROM training_subject WHERE (day(begin_date) > 0 AND month(begin_date) > 0 AND year(begin_date) > 0)
+    AND ((day(end_date) > 0 AND month(end_date) > 0 AND year(end_date) > 0) or end_date IS NULL)
+    AND train_id > 0
+    AND train_name_head IS NOT NULL
     '''
     print('Reading from db...')
     df = pd.read_sql_query(query, con=src_engine)
     df.replace({pd.NaT: None}, inplace=True)
     print(df.head())
+    print(f'Total records is {len(df)}.')
     for idx, row in df.iterrows():
         activity = CMTEEventActivity.query.filter_by(old_id=row['activity_id']).first()
         sponsor = CMTEEventSponsor.query.filter_by(old_id=row['sponsor_id']).first()
-        if not activity or not sponsor:
-            continue
-
-        event = CMTEEvent.query.filter_by(old_id=row['train_id']).first()
-        if not event:
-            event = CMTEEvent(title=row['title'],
-                              old_id=row['train_id'],
-                              activity=activity,
-                              venue=row['venue'],
-                              start_date=row['begin_date'],
-                              end_date=row['end_date'],
-                              approved_datetime=row['appr_date'],
-                              cmte_points=row['cpd_score'],
-                              sponsor=sponsor)
-            db.session.add(event)
-            db.session.commit()
-            print(f'{event.title} has been added!')
-        else:
-            print(f'{event.title} already exists!')
+        event = CMTEEvent(title=row['title'],
+                          old_id=row['train_id'],
+                          activity=activity,
+                          venue=row['venue'],
+                          start_date=row['begin_date'],
+                          end_date=row['end_date'],
+                          approved_datetime=row['appr_date'],
+                          cmte_points=row['cpd_score'],
+                          sponsor=sponsor)
+        db.session.add(event)
+        db.session.commit()
+        print(f'{event.title} has been added!')
 
 
 @app.cli.command('load-cpd-event-records')
@@ -274,7 +270,7 @@ def load_cpd_event_records(year, month):
     print(df.head())
     for idx, row in df.iterrows():
         member = Member.query.filter_by(old_mem_id=row['mem_id']).first()
-        license = member.current_license
+        license = member.license
         if not license:
             print(member.old_mem_id, 'No license found.')
             continue
@@ -312,7 +308,7 @@ def load_cpd_event_individual_records(year, month):
     print(df.head())
     for idx, row in df.iterrows():
         member = Member.query.filter_by(old_mem_id=row['mem_id']).first()
-        license = member.current_license
+        license = member.license
         if not license:
             print(member.old_mem_id, 'No license found.')
             continue
