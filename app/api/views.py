@@ -340,7 +340,7 @@ class MemberInfo(Resource):
         total_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
 
         member = Member.query.filter_by(pid=pin).first()
-        cmte_fee_payment_record = member.current_license.get_active_cmte_fee_payment()
+        cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
         data['active_cmte_payment'] = cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {}
 
         data['cmte_score'] = {'total': total_score, 'valid': valid_score}

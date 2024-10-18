@@ -440,9 +440,11 @@ def logout():
 @member.route('/')
 @login_required
 def index():
-    valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score))\
-        .filter(CMTEEventParticipationRecord.approved_date != None,
-                CMTEEventParticipationRecord.score_valid_until==current_user.current_license.end_date).scalar()
+    license = current_user.license
+    valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score)) \
+        .filter(
+                CMTEEventParticipationRecord.license == license,
+                CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date).scalar()
     return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores)
 
 
@@ -465,7 +467,7 @@ def individual_score_group_index():
 @member.route('/cmte/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
 @login_required
 def individual_score_form(event_type_id):
-    if not current_user.valid_license.get_active_cmte_fee_payment():
+    if not current_user.license.get_active_cmte_fee_payment():
         flash('กรุณาชำระค่าธรรมเนียมการยื่นขอคะแนนส่วนบุคคลก่อนดำเนินการต่อ', 'warning')
         return redirect(url_for('member.index'))
     form = IndividualScoreForm()
@@ -473,7 +475,7 @@ def individual_score_form(event_type_id):
         record = CMTEEventParticipationRecord()
         form.populate_obj(record)
         record.individual = True
-        record.license = current_user.valid_license
+        record.license = current_user.license
         record.event_type_id = event_type_id
         record.create_datetime = arrow.now('Asia/Bangkok').datetime
         s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
@@ -544,7 +546,7 @@ def summarize_cmte_scores():
         query = query.filter(CMTEEventParticipationRecord.approved_date != None)
     elif filter == 'approved_valid':
         query = query.filter(CMTEEventParticipationRecord.approved_date != None,
-                             CMTEEventParticipationRecord.score_valid_until==current_user.valid_license.end_date)
+                             CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date)
     query = query.order_by(CMTEEventParticipationRecord.create_datetime.desc())
 
     for record in query:
@@ -566,8 +568,8 @@ def summarize_cmte_scores():
             'วันที่บันทึก': record.create_datetime.strftime('%d/%m/%Y'),
         })
     df = pd.DataFrame.from_dict(records)
-    if current_user.valid_license:
-        pending_record_counts = current_user.valid_license.pending_cmte_records.count()
+    if current_user.license:
+        pending_record_counts = current_user.license.pending_cmte_records.count()
     else:
         pending_record_counts = 0
     score_table = df.to_html(index=False, classes='table table-striped')
@@ -638,7 +640,7 @@ def old_form_login():
                     else:
                         return redirect(url_for('member.index'))
                 else:
-                    flash('Wrong password.','danger')
+                    flash('Wrong password.', 'danger')
             else:
                 flash('Username not found.', 'danger')
     return redirect(url_for('member.login'))

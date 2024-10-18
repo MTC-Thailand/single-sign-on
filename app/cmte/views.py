@@ -343,26 +343,17 @@ def edit_participants(event_id: int = None, rec_id: int = None):
 @cmte.get('/admin/events/pending')
 @login_required
 @cmte_admin_permission.require()
-def pending_events():
-    page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter_by(approved_datetime=None).filter(CMTEEvent.payment_datetime != None).filter(
-        CMTEEvent.submitted_datetime != None)
-    events = query.paginate(page=page, per_page=20)
-    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
-    return render_template('cmte/admin/pending_events.html',
-                           events=events.items, next_url=next_url)
+def admin_pending_events():
+    events = CMTEEvent.query.filter_by(approved_datetime=None).all()
+    return render_template('cmte/admin/pending_events.html', events=events)
 
 
 @cmte.get('/admin/events/approved')
 @login_required
 @cmte_admin_permission.require()
 def admin_approved_events():
-    page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
-    events = query.paginate(page=page, per_page=20)
-    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
-    return render_template('cmte/admin/approved_events.html',
-                           events=events.items, next_url=next_url)
+    events = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).all()
+    return render_template('cmte/admin/approved_events.html', events=events)
 
 
 @cmte.get('/admin/events/load-pending/pages/<int:page_no>')

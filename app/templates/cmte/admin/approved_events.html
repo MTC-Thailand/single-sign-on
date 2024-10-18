@@ -10,7 +10,7 @@
       <div class="column">
         <div class="tabs is-boxed">
           <ul>
-            <li><a href="{{url_for('cmte.pending_events')}}">รออนุมัติ</a></li>
+            <li><a href="{{url_for('cmte.admin_pending_events')}}">รออนุมัติ</a></li>
             <li class="is-active"><a href="{{url_for('cmte.admin_approved_events')}}">อนุมัติแล้ว</a></li>
           </ul>
         </div>
@@ -43,16 +43,6 @@
           {% endfor %}
           </tbody>
         </table>
-        <div class="buttons is-centered">
-          {% if next_url %}
-          <button class="button is-dark is-outlined">
-            <span>Load More</span>
-            <span class="icon">
-              <i class="fa-solid fa-spinner"></i>
-            </span>
-          </button>
-          {% endif %}
-        </div>
         <div class="buttons is-centered">
           <a href="{{url_for('users.cmte_admin_index')}}" class="button is-light">
             <span class="icon">

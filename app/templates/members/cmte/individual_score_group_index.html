@@ -36,7 +36,7 @@
                     <th>วันที่ยื่น</th>
                     </thead>
                     <tbody>
-                        {% for rec in current_user.valid_license.pending_individual_cmte_records %}
+                        {% for rec in current_user.license.pending_individual_cmte_records %}
                         <tr>
                             <td>{{rec.desc}}</td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
