@@ -47,7 +47,13 @@
                         </tr>
                         <tr>
                             <td><strong>หน่วยคะแนน CMTE</strong></td>
-                            <td>{{valid_cmte_scores}}</td>
+                            <td>
+                                <a href="{{url_for('member.summarize_cmte_scores')}}">
+                                    <h1 {% if current_user.license.valid_cmte_scores >= 50 %} class="title has-text-success" {% else %} class="title" {% endif %}>
+                                        {{current_user.license.valid_cmte_scores}}
+                                    </h1>
+                                </a>
+                            </td>
                         </tr>
                     </table>
                 </div>

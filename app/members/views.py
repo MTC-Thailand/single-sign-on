@@ -560,14 +560,17 @@ def summarize_cmte_scores():
             'รายละเอียด': record.desc or '',
             'เริ่ม': record.event.start_date.strftime('%d/%m/%Y') if record.event else '',
             'สิ้นสุด': record.event.end_date.strftime('%d/%m/%Y') if record.event else '',
-            'หน่วยคะแนนรวม': record.event.cmte_points if record.event else '',
             'หน่วยคะแนนที่ได้รับ': record.score or '',
             'สถาบันฝึกอบรม': record.event.sponsor if record.event else '',
             'วันที่อนุมัติ': record.approved_date.strftime('%d/%m/%Y') if record.approved_date else '',
             'วันหมดอายุ': record.score_valid_until.strftime('%d/%m/%Y') if record.score_valid_until else '',
-            'วันที่บันทึก': record.create_datetime.strftime('%d/%m/%Y'),
+            'วันที่บันทึก': record.create_datetime.strftime('%d/%m/%Y') if record.create_datetime else '',
         })
     df = pd.DataFrame.from_dict(records)
+    if not df.empty:
+        total_scores = df['หน่วยคะแนนที่ได้รับ'].sum()
+    else:
+        total_scores = None
     if current_user.license:
         pending_record_counts = current_user.license.pending_cmte_records.count()
     else:
@@ -575,7 +578,8 @@ def summarize_cmte_scores():
     score_table = df.to_html(index=False, classes='table table-striped')
     return render_template('members/cmte/score_summary.html',
                            pending_record_counts=pending_record_counts,
-                           score_table=score_table, filter=filter)
+                           score_table=score_table, filter=filter,
+                           total_scores=total_scores)
 
 
 @member.route('/api/members')

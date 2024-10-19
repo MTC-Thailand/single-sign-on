@@ -1,6 +1,3 @@
-from datetime import datetime, date
-
-import arrow
 from flask_login import UserMixin
 
 from app import db
@@ -30,8 +27,8 @@ class Member(db.Model, UserMixin):
 
     @property
     def license_number(self):
-        if self.licenses:
-            return self.licenses[-1].number
+        if self.license:
+            return self.license.number
         return None
 
     @property
@@ -74,3 +71,13 @@ class License(db.Model):
     @property
     def pending_cmte_records(self):
         return self.cmte_records.filter_by(approved_date=None)
+
+    @property
+    def valid_cmte_records(self):
+        return (rec for rec in
+                self.cmte_records.filter_by(score_valid_until=self.end_date)
+                if rec.approved_date is not None)
+
+    @property
+    def valid_cmte_scores(self):
+        return sum([rec.score for rec in self.valid_cmte_records])
