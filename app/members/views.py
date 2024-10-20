@@ -16,7 +16,8 @@ from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine, or_, func
 
 from app.members import member_blueprint as member
-from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm
+from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm, \
+    MemberInfoForm
 
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm
@@ -648,3 +649,18 @@ def old_form_login():
             else:
                 flash('Username not found.', 'danger')
     return redirect(url_for('member.login'))
+
+
+@member.route('/members/info', methods=['GET', 'POST'])
+def edit_member_info():
+    form = MemberInfoForm(obj=current_user)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(current_user)
+            db.session.add(current_user)
+            db.session.commit()
+            flash('บันทึกข้อมูลเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('member.index'))
+        else:
+            flash(f'{form.errors}', 'danger')
+    return render_template('members/info_form.html', form=form)

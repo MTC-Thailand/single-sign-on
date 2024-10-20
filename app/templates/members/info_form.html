@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "members/nav.html" %}
+<section class="section">
+  <div class="container">
+    <div class="columns">
+      <div class="column is-one-third is-offset-4">
+        <h1 class="title has-text-centered">ข้อมูลส่วนตัว</h1>
+        <form method="post" class="box">
+          {{form.hidden_tag()}}
+          <div class="field">
+            <label class="label">ชื่อ</label>
+            <div class="control">
+              <input class="input" value="{{current_user.th_firstname}}" readonly>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">{{form.tel.label}}</label>
+            <div class="control">
+              {{form.tel(class="input is-success")}}
+              <p class="help is-success">
+                โปรดแก้ไขข้อมูลให้เป็นปัจจุบันเพื่อความสะดวกในการติดต่อ
+              </p>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">{{form.email.label}}</label>
+            <div class="control">
+              {{form.email(class="input is-success")}}
+              <p class="help is-success">
+                โปรดแก้ไขข้อมูลให้เป็นปัจจุบันเพื่อความสะดวกในการติดต่อ
+              </p>
+            </div>
+          </div>
+          <div class="field is-grouped">
+            <div class="control">
+              <a href="{{url_for('member.index')}}" class="button is-light">
+                <span>ยกเลิก</span>
+              </a>
+            </div>
+            <div class="control">
+              <button class="button is-success" type="submit">
+                <span class="icon">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                </span>
+                <span>บันทึก</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

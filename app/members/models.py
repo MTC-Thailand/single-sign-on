@@ -17,8 +17,8 @@ class Member(db.Model, UserMixin):
     en_lastname = db.Column(db.String())
     dob = db.Column(db.Date())
     pid = db.Column(db.String(), nullable=False)
-    email = db.Column(db.String())
-    tel = db.Column(db.String())
+    email = db.Column(db.String(), info={'label': 'E-mail'})
+    tel = db.Column(db.String(), info={'label': 'โทรศัพท์'})
     username = db.Column(db.String())
     password = db.Column(db.String())
 
