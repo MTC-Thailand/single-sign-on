@@ -212,6 +212,8 @@ class CMTEEventParticipationRecord(db.Model):
     event = db.relationship(CMTEEvent, backref=db.backref('participants'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
     approved_date = db.Column('approved_date', db.Date())
+    start_date = db.Column('start_date', db.Date())
+    end_date = db.Column('end_date', db.Date())
     license = db.relationship('License', backref=db.backref('cmte_records', lazy='dynamic'))
     score = db.Column('score', db.Numeric(), info={'label': 'Score'})
     desc = db.Column('description', db.Text(), info={'label': 'รายละเอียดกิจกรรม'})

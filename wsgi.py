@@ -295,7 +295,7 @@ def load_cpd_event_records(year, month):
 def load_cpd_event_individual_records(year):
     query = f'''
     SELECT train_id AS event_id, w_edate AS end_date, w_bdate AS start_date,
-    mem_id, w_appr_date AS approved_datetime, cpd_score
+    mem_id, w_appr_date AS approved_datetime, cpd_score, w_title
     FROM cpd_work
     WHERE ((day(w_edate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0) or w_edate is null)
     AND day(w_bdate) > 0 AND month(w_bdate) > 0 AND year(w_bdate) = {year}
@@ -308,6 +308,9 @@ def load_cpd_event_individual_records(year):
     print(len(df))
     for idx, row in df.iterrows():
         member = Member.query.filter_by(old_mem_id=row['mem_id']).first()
+        if not member:
+            print(row['mem_id'], 'Member not found..')
+            continue
         license = member.license
         if not license:
             print(member.old_mem_id, 'No license found.')
@@ -318,6 +321,9 @@ def load_cpd_event_individual_records(year):
         else:
             score_valid_until = license.start_date - timedelta(days=1)
         record = CMTEEventParticipationRecord(license=license,
+                                              start_date=row['start_date'],
+                                              end_date=row['end_date'],
+                                              desc=row['w_title'],
                                               individual=True,
                                               score=row['cpd_score'],
                                               approved_date=row['approved_datetime'],
