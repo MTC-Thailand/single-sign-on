@@ -39,6 +39,10 @@
                     </div>
                     <table class="table is-fullwidth mt-4">
                         <tr>
+                            <td><strong>วันเริ่มใบอนุญาต</strong></td>
+                            <td>{{current_user.license.start_date|localdate}} ({{current_user.license.start_date|humanizedate}})</td>
+                        </tr>
+                        <tr>
                             <td><strong>ใบอนุญาตหมดอายุ</strong></td>
                             <td>{{current_user.license.end_date|localdate}} ({{current_user.license.end_date|humanizedate}})</td>
                         </tr>
