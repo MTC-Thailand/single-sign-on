@@ -9,11 +9,26 @@
         <h1 class="title has-text-centered">ข้อมูลส่วนตัว</h1>
         <form method="post" class="box">
           {{form.hidden_tag()}}
+          <div class="notification is-danger is-light">
           <div class="field">
             <label class="label">ชื่อ</label>
             <div class="control">
               <input class="input" value="{{current_user.th_firstname}}" readonly>
             </div>
+          </div>
+          <div class="field">
+            <label class="label">สกุล</label>
+            <div class="control">
+              <input class="input" value="{{current_user.th_lastname}}" readonly>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">หมายเลขบัตรประชาชน</label>
+            <div class="control">
+              <input class="input" value="{{current_user.pid}}" readonly>
+            </div>
+          </div>
+            <p>หากต้องการแก้ไขข้อมูลส่วนนี้กรุณาติดต่อเจ้าหน้าที่</p>
           </div>
           <div class="field">
             <label class="label">{{form.tel.label}}</label>
