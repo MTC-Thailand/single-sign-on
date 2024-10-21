@@ -292,20 +292,20 @@ def load_cpd_event_records(year, month):
 
 @app.cli.command('load-cpd-event-individual-records')
 @click.argument('year')
-@click.argument('month')
-def load_cpd_event_individual_records(year, month):
+def load_cpd_event_individual_records(year):
     query = f'''
     SELECT train_id AS event_id, w_edate AS end_date, w_bdate AS start_date,
     mem_id, w_appr_date AS approved_datetime, cpd_score
     FROM cpd_work
     WHERE ((day(w_edate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0) or w_edate is null)
-    AND day(w_bdate) > 0 AND month(w_bdate) = {month} AND year(w_bdate) = {year}
+    AND day(w_bdate) > 0 AND month(w_bdate) > 0 AND year(w_bdate) = {year}
     AND ((day(w_appr_date) > 0 AND month(w_appr_date) > 0) OR w_appr_date IS NULL)
     AND train_id = 0
     ;
     '''
     df = pd.read_sql_query(query, con=src_engine)
     print(df.head())
+    print(len(df))
     for idx, row in df.iterrows():
         member = Member.query.filter_by(old_mem_id=row['mem_id']).first()
         license = member.license
