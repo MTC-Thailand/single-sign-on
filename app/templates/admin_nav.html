@@ -22,7 +22,7 @@
                     <span>เมนูหลัก</span>
                 </a>
                 {% if current_user.is_authenticated %}
-                <a class="navbar-item" href="{{ url_for('member.logout') }}">
+                <a class="navbar-item" href="{{ url_for('users.logout') }}">
                     <span class="icon">
                         <i class="fas fa-sign-out-alt"></i>
                     </span>

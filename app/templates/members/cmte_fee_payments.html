@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "members/nav.html" %}
+<section class="section">
+  <div class="container">
+    <div class="columns">
+      <div class="column">
+        <h1 class="title has-text-centered">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</h1>
+        <table class="table is-striped is-fullwidth">
+          <thead>
+          <th>วันที่ชำระ</th>
+          <th>ระยะเวลาที่ใช้ขออนุมัติคะแนนส่วนบุคคล</th>
+          </thead>
+          <tbody>
+          {% for r in current_user.license.cmte_fee_payment_records %}
+          <tr>
+            <td>{{r.payment_datetime|localdatetime}}</td>
+            <td>{{r.start_date|localdate}} - {{r.end_date|localdate}}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

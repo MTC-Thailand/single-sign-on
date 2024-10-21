@@ -1,15 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Admin Index</title>
-</head>
-<body>
-<h1>Menu</h1>
-<ul>
-  <li>
-    <a href="{{url_for('webadmin.upload_renew')}}">Upload Renew Members</a>
-  </li>
-</ul>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+{% include "admin_nav.html" %}
+<section class="section">
+    <div class="content">
+        <div class="columns">
+            <div class="column">
+                <p>
+                    ระบบจัดการสมาชิกยังอยู่ในช่วงปรับปรุงระบบ อาจมีบางรายการที่จะยกเลิกการใช้งานในอนาคต
+                </p>
+                <h1>Menu</h1>
+                <ul>
+                    <li>
+                        <a href="{{url_for('webadmin.upload_renew')}}">Upload Renew Members</a>
+                    </li>
+                    <li>
+                        <a href="{{url_for('webadmin.upload_renew')}}">ตรวจสอบคะแนน CMTE</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

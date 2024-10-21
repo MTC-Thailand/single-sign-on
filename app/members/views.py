@@ -664,3 +664,8 @@ def edit_member_info():
         else:
             flash(f'{form.errors}', 'danger')
     return render_template('members/info_form.html', form=form)
+
+
+@member.route('/members/cmte-payments')
+def list_cmte_payments():
+    return render_template('members/cmte_fee_payments.html')

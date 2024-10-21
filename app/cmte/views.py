@@ -512,7 +512,7 @@ def admin_edit_fee_payment_record(record_id=None):
                 db.session.add(record)
                 db.session.commit()
                 flash('Fee payment record has been created.', 'success')
-                return redirect(url_for('member.admin_index'))
+                return redirect(url_for('user.cmte_admin_index'))
             else:
                 flash('Fee payment record update failed. No license number found.', 'danger')
         else:

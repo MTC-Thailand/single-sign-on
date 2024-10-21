@@ -17,6 +17,7 @@
                                 <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved')}}">ตรวจสอบหน่วยคะแนน</a></li>
                                 <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
                                 <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
+                                <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
                                 <li><a>รายการกิจกรรม</a></li>
                             </ul>
                         </li>
@@ -53,6 +54,12 @@
                                         {{current_user.license.valid_cmte_scores}}
                                     </h1>
                                 </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong></td>
+                            <td>
+                                {{'ชำระแล้ว' if current_user.license.get_active_cmte_fee_payment() else 'ยังไม่ได้ชำระ'}}
                             </td>
                         </tr>
                     </table>
