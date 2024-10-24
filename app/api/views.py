@@ -65,10 +65,10 @@ class CMTEFeePaymentRecord(Resource):
                             type: string
                             description: license no.
                         start_date:
-                            type: object
+                            type: string
                             description: Start date
                         end_date:
-                            type: object
+                            type: string
                             description: End date
         """
         license = License.query.filter_by(number=lic_no).first()
