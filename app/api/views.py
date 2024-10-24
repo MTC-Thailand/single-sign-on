@@ -74,7 +74,7 @@ class CMTEFeePaymentRecord(Resource):
         license = License.query.filter_by(number=lic_no).first()
         active_payment_record = license.get_active_cmte_fee_payment()
         data = active_payment_record.to_dict() if active_payment_record else {}
-        return jsonify(data)
+        return jsonify(data=data)
 
 
 class CMTEScore(Resource):
