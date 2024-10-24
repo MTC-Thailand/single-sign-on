@@ -4,7 +4,8 @@ from flask_login import login_required
 
 from app import db
 from app.admin import webadmin
-from app.members.models import License
+from app.cmte.models import CMTEFeePaymentRecord
+from app.members.models import License, Member
 
 
 @webadmin.route('/')
@@ -33,4 +34,55 @@ def upload_renew():
                     db.session.add(member)
             db.session.commit()
             return 'Update completed.'
+    return render_template('webadmin/upload_renew.html')
+
+
+@webadmin.route('/upload/new', methods=['GET', 'POST'])
+@login_required
+def upload_new():
+    if request.method == 'POST':
+        f = request.files['file']
+        df = pd.read_excel(f, engine='openpyxl')
+        for idx, row in df.iterrows():
+            member = Member.query.filter_by(pid=str(int(row['idcardnumber']))).first()
+            if not member:
+                member = Member(pid=str(row['idcardnumber']),
+                                th_title=row['prefix'],
+                                th_firstname=row['firstnameTH'],
+                                th_lastname=row['lastnameTH'],
+                                en_firstname=row['firstnameEN'],
+                                en_lastname=row['lastnameEN'],
+                                number=row['mem_id_txt'],
+                                email=row['email'],
+                                tel=row['telephone_number']
+                                )
+                db.session.add(member)
+                print('adding new member: {}'.format(member.number))
+                license = License.query.filter_by(number=str(int(row['license_no']))).first()
+                if not license:
+                    license = License(start_date=row['license_begin_date'],
+                                      end_date=row['license_exp_date'],
+                                      issue_date=row['approve_date'],
+                                      number=str(row['license_no']),
+                                      member=member)
+                else:
+                    license.start_date = row['license_begin_date']
+                    license.end_date = row['license_exp_date']
+                    license.issue_date = row['approve_date']
+                db.session.add(license)
+            if row['form_tradition'] == 1 and not pd.isna(row['payment_date']):
+                cmte_payment_record = license.cmte_fee_payment_records.filter_by(
+                    start_date=license.start_date,
+                    end_date=license.end_date,
+                    license=license).first()
+                if not cmte_payment_record:
+                    cmte_payment_record = CMTEFeePaymentRecord(
+                        start_date=license.start_date,
+                        end_date=license.end_date,
+                        payment_datetime=row['payment_date'],
+                        license=license,
+                    )
+                    db.session.add(cmte_payment_record)
+        db.session.commit()
+        return 'Upload completed.'
     return render_template('webadmin/upload_renew.html')
