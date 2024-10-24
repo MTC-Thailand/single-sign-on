@@ -2,9 +2,11 @@ import pandas as pd
 from flask import render_template, request
 from flask_login import login_required
 
-from app import db
+from app import db, admin_permission
 from app.admin import webadmin
+from app.admin.forms import MemberInfoAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
+from app.members.forms import MemberInfoForm
 from app.members.models import License, Member
 
 
@@ -86,3 +88,12 @@ def upload_new():
         db.session.commit()
         return 'Upload completed.'
     return render_template('webadmin/upload_renew.html')
+
+
+@webadmin.route('/members/<int:member_id>/info', methods=['GET'])
+@login_required
+@admin_permission.require(http_exception=403)
+def edit_member_info(member_id):
+    member = Member.query.get(member_id)
+    form = MemberInfoAdminForm(obj=member)
+    return render_template('webadmin/member_info_form.html', form=form)

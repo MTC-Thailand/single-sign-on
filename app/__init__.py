@@ -88,12 +88,13 @@ def create_app():
     from app.admin import webadmin as webadmin_blueprint
     app.register_blueprint(webadmin_blueprint)
 
-    from app.api.views import Login, CMTEScore, MemberInfo, RefreshToken
+    from app.api.views import Login, CMTEScore, MemberInfo, RefreshToken, CMTEFeePaymentRecord
 
     api.add_resource(Login, '/auth/login')
     api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
     api.add_resource(RefreshToken, '/auth/refresh')
+    api.add_resource(CMTEFeePaymentRecord, '/members/<string:lic_no>/cmte-fee-payment-record')
 
     app.register_blueprint(api_bp)
 

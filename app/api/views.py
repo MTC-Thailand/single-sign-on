@@ -11,7 +11,7 @@ from flask_restful import Resource
 from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
 
-from app.members.models import Member
+from app.members.models import Member, License
 
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
@@ -42,6 +42,39 @@ class RefreshToken(Resource):
         identity = get_jwt_identity()
         access_token = create_access_token(identity=identity)
         return jsonify(access_token=access_token)
+
+
+class CMTEFeePaymentRecord(Resource):
+    @jwt_required()
+    def get(self, lic_no):
+        """
+        This endpoint returns active CMTE fee payment.
+        ---
+        parameters:
+            -   lic_no: license no.
+                in: path
+                type: string
+                required: true
+        responses:
+            200:
+                description: Active CMTE fee payment of the individual
+                schema:
+                    id: CMTEFeePaymentRecord
+                    properties:
+                        license_number:
+                            type: string
+                            description: license no.
+                        start_date:
+                            type: object
+                            description: Start date
+                        end_date:
+                            type: object
+                            description: End date
+        """
+        license = License.query.filter_by(number=lic_no).first()
+        active_payment_record = license.get_active_cmte_fee_payment()
+        data = active_payment_record.to_dict() if active_payment_record else {}
+        return jsonify(data)
 
 
 class CMTEScore(Resource):
