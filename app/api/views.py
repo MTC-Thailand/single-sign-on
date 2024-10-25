@@ -90,14 +90,25 @@ class CMTEFeePaymentResource(Resource):
         """
         This endpoint posts CMTE fee payment data.
         ---
+        consumes:
+            -   application/json
         parameters:
-            -   lic_no: license no.
+            -   name: lic_no
                 in: path
                 type: string
                 required: true
-            - payment_datetime: payment datetime
+                description: License number
+            -   name: payment_datetime
+                in: body
                 type: string
                 required: true
+                schema:
+                    payment_datetime: string
+                    properties:
+                        payment_datetime:
+                            type: string
+                            description: Payment datetime in 'YYYY-MM-DD HH:MM:SS' format.
+
         responses:
             201:
                 description: Active CMTE fee payment of the individual
@@ -113,7 +124,7 @@ class CMTEFeePaymentResource(Resource):
                         end_date:
                             type: string
                             description: End date
-                        pay_date:
+                        payment_datetime:
                             type: string
                             description: Payment date
         """
