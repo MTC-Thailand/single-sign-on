@@ -257,4 +257,5 @@ class CMTEFeePaymentRecord(db.Model):
     def to_dict(self):
         return {'end_date': self.end_date.strftime('%Y-%m-%d'),
                 'start_date': self.start_date.strftime('%Y-%m-%d'),
+                'payment_datetime': self.payment_datetime.isoformat(),
                 'license_number': self.license_number}

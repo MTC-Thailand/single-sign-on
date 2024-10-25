@@ -1,17 +1,23 @@
 import datetime
+import arrow
 import os
 
 import pandas as pd
 from http import HTTPStatus
 
 import requests
-from flask import jsonify, request, make_response
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token
+from flask import jsonify, request
+from flask_jwt_extended import (create_access_token,
+                                jwt_required,
+                                get_jwt_identity,
+                                create_refresh_token)
 from flask_restful import Resource
 from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
 
+from app import db
 from app.members.models import Member, License
+from app.cmte.models import CMTEFeePaymentRecord
 
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
@@ -44,7 +50,7 @@ class RefreshToken(Resource):
         return jsonify(access_token=access_token)
 
 
-class CMTEFeePaymentRecord(Resource):
+class CMTEFeePaymentResource(Resource):
     @jwt_required()
     def get(self, lic_no):
         """
@@ -70,11 +76,70 @@ class CMTEFeePaymentRecord(Resource):
                         end_date:
                             type: string
                             description: End date
+                        payment_datetime:
+                            type: string
+                            description: Payment date
         """
         license = License.query.filter_by(number=lic_no).first()
         active_payment_record = license.get_active_cmte_fee_payment()
         data = active_payment_record.to_dict() if active_payment_record else {}
         return jsonify(data=data)
+
+    @jwt_required()
+    def post(self, lic_no):
+        """
+        This endpoint posts CMTE fee payment data.
+        ---
+        parameters:
+            -   lic_no: license no.
+                in: path
+                type: string
+                required: true
+            - payment_datetime: payment datetime
+                type: string
+                required: true
+        responses:
+            201:
+                description: Active CMTE fee payment of the individual
+                schema:
+                    id: CMTEFeePaymentRecord
+                    properties:
+                        license_number:
+                            type: string
+                            description: license no.
+                        start_date:
+                            type: string
+                            description: Start date
+                        end_date:
+                            type: string
+                            description: End date
+                        pay_date:
+                            type: string
+                            description: Payment date
+        """
+        payment_datetime = request.json.get('payment_datetime')
+        print(payment_datetime)
+        if payment_datetime:
+            payment_datetime = arrow.get(payment_datetime, 'YYYY-MM-DD HH:mm:ss', tzinfo='Asia/Bangkok').datetime
+        else:
+            return {'message': 'Payment datetime required.'}, 400
+        license = License.query.filter_by(number=lic_no).first()
+        if license:
+            record = CMTEFeePaymentRecord.query.filter_by(license=license,
+                                                          start_date=license.start_date,
+                                                          end_date=license.end_date).first()
+            if not record:
+                record = CMTEFeePaymentRecord(license_number=lic_no,
+                                              payment_datetime=payment_datetime,
+                                              start_date=license.start_date,
+                                              end_date=license.end_date)
+                db.session.add(record)
+                db.session.commit()
+                return {'data': record.to_dict()}, 201
+            else:
+                return {'message': 'Payment record already exists'}, 400
+        else:
+            return {'message': 'License not found.'}, 400
 
 
 class CMTEScore(Resource):
