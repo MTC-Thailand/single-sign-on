@@ -17,30 +17,16 @@
         <table id="events-table" class="table is-fullwidth">
           <thead>
           <th>ชื่อ</th>
-          <th>วันและเวลา</th>
+          <th>เริ่มต้น</th>
+          <th>สิ้นสุด</th>
+          <th>สถานที่</th>
           <th>ประเภท</th>
           <th>อัตราค่าธรรมเนียม</th>
+          <th>สถาบัน</th>
           <th>วันที่ยื่น</th>
           <th>วันที่อนุมัติ</th>
-          <th></th>
           </thead>
           <tbody>
-          {% for evt in events %}
-          <tr>
-            <td>{{evt.title}}</td>
-            <td>{{evt.start_date|localdatetime}} - {{evt.end_date|localdatetime}}</td>
-            <td>{{evt.event_type}}</td>
-            <td>{{evt.fee_rate}}</td>
-            <td>{{evt.submitted_datetime|localdatetime}}</td>
-            <td>{{evt.approved_datetime|localdatetime}}</td>
-            <td><a class="button is-small is-link is-outlined" href="{{url_for('cmte.admin_preview_event', event_id=evt.id, next_url=request.url)}}">
-              <span class="icon">
-                <i class="fa-solid fa-circle-info"></i>
-              </span>
-              <span>รายละเอียด</span>
-            </a></td>
-          </tr>
-          {% endfor %}
           </tbody>
         </table>
         <div class="buttons is-centered">
@@ -60,8 +46,64 @@
 {% block scripts %}
 {{super()}}
 <script>
+  $.fn.dataTable.moment('lll');
   $(document).ready(function (){
-    $('#events-table').DataTable();
+    $('#events-table').DataTable({
+      ajax: {{url_for('cmte.get_events', _type='approved')|tojson|safe}},
+      order: [[4, 'desc']],
+      columns: [
+        {
+          data: 'title',
+          render: function (data, type, row) {
+            return `<a href="${row['link']}">${data}</a>`
+          }
+        },
+        {
+          data: 'start_date',
+          render: function (data, type) {
+            if (data !== null) {
+              return moment(data).format('lll')
+            } else {
+              return null
+            }
+          }
+        },
+        {
+          data: 'end_date',
+          render: function (data, type) {
+            if (data !== null) {
+              return moment(data).format('lll')
+            } else {
+              return null
+            }
+          }
+        },
+        {data: 'venue'},
+        {data: 'event_type'},
+        {data: 'fee_rate'},
+        {data: 'sponsor'},
+        {
+          data: 'submitted_datetime',
+          render: function (data, type) {
+            if (data !== null) {
+              return moment(data).format('lll')
+            } else {
+              return null
+            }
+          }
+        },
+        {
+          data: 'approved_datetime',
+          render: function (data, type) {
+            if (data !== null) {
+              return moment(data).format('lll')
+            } else {
+              return null
+            }
+          }
+        },
+      ]
+    });
   })
 </script>
 {% endblock %}

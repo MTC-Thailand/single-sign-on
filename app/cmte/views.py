@@ -8,7 +8,8 @@ import pandas as pd
 
 import arrow
 import boto3
-from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app, session
+from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app, session, \
+    jsonify
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
@@ -24,7 +25,7 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEPaymentForm,
                             CMTEParticipantFileUploadForm, CMTEFeePaymentForm, CMTEAdminEventForm, CMTEEventCodeForm)
 from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, \
-    CMTESponsorMember, CMTEEventSponsor
+    CMTESponsorMember, CMTEEventSponsor, CMTEEventActivity
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -80,7 +81,9 @@ def create_event(event_id=None):
     if form.validate_on_submit():
         if not event_id:
             event = CMTEEvent()
+        event_activity_id = request.form.get('event_activity_id', type=int)
         form.populate_obj(event)
+        event.activity_id = event_activity_id
         event_type_fee_rate_id = request.form.get('event_type_fee_rate', type=int)
         event.fee_rate_id = event_type_fee_rate_id
         event.start_date = arrow.get(event.start_date, 'Asia/Bangkok').datetime
@@ -112,12 +115,19 @@ def create_event(event_id=None):
 def get_fee_rates():
     event_type_id = request.form.get('event_type', type=int)
     fee_rate_id = request.args.get('fee_rate_id', type=int)
+    activity_id = request.args.get('activity_id', type=int)
     event_type = CMTEEventType.query.get(event_type_id)
     options = ''
     for fr in event_type.fee_rates:
         checked = 'checked' if fr.id == fee_rate_id else ''
         options += f'<label class="radio is-danger"><input type="radio" required {checked} name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
     options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
+
+    options += '<select hx-swap-oob="true" id="activities">'
+    for a in event_type.activities:
+        selected = 'selected' if activity_id == a.id else ''
+        options += f'<option {selected} name="event_activity_id" value="{a.id}">{a.name}</li>'
+    options += '</select>'
     return options
 
 
@@ -344,7 +354,7 @@ def edit_participants(event_id: int = None, rec_id: int = None):
 @login_required
 @cmte_admin_permission.require()
 def admin_pending_events():
-    events = CMTEEvent.query.filter_by(approved_datetime=None).all()
+    events = CMTEEvent.query.filter_by(approved_datetime=None).order_by(CMTEEvent.submitted_datetime.desc())
     return render_template('cmte/admin/pending_events.html', events=events)
 
 
@@ -352,8 +362,34 @@ def admin_pending_events():
 @login_required
 @cmte_admin_permission.require()
 def admin_approved_events():
-    events = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).all()
+    events = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).order_by(CMTEEvent.submitted_datetime.desc())
     return render_template('cmte/admin/approved_events.html', events=events)
+
+
+@cmte.get('/api/events')
+@login_required
+@cmte_admin_permission.require()
+def get_events():
+    search = request.args.get('search[value]')
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    _type = request.args.get('_type', 'pending')
+
+    # query = CMTEEvent.query.filter(db.or_(CMTEEvent.title.like(f'%{search}%')))
+    query = CMTEEvent.query
+    if _type == 'approved':
+        query = query.filter(CMTEEvent.approved_datetime != None)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for event in query:
+        _data = event.to_dict()
+        _data['link'] = url_for('cmte.admin_preview_event', event_id=event.id)
+        data.append(_data)
+    return jsonify(data=data,
+                   recordsFiltered=total_filtered,
+                   recordsTotal=query.count(),
+                   draw=request.args.get('draw', type=int))
 
 
 @cmte.get('/admin/events/load-pending/pages/<int:page_no>')
@@ -605,7 +641,9 @@ def admin_event_edit(event_id=None):
         if form.validate_on_submit():
             if not event:
                 event = CMTEEvent()
+            event_activity_id = request.form.get('event_activity_id', type=int)
             form.populate_obj(event)
+            event.activity_id = event_activity_id
             db.session.add(event)
             db.session.commit()
             flash('เพิ่มกิจกรรมเรียบร้อย', 'success')

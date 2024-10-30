@@ -188,6 +188,20 @@ class CMTEEvent(db.Model):
 
     # TODO: add a field for an approver
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'event_type': str(self.event_type) if self.event_type else None,
+            'fee_rate': str(self.fee_rate) if self.fee_rate else None,
+            'submitted_datetime': self.submitted_datetime.isoformat() if self.submitted_datetime else None,
+            'approved_datetime': self.approved_datetime.isoformat() if self.approved_datetime else None,
+            'venue': self.venue,
+            'sponsor': str(self.sponsor) if self.sponsor else None,
+        }
+
     def __str__(self):
         return self.title
 

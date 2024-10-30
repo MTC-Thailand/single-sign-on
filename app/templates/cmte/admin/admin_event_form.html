@@ -33,10 +33,16 @@
                         <label class="label">{{form.event_type.label}}</label>
                         <div class="select">
                             {% if event %}
-                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates', fee_rate_id=event.fee_rate_id), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates', fee_rate_id=event.fee_rate_id, activity_id=event.activity_id), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
                             {% else %}
                             {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates'), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
                             {% endif %}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">กิจกรรม</label>
+                        <div class="select">
+                            <select id="activities"></select>
                         </div>
                     </div>
                     <div class="field">
@@ -71,12 +77,6 @@
                         <label class="label">{{form.submitted_datetime.label}}</label>
                         <div class="control">
                             {{form.submitted_datetime(class="input", type="text")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.approved_datetime.label}}</label>
-                        <div class="control">
-                            {{form.approved_datetime(class="input", type="text")}}
                         </div>
                     </div>
                     <div class="field">
@@ -206,23 +206,6 @@
                 format: 'DD/MM/YYYY HH:mm'
             }
         })
-        $("input[name='approved_datetime']").daterangepicker({
-            buttonClasses: 'button is-small',
-            applyButtonClasses: 'is-link',
-            cancelButtonClasses: 'is-light',
-            {% if not form.approved_datetime.data %}
-            startDate: moment().startOf('hour'),
-            {% else %}
-            startDate: {{form.approved_datetime.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
-            {% endif %}
-            timePicker: true,
-            timePicker24Hour: true,
-            timePickerIncrement: 30,
-            singleDatePicker: true,
-            locale: {
-            format: 'DD/MM/YYYY HH:mm'
-        }
-    })
         $("input[name='submitted_datetime']").daterangepicker({
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',
