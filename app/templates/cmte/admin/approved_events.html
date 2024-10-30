@@ -10,8 +10,8 @@
       <div class="column">
         <div class="tabs is-boxed">
           <ul>
-            <li><a href="{{url_for('cmte.admin_pending_events')}}">รออนุมัติ</a></li>
-            <li class="is-active"><a href="{{url_for('cmte.admin_approved_events')}}">อนุมัติแล้ว</a></li>
+            <li {% if _type=='pending' %} class="is-active" {% endif %}><a href="{{url_for('cmte.admin_pending_events', _type='pending')}}">รออนุมัติ</a></li>
+            <li {% if _type=='approved' %} class="is-active" {% endif %}><a href="{{url_for('cmte.admin_approved_events', _type='approved')}}">อนุมัติแล้ว</a></li>
           </ul>
         </div>
         <table id="events-table" class="table is-fullwidth">
@@ -20,7 +20,6 @@
           <th>เริ่มต้น</th>
           <th>สิ้นสุด</th>
           <th>สถานที่</th>
-          <th>ประเภท</th>
           <th>อัตราค่าธรรมเนียม</th>
           <th>สถาบัน</th>
           <th>วันที่ยื่น</th>
@@ -49,14 +48,16 @@
   $.fn.dataTable.moment('lll');
   $(document).ready(function (){
     $('#events-table').DataTable({
-      ajax: {{url_for('cmte.get_events', _type='approved')|tojson|safe}},
-      order: [[4, 'desc']],
+      ajax: {{url_for('cmte.get_events', _type=_type)|tojson|safe}},
+      order: [[1, 'desc']],
+      serverSide: true,
       columns: [
         {
           data: 'title',
           render: function (data, type, row) {
             return `<a href="${row['link']}">${data}</a>`
-          }
+          },
+          orderable: false
         },
         {
           data: 'start_date',
@@ -66,7 +67,8 @@
             } else {
               return null
             }
-          }
+          },
+          orderable: true
         },
         {
           data: 'end_date',
@@ -76,12 +78,12 @@
             } else {
               return null
             }
-          }
+          },
+          orderable: true
         },
-        {data: 'venue'},
-        {data: 'event_type'},
-        {data: 'fee_rate'},
-        {data: 'sponsor'},
+        {data: 'venue', orderable: false},
+        {data: 'fee_rate', orderable: false},
+        {data: 'sponsor', orderable: false},
         {
           data: 'submitted_datetime',
           render: function (data, type) {
@@ -90,7 +92,8 @@
             } else {
               return null
             }
-          }
+          },
+          orderable: true
         },
         {
           data: 'approved_datetime',
@@ -100,7 +103,8 @@
             } else {
               return null
             }
-          }
+          },
+          orderable: true
         },
       ]
     });

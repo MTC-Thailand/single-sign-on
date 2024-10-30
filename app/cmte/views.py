@@ -1,4 +1,5 @@
 import io
+import re
 import time
 import os
 import uuid
@@ -354,33 +355,52 @@ def edit_participants(event_id: int = None, rec_id: int = None):
 @login_required
 @cmte_admin_permission.require()
 def admin_pending_events():
-    events = CMTEEvent.query.filter_by(approved_datetime=None).order_by(CMTEEvent.submitted_datetime.desc())
-    return render_template('cmte/admin/pending_events.html', events=events)
+    return render_template('cmte/admin/approved_events.html', _type='pending')
 
 
 @cmte.get('/admin/events/approved')
 @login_required
 @cmte_admin_permission.require()
 def admin_approved_events():
-    events = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).order_by(CMTEEvent.submitted_datetime.desc())
-    return render_template('cmte/admin/approved_events.html', events=events)
+    return render_template('cmte/admin/approved_events.html', _type='approved')
 
 
 @cmte.get('/api/events')
 @login_required
 @cmte_admin_permission.require()
 def get_events():
+    orderable_columns = {
+        1: CMTEEvent.start_date,
+        2: CMTEEvent.end_date,
+        7: CMTEEvent.submitted_datetime,
+        8: CMTEEvent.approved_datetime
+    }
     search = request.args.get('search[value]')
     start = request.args.get('start', type=int)
     length = request.args.get('length', type=int)
     _type = request.args.get('_type', 'pending')
-
-    # query = CMTEEvent.query.filter(db.or_(CMTEEvent.title.like(f'%{search}%')))
-    query = CMTEEvent.query
+    # query = CMTEEvent.query
+    query = CMTEEvent.query.filter(db.or_(CMTEEvent.title.like(f'%{search}%')))
     if _type == 'approved':
         query = query.filter(CMTEEvent.approved_datetime != None)
+    elif _type == 'pending':
+        query = query.filter(CMTEEvent.approved_datetime == None)
     total_filtered = query.count()
-    query = query.offset(start).limit(length)
+    r_dir = re.compile('order\[\d\]\[dir\]')
+    r_column = re.compile('order\[(\d)\]\[column\]')
+    order_dir = ''.join((filter(r_dir.match, request.args.keys())))
+    order_column = ''.join((filter(r_column.match, request.args.keys())))
+    print(order_dir, order_column, request.args.get(order_dir), request.args.get(order_column))
+    if order_column and order_dir:
+        dir_ = request.args.get(order_dir)
+        col_idx = request.args.get(order_column)
+        if int(col_idx) in orderable_columns:
+            if dir_ == 'desc':
+                query = query.order_by(orderable_columns[int(col_idx)].desc())
+            else:
+                query = query.order_by(orderable_columns[int(col_idx)])
+
+    query = query.order_by(CMTEEvent.submitted_datetime).offset(start).limit(length)
     data = []
     for event in query:
         _data = event.to_dict()
