@@ -97,3 +97,28 @@ def edit_member_info(member_id):
     member = Member.query.get(member_id)
     form = MemberInfoAdminForm(obj=member)
     return render_template('webadmin/member_info_form.html', form=form)
+
+
+@webadmin.route('/members/password-view', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def view_member_password():
+    if request.method == 'POST':
+        license_no = request.form.get('license_no')
+        license = License.query.filter_by(number=license_no).one()
+        if not license:
+            return 'No license found.'
+        else:
+            return f'''
+            <p>หมายเลขโทรศัพท์ {license.member.tel}</p>
+            <p>วันเดือนปีเกิด {license.member.dob}
+            <p>รหัสผ่านคือ {license.member.password}</p>
+            '''
+    return render_template('webadmin/password_view.html')
+
+
+
+
+    member = Member.query.get()
+    form = MemberInfoAdminForm(obj=member)
+    return render_template('webadmin/member_info_form.html', form=form)
