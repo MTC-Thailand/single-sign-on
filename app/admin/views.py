@@ -111,8 +111,9 @@ def view_member_password():
         else:
             return f'''
             <p>หมายเลขโทรศัพท์ {license.member.tel}</p>
-            <p>วันเดือนปีเกิด {license.member.dob}
-            <p>รหัสผ่านคือ {license.member.password}</p>
+            <p>วันเดือนปีเกิด {license.member.dob}</p>
+            <p>username: {license.member.username}</p>
+            <p>password: {license.member.password}</p>
             '''
     return render_template('webadmin/password_view.html')
 
