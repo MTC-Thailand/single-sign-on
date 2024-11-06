@@ -3,6 +3,7 @@ from flask_wtf.file import FileField
 from wtforms.validators import NumberRange, DataRequired, EqualTo, Email
 from wtforms_alchemy import model_form_factory, QuerySelectField
 from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField
+from wtforms_components import DateField
 
 from app.cmte.models import *
 
@@ -47,6 +48,7 @@ class CMTEAdminEventForm(ModelForm):
 class ParticipantForm(FlaskForm):
     license_number = StringField('License Number')
     score = DecimalField('Score', validators=[NumberRange(min=0)])
+    approved_date = DateField('Approved Date')
 
 
 class IndividualScoreForm(FlaskForm):

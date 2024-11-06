@@ -6,19 +6,13 @@
     <div class="container">
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column is-one-third is-offset-4">
-                <article class="panel is-info">
-                    <p class="panel-heading">Admin</p>
-                    <a class="panel-block" href="{{url_for('cmte.admin_pending_events')}}">
-                        อนุมัติกิจกรรม
-                    </a>
-                    <a class="panel-block" href="{{url_for('cmte.admin_edit_fee_payment_record')}}">
-                        เพิ่มรายการชำระค่าธรรมเนียมรายบุคคล
-                    </a>
-                    <a class="panel-block" href="{{url_for('cmte.admin_event_edit')}}">
-                        เพิ่มกิจกรรม
-                    </a>
-                </article>
+            <div class="column">
+                <h2 class="title has-text-centered">ไม่สามารถบันทึกคะแนนได้</h2>
+                <h2 class="subtitle has-text-centered">กรุณาตรวจสอบข้อมูลให้ถูกต้องอีกครั้ง</h2>
+                {{errors|safe}}
+                <a class="button is-light" href="{{url_for('cmte.admin_preview_event', event_id=event.id)}}">
+                    Back
+                </a>
             </div>
         </div>
     </div>

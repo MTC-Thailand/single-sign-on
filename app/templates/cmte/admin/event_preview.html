@@ -214,7 +214,10 @@
                         <span>เพิ่มรายชื่อผู้เข้าร่วม</span>
                     </a>
                     หรือ
-                    <form class="notification is-light" method="post" action="{{url_for('cmte.add_participants', event_id=event.id, source='admin')}}" enctype="multipart/form-data">
+                    <form class="notification is-light"
+                          method="post"
+                          action="{{url_for('cmte.add_participants', event_id=event.id, source='admin')}}" enctype="multipart/form-data"
+                    >
                         {{participant_form.hidden_tag()}}
                         <div class="field">
                             <label class="label">Upload รายชื่อ</label>
@@ -225,7 +228,7 @@
                         </div>
                         <div class="field is-grouped">
                             <div class="control">
-                                <input type="submit" value="Upload" class="button is-small is-success">
+                                <input id="upload-btn" type="submit" value="Upload" class="button is-small is-success">
                             </div>
                             <div class="control">
                                 <a class="button is-small is-light" href="{{url_for('cmte.get_participants_template_file')}}">
@@ -243,14 +246,18 @@
         <div class="columns">
             <div class="column">
                 <div id="participant-form"></div>
+                {% if errors %}
+                    {{errors|safe}}
+                {% endif %}
                 <h1 class="title is-size-4">รายชื่อผู้เข้าร่วม</h1>
                 <div id="participant-table">
-                    <table class="table">
+                    <table class="table" id="participant-list-table">
                         <thead>
                         <th>ชื่อ</th>
                         <th>หมายเลขใบอนุญาต (ท.น.)</th>
                         <th>คะแนนที่ได้รับ</th>
                         <th>เพิ่มเมื่อ</th>
+                        <th>อนุมัติเมื่อ</th>
                         <th></th>
                         </thead>
                         <tbody>
@@ -260,6 +267,7 @@
                             <td>{{rec.license_number}}</td>
                             <td>{{rec.score}}</td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
+                            <td>{{rec.approved_date|localdate or 'รออนุมัติ'}}</td>
                             <td>
                                 <a class="icon"
                                    hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
@@ -281,9 +289,41 @@
                         {% endfor %}
                         </tbody>
                     </table>
+                    <div class="buttons is-centered">
+                        <a hx-delete="{{url_for('cmte.approve_event_participation_records', event_id=event.id)}}"
+                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                           hx-confirm="คุณแน่ใจว่าจะอนุมัติทุกรายการหรือไม่"
+                           class="button is-danger">
+                            <span class="icon">
+                                <i class="fas fa-times"></i>
+                            </span>
+                            <span>
+                                ยกเลิกการอนุมัติทั้งหมด
+                            </span>
+                        </a>
+                        <a hx-post="{{url_for('cmte.approve_event_participation_records', event_id=event.id)}}"
+                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                           hx-confirm="คุณแน่ใจว่าจะอนุมัติทุกรายการหรือไม่"
+                           class="button is-info">
+                            <span class="icon">
+                                <i class="fas fa-check"></i>
+                            </span>
+                            <span>
+                                อนุมัติทั้งหมด
+                            </span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script>
+    $(document).ready(()=>{
+        $('#participant-list-table').DataTable();
+    })
+</script>
 {% endblock %}
