@@ -1,5 +1,5 @@
 import pandas as pd
-from flask import render_template, request
+from flask import render_template, request, url_for
 from flask_login import login_required
 
 from app import db, admin_permission
@@ -24,9 +24,9 @@ def upload_renew():
         df = pd.read_excel(f, engine='openpyxl')
         for idx, row in df.iterrows():
             license = License.query.filter_by(number=str(int(row['license_no']))).first()
-            if license:
-                license.start_date = start_date=row['renew_start_date']
-                license.end_date = end_date=row['renew_end_date']
+            if license and not pd.isnull(row['renew_end_date']) and not pd.isnull(row['renew_start_date']):
+                license.start_date = row['renew_start_date']
+                license.end_date = row['renew_end_date']
                 license.issue_date = row['renew_start_date']
                 db.session.add(license)
                 if row['type'] == 'renew_name':
@@ -34,8 +34,8 @@ def upload_renew():
                     member.th_firstname = row['firstname']
                     member.th_lastname = row['lastname']
                     db.session.add(member)
-            db.session.commit()
-            return 'Update completed.'
+        db.session.commit()
+        return 'Update completed. <a href="{}">Back</a>'.format(url_for('webadmin.index'))
     return render_template('webadmin/upload_renew.html')
 
 
