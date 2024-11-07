@@ -446,11 +446,13 @@ class MemberInfo(Resource):
             INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
             WHERE lic_id={mem_id} 
             '''
-        total_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
 
         member = Member.query.filter_by(pid=pin).first()
         cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
+        total_score = member.license.valid_cmte_scores
         data['active_cmte_payment'] = cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {}
+        data['lic_b_date'] = member.license.start_date.strftime('%Y-%m-%d')
+        data['lic_exp_date'] = member.license.end_date.strftime('%Y-%m-%d')
 
         data['cmte_score'] = {'total': total_score, 'valid': valid_score}
         return jsonify({'data': data})
