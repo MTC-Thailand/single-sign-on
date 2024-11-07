@@ -21,6 +21,11 @@ class Member(db.Model, UserMixin):
     tel = db.Column(db.String(), info={'label': 'โทรศัพท์'})
     username = db.Column(db.String())
     password = db.Column(db.String())
+    status = db.Column(db.String(), info={'label': 'สถานะ',
+                                          'choices': [(c, c) for c in ('ปกติ', 'ลาออก', 'สิ้นสมาชิกภาพ')]})
+    end_date = db.Column(db.Date(), info={'label': 'วันสิ้นอายุสมาชิกภาพ'})
+    begin_date = db.Column(db.Date(), info={'label': 'วันเริ่มต้นสมาชิกภาพ'})
+    # TODO: import begin date from the legacy database.
 
     def __str__(self):
         return self.th_fullname
@@ -81,3 +86,19 @@ class License(db.Model):
     @property
     def valid_cmte_scores(self):
         return sum([rec.score for rec in self.valid_cmte_records])
+
+    def to_dict(self):
+        return {
+            '',
+        }
+
+
+# class MemberAddress(db.Model):
+#     __tablename__ = 'member_addresses'
+#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     street_number = db.Column(db.Text())
+#     add_id = db.Column(db.Integer, info={'label': 'ชนิด',
+#                                          'choices': [('1', 'ที่อยู่'),
+#                                                      ('2', 'ที่ทำงาน'),
+#                                                      ('3', 'ที่อยู่ตามทะเบียนบ้าน')]})
+#     zipcode = db.Column('zipcode', db.Integer, info={'label': 'รหัสไปรษณีย์'})
