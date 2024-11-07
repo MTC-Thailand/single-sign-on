@@ -556,7 +556,7 @@ def summarize_cmte_scores():
             event_title = record.event.title
         else:
             event_type = CMTEEventType.query.get(record.event_type_id)
-            event_title = event_type.name
+            event_title = event_type.name if event_type else 'No title'
         records.append({
             'ชื่อกิจกรรม': event_title,
             'รายละเอียด': record.desc or '',
