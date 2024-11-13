@@ -216,6 +216,16 @@
                     </tbody>
                 </table>
                 <div class="buttons is-centered">
+                    <a class="button is-danger"
+                       hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                       hx-delete="{{url_for('cmte.admin_event_edit', event_id=event.id)}}"
+                       hx-confirm="คุณแน่ใจว่าต้องการลบกิจกรรมนี้ ข้อมูลจะไม่สามารถกู้กลับได้"
+                    >
+                    <span class="icon">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </span>
+                        <span>ลบกิจกรรม</span>
+                    </a>
                     <a class="button is-outlined is-dark" href="{{url_for('cmte.admin_event_edit', event_id=event.id)}}">
                     <span class="icon">
                         <i class="fas fa-pencil-alt"></i>

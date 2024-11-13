@@ -223,7 +223,7 @@ class CMTEEventParticipationRecord(db.Model):
     license_number = db.Column('license_number', db.ForeignKey('licenses.number'),
                                info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
-    event = db.relationship(CMTEEvent, backref=db.backref('participants'))
+    event = db.relationship(CMTEEvent, backref=db.backref('participants', cascade='all, delete-orphan'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
     approved_date = db.Column('approved_date', db.Date())
     start_date = db.Column('start_date', db.Date())

@@ -117,7 +117,6 @@ def get_fee_rates():
     event_type_id = request.form.get('event_type', type=int)
     fee_rate_id = request.args.get('fee_rate_id', type=int)
     activity_id = request.args.get('activity_id', type=int)
-    print(activity_id, 'activity_id')
     event_type = CMTEEventType.query.get(event_type_id)
     options = ''
     for fr in event_type.fee_rates:
@@ -125,7 +124,7 @@ def get_fee_rates():
         options += f'<label class="radio is-danger"><input type="radio" required {checked} name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
     options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
 
-    options += '<select hx-swap-oob="true" id="activities" name="event_activity_id">'
+    options += '<select hx-swap-oob="true" id="activities" name="activity">'
     for a in event_type.activities:
         selected = 'selected' if activity_id == a.id else ''
         options += f'<option {selected} value="{a.id}">{a.name}</li>'
@@ -371,8 +370,8 @@ def edit_participants(event_id: int = None, rec_id: int = None):
         resp = make_response()
         resp.headers['HX-Refresh'] = 'true'
         return resp
-
-    if request.headers.get('HX-Request') == 'true':
+    else:
+        flash(f'{form.errors}', 'danger')
         resp = make_response()
         resp.headers['HX-Refresh'] = 'true'
         return resp
@@ -697,7 +696,7 @@ def manage_sponsor(sponsor_id):
 
 
 @cmte.route('/admin/events', methods=['GET', 'POST'])
-@cmte.route('/admin/events/<int:event_id>', methods=['GET', 'POST'])
+@cmte.route('/admin/events/<int:event_id>', methods=['GET', 'POST', 'DELETE'])
 @login_required
 @cmte_admin_permission.require()
 def admin_event_edit(event_id=None):
@@ -707,18 +706,23 @@ def admin_event_edit(event_id=None):
     else:
         event = None
         form = CMTEAdminEventForm()
+    if request.method == 'DELETE':
+        db.session.delete(event)
+        db.session.commit()
+        resp = make_response()
+        flash('ลบกิจกรรมเรียบร้อยแล้ว', 'success')
+        resp.headers['HX-Redirect'] = url_for('users.cmte_admin_index')
+        return resp
     if request.method == 'POST':
         if form.validate_on_submit():
             if not event:
                 event = CMTEEvent()
-            event_activity_id = request.form.get('event_activity_id', type=int)
             form.populate_obj(event)
-            event.activity_id = event_activity_id
-            print(event_activity_id, 'event activity id')
             db.session.add(event)
             db.session.commit()
             flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
-            return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
+            return redirect(url_for('cmte.admin_preview_event', event_id=event.id))
         else:
+            print(form.activity.data, 'activity field value')
             flash(f'Error {form.errors}', 'danger')
     return render_template('cmte/admin/admin_event_form.html', form=form, event=event)

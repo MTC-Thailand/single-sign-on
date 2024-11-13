@@ -155,7 +155,7 @@
                             {% if event %}
                             <a href="{{url_for('cmte.admin_preview_event', event_id=event.id)}}" class="button is-light">Cancel</a>
                             {% else %}
-                            <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Cancel</a>
+                            <a href="{{url_for('users.cmte_admin_index')}}" class="button is-light">Cancel</a>
                             {% endif %}
                             <button type="submit" class="button is-success">Submit</button>
                         </div>
