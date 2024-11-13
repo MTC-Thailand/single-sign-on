@@ -9,22 +9,21 @@
 {% include "cmte/admin_nav.html" %}
 <section class="section">
     <div class="container">
-        <h1 class="title has-text-centered">Event Registration Preview</h1>
+        <h1 class="title has-text-centered">Event Preview</h1>
         {% include "messages.html" %}
         <div class="columns">
             <div class="column">
-                <h2 class="title">{{event.event_type}}</h2>
-                <h3 class="subtitle">{{event.title}}</h3>
+                <h3 class="title">{{event.title}}</h3>
                 <table class="table is-fullwidth is-bordered">
                     <tbody>
                     <tr>
                         <td><strong>ประเภท</strong></td>
-                        <td>{{event.event_type.category}}</td>
+                        <td>{{event.event_type}}</td>
                         <td></td>
                     </tr>
                     <tr>
                         <td><strong>ชนิด</strong></td>
-                        <td>{{event.event_type}}</td>
+                        <td>{{event.activity}}</td>
                         <td>
                             <table class="table is-fullwidth is-bordered">
                                 <tbody>
@@ -95,6 +94,31 @@
                             </ul>
                         </td>
                         <td></td>
+                    </tr>
+                    <tr>
+                        <td>ข้อมูลผู้ประสานงาน</td>
+                        <td>
+                            <ul>
+                                <li>
+                                    <span class="icon">
+                                        <i class="fa-solid fa-user"></i>
+                                    </span>
+                                    <span>{{event.coord_name}}</span>
+                                </li>
+                                <li>
+                                    <span class="icon">
+                                        <i class="fa-solid fa-envelope"></i>
+                                    </span>
+                                    <span>{{event.coord_email}}</span>
+                                </li>
+                                <li>
+                                    <span class="icon">
+                                        <i class="fa-solid fa-phone"></i>
+                                    </span>
+                                    <span>{{event.coord_phone}}</span>
+                                </li>
+                            </ul>
+                        </td>
                     </tr>
                     {% if event.approved_datetime %}
                     <tr>

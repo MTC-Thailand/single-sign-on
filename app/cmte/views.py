@@ -117,6 +117,7 @@ def get_fee_rates():
     event_type_id = request.form.get('event_type', type=int)
     fee_rate_id = request.args.get('fee_rate_id', type=int)
     activity_id = request.args.get('activity_id', type=int)
+    print(activity_id, 'activity_id')
     event_type = CMTEEventType.query.get(event_type_id)
     options = ''
     for fr in event_type.fee_rates:
@@ -124,10 +125,10 @@ def get_fee_rates():
         options += f'<label class="radio is-danger"><input type="radio" required {checked} name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
     options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
 
-    options += '<select hx-swap-oob="true" id="activities">'
+    options += '<select hx-swap-oob="true" id="activities" name="event_activity_id">'
     for a in event_type.activities:
         selected = 'selected' if activity_id == a.id else ''
-        options += f'<option {selected} name="event_activity_id" value="{a.id}">{a.name}</li>'
+        options += f'<option {selected} value="{a.id}">{a.name}</li>'
     options += '</select>'
     return options
 
@@ -259,6 +260,14 @@ def admin_edit_event_code(event_id):
     </a>
     '''
     return template
+
+
+@cmte.route('/admin/event-types', methods=('GET', 'POST'))
+@login_required
+@cmte_admin_permission.require()
+def admin_edit_event_types():
+    event_types = CMTEEventType.query
+    return render_template('cmte/admin/event_types.html', event_types=event_types)
 
 
 @cmte.post('/events/<int:event_id>/submission')
@@ -705,10 +714,11 @@ def admin_event_edit(event_id=None):
             event_activity_id = request.form.get('event_activity_id', type=int)
             form.populate_obj(event)
             event.activity_id = event_activity_id
+            print(event_activity_id, 'event activity id')
             db.session.add(event)
             db.session.commit()
             flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
-            return redirect(url_for('users.cmte_admin_index'))
+            return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
         else:
             flash(f'Error {form.errors}', 'danger')
-    return render_template('cmte/admin/admin_event_form.html', form=form)
+    return render_template('cmte/admin/admin_event_form.html', form=form, event=event)

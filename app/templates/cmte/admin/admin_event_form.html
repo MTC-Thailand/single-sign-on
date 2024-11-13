@@ -40,9 +40,9 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">ชนิดกิจกรรม</label>
+                        <label class="label">{{form.activity.label}}</label>
                         <div class="select">
-                            <select id="activities"></select>
+                            {{form.activity(id="activities")}}
                         </div>
                     </div>
                     <div class="field">
@@ -152,7 +152,11 @@
                     </div>
                     <div class="field">
                         <div class="is-grouped is-grouped-centered">
+                            {% if event %}
+                            <a href="{{url_for('cmte.admin_preview_event', event_id=event.id)}}" class="button is-light">Cancel</a>
+                            {% else %}
                             <a href="{{url_for('cmte.cmte_index')}}" class="button is-light">Cancel</a>
+                            {% endif %}
                             <button type="submit" class="button is-success">Submit</button>
                         </div>
                     </div>

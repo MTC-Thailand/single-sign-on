@@ -173,7 +173,7 @@
                 </div>
                 <h1 class="title is-size-4">รายชื่อผู้เข้าร่วม</h1>
                 <div id="participant-table">
-                    <table class="table">
+                    <table class="table" id="participant-list-table">
                         <thead>
                         <th>ชื่อ</th>
                         <th>หมายเลขใบอนุญาต (ท.น.)</th>
@@ -217,6 +217,9 @@
 {% block scripts %}
 {{super()}}
 <script>
+    $(document).ready(()=>{
+        $('#participant-list-table').DataTable();
+    })
     document.addEventListener('alertError', function () {
         Swal.fire({
             icon: 'error',
