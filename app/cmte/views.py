@@ -422,7 +422,6 @@ def admin_approved_events():
 
 @cmte.get('/api/events')
 @login_required
-@cmte_admin_permission.require()
 def get_events():
     orderable_columns = {
         1: CMTEEvent.start_date,
@@ -434,12 +433,14 @@ def get_events():
     start = request.args.get('start', type=int)
     length = request.args.get('length', type=int)
     _type = request.args.get('_type', 'pending')
-    # query = CMTEEvent.query
+    new_only = request.args.get('new_only', 'false')
     query = CMTEEvent.query.filter(db.or_(CMTEEvent.title.like(f'%{search}%')))
     if _type == 'approved':
         query = query.filter(CMTEEvent.approved_datetime != None)
     elif _type == 'pending':
         query = query.filter(CMTEEvent.approved_datetime == None)
+    if new_only == 'true':
+        query = query.filter(CMTEEvent.start_date >= datetime.today())
     total_filtered = query.count()
     r_dir = re.compile('order\[\d\]\[dir\]')
     r_column = re.compile('order\[(\d)\]\[column\]')
@@ -732,3 +733,16 @@ def admin_event_edit(event_id=None):
             print(form.activity.data, 'activity field value')
             flash(f'Error {form.errors}', 'danger')
     return render_template('cmte/admin/admin_event_form.html', form=form, event=event)
+
+
+@cmte.route('/upcoming-events')
+@login_required
+def upcoming_events():
+    return render_template('members/cmte/upcoming_events.html')
+
+
+@cmte.route('/events/<int:event_id>/info')
+@login_required
+def show_event_detail_modal(event_id):
+    event = CMTEEvent.query.get(event_id)
+    return render_template('members/cmte/event_info_modal.html', event=event)

@@ -199,6 +199,8 @@ class CMTEEvent(db.Model):
             'submitted_datetime': self.submitted_datetime.isoformat() if self.submitted_datetime else None,
             'approved_datetime': self.approved_datetime.isoformat() if self.approved_datetime else None,
             'venue': self.venue,
+            'points': self.cmte_points,
+            'website': self.website,
             'sponsor': str(self.sponsor) if self.sponsor else None,
         }
 

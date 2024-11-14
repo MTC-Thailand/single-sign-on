@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "members/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <h1 class="title has-text-centered">รายการกิจกรรมใหม่</h1>
+                <h1 class="subtitle has-text-centered is-size-5 has-text-danger">ขณะนี้เจ้าหน้าที่กำลังเพิ่มกิจกรรมใหม่เข้าสู่ระบบ</h1>
+                <table id="upcomingEventsTable" class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อกิจกรรม</th>
+                    <th>เริ่มต้น</th>
+                    <th>สิ้นสุด</th>
+                    <th>สถานที่</th>
+                    <th>สถาบัน</th>
+                    <th>วันที่อนุมัติ</th>
+                    <th>คะแนน</th>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+                <div id="info-modal"></div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script>
+    $.fn.dataTable.moment('lll');
+    $(document).ready(()=>{
+        var table = new DataTable('#upcomingEventsTable', {
+            ajax: {{url_for('cmte.get_events', _type='approved', new_only='true')|tojson|safe}},
+            order: [[1, 'desc']],
+            serverSide: true,
+            initComplete: function () {
+                htmx.process('#upcomingEventsTable')
+            },
+            columns: [
+            {
+                data: 'title',
+                render: function (data, type, row) {
+                    return `<a hx-swap="innerHTML" hx-target="#info-modal" hx-get="/cmte/events/${row['id']}/info">${data}</a>`
+                },
+                orderable: false
+            },
+            {
+                data: 'start_date',
+                render: function (data, type) {
+                    if (data !== null) {
+                        return moment(data).format('lll')
+                    } else {
+                        return null
+                    }
+                },
+                orderable: true
+            },
+            {
+                data: 'end_date',
+                render: function (data, type) {
+                    if (data !== null) {
+                        return moment(data).format('lll')
+                    } else {
+                        return null
+                    }
+                },
+                orderable: true
+            },
+            {data: 'venue', orderable: false},
+            {data: 'sponsor', orderable: false},
+            {
+                data: 'approved_datetime',
+                render: function (data, type) {
+                    if (data !== null) {
+                        return moment(data).format('lll')
+                    } else {
+                        return null
+                    }
+                },
+                orderable: true
+            },
+            {data: 'points', orderable: false},
+        ],
+        })
+        table.on('draw', function () {
+            // htmx process must be called after the table is redrawn.
+            htmx.process('#upcomingEventsTable')
+        })
+    })
+</script>
+{% endblock %}

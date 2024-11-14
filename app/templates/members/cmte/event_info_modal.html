@@ -1,0 +1,74 @@
+<div class="modal is-active" id="event-info-modal">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">Event Detail</p>
+      <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
+    </header>
+    <section class="modal-card-body">
+      <table class="table is-fullwidth">
+        <tbody>
+        <tr>
+          <td><strong>ชื่อ</strong></td>
+          <td>{{event.title}}</td>
+        </tr>
+        <tr>
+          <td><strong>คะแนน</strong></td>
+          <td>{{event.cmte_points}}</td>
+        </tr>
+        <tr>
+          <td><strong>วันและเวลา</strong></td>
+          <td>{{event.start_date|localdatetime}} - {{event.end_date|localdatetime}}</td>
+        </tr>
+        <tr>
+          <td><strong>สถานที่</strong></td>
+          <td>{{event.venue}}</td>
+        </tr>
+        <tr>
+          <td><strong>Web Site</strong></td>
+          <td><a href="{{event.website}}">{{event.website}}</a></td>
+        </tr>
+        <tr>
+          <td><strong>ผู้จัด</strong></td>
+          <td>{{event.sponsor}}</td>
+        </tr>
+        <tr>
+          <td><strong>ผู้ประสานงาน</strong></td>
+          <td>
+            <ul>
+              <li>
+                <span class="icon">
+                    <i class="fa-solid fa-user"></i>
+                </span>
+                <span>{{event.coord_name}}</span>
+              </li>
+              <li>
+                <span class="icon">
+                    <i class="fa-solid fa-envelope"></i>
+                </span>
+                <span>{{event.coord_email}}</span>
+              </li>
+              <li>
+                <span class="icon">
+                    <i class="fa-solid fa-phone"></i>
+                </span>
+                <span>{{event.coord_phone}}</span>
+              </li>
+            </ul>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </section>
+    <footer class="modal-card-foot">
+    </footer>
+  </div>
+</div>
+<script>
+  window.addEventListener('closeModal', (evt) => {
+    htmx.removeClass(htmx.find('#event-info-modal'), 'is-active')
+  })
+  window.document.getElementById("cancelButton").addEventListener("click", function () {
+    htmx.removeClass(htmx.find('#event-info-modal'), 'is-active')
+  })
+</script>
