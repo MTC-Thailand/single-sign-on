@@ -239,6 +239,10 @@ class CMTEEventParticipationRecord(db.Model):
     def is_valid(self):
         return self.score_valid_until < self.license.end_date
 
+    def set_score_valid_date(self):
+        if self.event.end_date.date() <= self.license.end_date:
+            self.score_valid_until = self.license.end_date
+
 
 class CMTEEventDoc(db.Model):
     __tablename__ = 'cmte_event_docs'

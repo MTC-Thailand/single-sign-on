@@ -352,7 +352,9 @@ def edit_participants(event_id: int = None, rec_id: int = None):
             if rec:
                 rec.score = form.score.data
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-                rec.approved_date = form.approved_date.data
+                if form.approved_date.data:
+                    rec.approved_date = form.approved_date.data
+                    rec.set_score_valid_date()
         else:
             rec = CMTEEventParticipationRecord.query.filter_by(license_number=form.license_number.data,
                                                                event_id=event_id).first()
@@ -364,6 +366,8 @@ def edit_participants(event_id: int = None, rec_id: int = None):
                 rec = CMTEEventParticipationRecord(event_id=event_id, license_number=form.license_number.data,
                                                    score=float(form.score.data))
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+                if form.approved_date.data:
+                    rec.set_score_valid_date()
         db.session.add(rec)
         db.session.commit()
         flash('เพิ่มข้อมูลเรียบร้อยแล้ว', 'success')
@@ -385,6 +389,8 @@ def approve_event_participation_records(event_id):
     if request.method == 'POST':
         for rec in event.participants:
             rec.approved_date = arrow.now('Asia/Bangkok').datetime.date()
+            rec.score_valid_until = rec.license.end_date
+            rec.set_score_valid_date()
             db.session.add(rec)
         db.session.commit()
         resp = make_response()
