@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import click
 import pandas as pd
+import pytz
 from flask import session
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
@@ -351,10 +352,13 @@ def load_cpd_payment():
 @app.cli.command('convert-event-year')
 def convert_event_year():
     from dateutil.relativedelta import relativedelta
+    bangkok = pytz.timezone('Asia/Bangkok')
     for e in CMTEEvent.query:
         if e.start_date and e.start_date.year > 2100:
             new_start_date = e.start_date - relativedelta(years=543)
-            print(e.start_date, new_start_date)
+            e.start_date = new_start_date.astimezone(bangkok)
         if e.end_date and e.end_date.year > 2100:
             new_end_date = e.end_date - relativedelta(years=543)
-            print(e.end_date, new_end_date)
+            e.end_date = new_end_date.astimezone(bangkok)
+        db.session.add(e)
+    db.session.commit()
