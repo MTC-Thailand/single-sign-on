@@ -346,3 +346,15 @@ def load_cpd_payment():
         db.session.add(record)
         db.session.commit()
         print('.', end='', flush=True)
+
+
+@app.cli.command('convert-event-year')
+def convert_event_year():
+    from dateutil.relativedelta import relativedelta
+    for e in CMTEEvent.query:
+        if e.start_date and e.start_date.year > 2100:
+            new_start_date = e.start_date - relativedelta(years=543)
+            print(e.start_date, new_start_date)
+        if e.end_date and e.end_date.year > 2100:
+            new_end_date = e.end_date - relativedelta(years=543)
+            print(e.end_date, new_end_date)
