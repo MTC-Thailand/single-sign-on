@@ -291,6 +291,44 @@ def load_cpd_event_records(year, month):
         print('.', end='', flush=True)
 
 
+@app.cli.command('load-cpd-event-records-2')
+@click.argument('year')
+@click.argument('month')
+@click.argument('event_id')
+def load_cpd_event_records_2(year, month, event_id):
+    query = f'''
+    SELECT train_id AS event_id, w_edate AS end_date, w_bdate AS start_date,
+    mem_id, w_appr_date AS approved_datetime, cpd_score FROM cpd_work
+    WHERE ((day(w_edate) > 0 AND month(w_edate) > 0 AND year(w_edate) > 0) or w_edate is null)
+    AND day(w_bdate) > 0 AND month(w_bdate) = {month} AND year(w_bdate) = {year}
+    AND ((day(w_appr_date) > 0 AND month(w_appr_date) > 0) OR w_appr_date IS NULL)
+    AND train_id is null AND cpd_type_no=7 AND act_no=70; 
+    ;
+    '''
+    df = pd.read_sql_query(query, con=src_engine)
+    print(df.head())
+    for idx, row in df.iterrows():
+        member = Member.query.filter_by(old_mem_id=row['mem_id']).first()
+        license = member.license
+        if not license:
+            print(member.old_mem_id, 'No license found.')
+            continue
+        event = CMTEEvent.query.get(event_id)
+        end_date = row['end_date'] or row['start_date']
+        if end_date > license.start_date:
+            score_valid_until = license.end_date
+        else:
+            score_valid_until = license.start_date - timedelta(days=1)
+        record = CMTEEventParticipationRecord(license=license,
+                                              event=event,
+                                              score=row['cpd_score'],
+                                              approved_date=row['approved_datetime'] or datetime.datetime(2022,1,8),
+                                              score_valid_until=score_valid_until)
+        db.session.add(record)
+        db.session.commit()
+        print('.', end='', flush=True)
+
+
 @app.cli.command('load-cpd-event-individual-records')
 @click.argument('year')
 def load_cpd_event_individual_records(year):
