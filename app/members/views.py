@@ -557,15 +557,19 @@ def summarize_cmte_scores():
     for record in query:
         if record.event:
             event_title = record.event.title
+            start_date = record.event.start_date.strftime('%d/%m/%Y') if record.event.start_date else ''
+            end_date = record.event.end_date.strftime('%d/%m/%Y') if record.event.end_date else ''
         else:
-            event_title = 'กิจกรรมส่วนบุคคล'
+            event_title = record.activity.name if record.activity else 'กิจกรรมส่วนบุคคล'
+            start_date = record.start_date.strftime('%d/%m/%Y') if record.start_date else ''
+            end_date = record.end_date.strftime('%d/%m/%Y') if record.end_date else ''
         records.append({
             'ชื่อกิจกรรม': event_title,
             'รายละเอียด': record.desc or '',
-            'เริ่ม': record.event.start_date.strftime('%d/%m/%Y') if record.event else '',
-            'สิ้นสุด': record.event.end_date.strftime('%d/%m/%Y') if record.event else '',
+            'เริ่ม': start_date,
+            'สิ้นสุด': end_date,
             'หน่วยคะแนนที่ได้รับ': record.score or None,
-            'สถาบันฝึกอบรม': record.event.sponsor if record.event else '',
+            'สถาบันฝึกอบรม': record.event.sponsor if record.event else '-',
             'วันที่อนุมัติ': record.approved_date.strftime('%d/%m/%Y') if record.approved_date else '',
             'วันหมดอายุ': record.score_valid_until.strftime('%d/%m/%Y') if record.score_valid_until else '',
             'วันที่บันทึก': record.create_datetime.strftime('%d/%m/%Y') if record.create_datetime else '',

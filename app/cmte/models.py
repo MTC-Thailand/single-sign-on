@@ -237,7 +237,11 @@ class CMTEEventParticipationRecord(db.Model):
     event_type_id = db.Column('event_type_id', db.ForeignKey('cmte_event_types.id'))
     score_valid_until = db.Column('score_valid_until', db.Date())
     closed_date = db.Column('closed_date', db.Date())
-    reason = db.Column('reason', db.Text())
+    reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
+    activity_id = db.Column('activity_id', db.ForeignKey('cmte_event_activities.id'))
+    activity = db.relationship(CMTEEventActivity, backref=db.backref('records',
+                                                                     lazy='dynamic',
+                                                                     cascade='all, delete-orphan'))
 
     @property
     def is_valid(self):

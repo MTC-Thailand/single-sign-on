@@ -88,9 +88,14 @@
           <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
           <input type="hidden" name="approved" value="true">
           <div class="field">
+            <div class="select">
+              {{form.activity()}}
+            </div>
+          </div>
+          <div class="field">
             <label class="label">คะแนน</label>
             <div class="control">
-              <input type="number" step="any" name="score" class="input">
+              {{form.score(class="input is-danger", required=True)}}
             </div>
           </div>
           <div class="field">
@@ -106,9 +111,9 @@
           <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
           <input type="hidden" name="approved" value="false">
           <div class="field">
-            <label class="label">เหตุผล</label>
+            <label class="label">{{form.reason.label}}</label>
             <div class="control">
-              <textarea name="reason" class="textarea"></textarea>
+              {{form.reason(class="textarea")}}
             </div>
           </div>
           <div class="field">

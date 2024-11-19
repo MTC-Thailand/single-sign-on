@@ -27,7 +27,7 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEParticipantFileUploadForm,
                             CMTEFeePaymentForm,
                             CMTEAdminEventForm,
-                            CMTEEventCodeForm)
+                            CMTEEventCodeForm, IndividualScoreAdminForm)
 from app.cmte.models import (CMTEEvent,
                              CMTEEventType,
                              CMTEEventParticipationRecord,
@@ -789,13 +789,12 @@ def admin_individual_score_index():
 @cmte_admin_permission.require()
 def admin_individual_score_detail(record_id):
     record = CMTEEventParticipationRecord.query.get(record_id)
+    form = IndividualScoreAdminForm(obj=record)
     if request.method == 'POST':
-        score = request.form.get('score', type=float)
         approved = request.form.get('approved')
-        reason = request.form.get('reason')
         if approved == 'true':
-            if score and score > 0.0:
-                record.score = score
+            if form.score.data and form.score.data > 0.0:
+                form.populate_obj(record)
                 record.approved_date = arrow.now('Asia/Bangkok').date()
                 record.set_score_valid_date()
                 db.session.add(record)
@@ -805,13 +804,13 @@ def admin_individual_score_detail(record_id):
             else:
                 flash('กรุณาตรวจสอบคะแนนอีกครั้ง', 'warning')
         else:
-            record.reason = reason
+            form.populate_obj(record)
             record.closed_date = arrow.now('Asia/Bangkok').date()
             db.session.add(record)
             db.session.commit()
             flash('บันทึกข้อมูลเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_individual_score_index'))
-    return render_template('cmte/admin/individual_score_detail.html', record=record)
+    return render_template('cmte/admin/individual_score_detail.html', record=record, form=form)
 
 @cmte.route('/payments/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
 @login_required
