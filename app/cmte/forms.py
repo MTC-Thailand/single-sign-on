@@ -52,8 +52,11 @@ class ParticipantForm(FlaskForm):
     approved_date = DateField('Approved Date', validators=[Optional()])
 
 
-class IndividualScoreForm(FlaskForm):
-    desc = TextAreaField('รายละเอียด', validators=[DataRequired()])
+class IndividualScoreForm(ModelForm):
+    class Meta:
+        model = CMTEEventParticipationRecord
+        only = ['start_date', 'end_date', 'desc']
+        date_format = '%d/%m/%Y'
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
 

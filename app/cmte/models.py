@@ -228,21 +228,26 @@ class CMTEEventParticipationRecord(db.Model):
     event = db.relationship(CMTEEvent, backref=db.backref('participants', cascade='all, delete-orphan'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
     approved_date = db.Column('approved_date', db.Date())
-    start_date = db.Column('start_date', db.Date())
-    end_date = db.Column('end_date', db.Date())
+    start_date = db.Column('start_date', db.Date(), info={'label': 'เริ่ม'})
+    end_date = db.Column('end_date', db.Date(), info={'label': 'สิ้นสุด'})
     license = db.relationship('License', backref=db.backref('cmte_records', lazy='dynamic'))
     score = db.Column('score', db.Numeric(), info={'label': 'Score'})
     desc = db.Column('description', db.Text(), info={'label': 'รายละเอียดกิจกรรม'})
     individual = db.Column('individual', db.Boolean(), default=False)
     event_type_id = db.Column('event_type_id', db.ForeignKey('cmte_event_types.id'))
     score_valid_until = db.Column('score_valid_until', db.Date())
+    closed_date = db.Column('closed_date', db.Date())
+    reason = db.Column('reason', db.Text())
 
     @property
     def is_valid(self):
-        return self.score_valid_until < self.license.end_date
+        return (self.score_valid_until < self.license.end_date) and self.approved_date is not None
 
     def set_score_valid_date(self):
-        if self.event.end_date.date() <= self.license.end_date:
+        if self.event:
+            if self.event.end_date.date() <= self.license.end_date:
+                self.score_valid_until = self.license.end_date
+        else:
             self.score_valid_until = self.license.end_date
 
 

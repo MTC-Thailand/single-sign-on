@@ -35,7 +35,7 @@ bangkok = timezone('Asia/Bangkok')
 
 @cmte.route('/aws-s3/download/<key>', methods=['GET'])
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def download_file(key):
     download_filename = request.args.get('download_filename')
     s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
@@ -602,13 +602,27 @@ def search_license():
 
 
 @cmte.route('/admin/fee-payment-record-form', methods=['GET', 'POST'])
-@cmte.route('/admin/fee-payment-record-form/<int:record_id>', methods=['GET', 'POST'])
+@cmte.route('/admin/fee-payment-record-form/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
 @login_required
 @cmte_admin_permission.require()
 def admin_edit_fee_payment_record(record_id=None):
-    form = CMTEFeePaymentForm()
+    print(request.method)
+    if record_id:
+        record = CMTEFeePaymentRecord.query.get(record_id)
+        form = CMTEFeePaymentForm(obj=record)
+        return render_template('cmte/admin/fee_payment_form.html', form=form, record=record)
+    else:
+        record = None
+        form = CMTEFeePaymentForm()
     today = datetime.today()
     active_payments = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.end_date >= today).all()
+    if request.method == 'DELETE':
+        print(f'deleting {record}')
+        db.session.delete(record)
+        db.session.commit()
+        resp = make_response()
+        resp.headers['HX-Redirect'] = url_for('cmte.admin_edit_fee_payment_record')
+        return resp
     if request.method == 'POST':
         if form.validate_on_submit():
             record = CMTEFeePaymentRecord()
@@ -629,7 +643,8 @@ def admin_edit_fee_payment_record(record_id=None):
                 flash('Fee payment record update failed. No license number found.', 'danger')
         else:
             flash('Error updating fee payment record form.', 'danger')
-    return render_template('cmte/admin/fee_payment_form.html', form=form, active_payments=active_payments)
+    return render_template('cmte/admin/fee_payment_form.html',
+                           form=form, active_payments=active_payments, record=record)
 
 
 @cmte.route('/sponsors/members/login', methods=['GET', 'POST'])
@@ -746,3 +761,43 @@ def upcoming_events():
 def show_event_detail_modal(event_id):
     event = CMTEEvent.query.get(event_id)
     return render_template('members/cmte/event_info_modal.html', event=event)
+
+
+@cmte.route('/events/individuals/index')
+@login_required
+@cmte_admin_permission.require()
+def admin_individual_score_index():
+    records = CMTEEventParticipationRecord.query.filter_by(individual=True,
+                                                           approved_date=None,
+                                                           closed_date=None)
+    return render_template('cmte/admin/individual_scores.html', records=records)
+
+
+@cmte.route('/events/individuals/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_individual_score_detail(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    if request.method == 'POST':
+        score = request.form.get('score', type=float)
+        approved = request.form.get('approved')
+        reason = request.form.get('reason')
+        if approved == 'true':
+            if score and score > 0.0:
+                record.score = score
+                record.approved_date = arrow.now('Asia/Bangkok').date()
+                record.set_score_valid_date()
+                db.session.add(record)
+                db.session.commit()
+                flash('อนุมัติคะแนนเรียบร้อย', 'success')
+                return redirect(url_for('cmte.admin_individual_score_index'))
+            else:
+                flash('กรุณาตรวจสอบคะแนนอีกครั้ง', 'warning')
+        else:
+            record.reason = reason
+            record.closed_date = arrow.now('Asia/Bangkok').date()
+            db.session.add(record)
+            db.session.commit()
+            flash('บันทึกข้อมูลเรียบร้อย', 'success')
+            return redirect(url_for('cmte.admin_individual_score_index'))
+    return render_template('cmte/admin/individual_score_detail.html', record=record)

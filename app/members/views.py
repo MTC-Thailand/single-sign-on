@@ -14,7 +14,7 @@ import pandas as pd
 from flask import render_template, make_response, jsonify, current_app, flash, request, redirect, url_for, session
 from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
-from sqlalchemy import create_engine, or_, func
+from sqlalchemy import create_engine, or_, func, and_
 
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm, \
@@ -453,9 +453,7 @@ def index():
 @member.route('/cmte/individual-scores/index', methods=['GET'])
 @login_required
 def individual_score_index():
-    event_types = CMTEEventType.query \
-        .filter_by(for_group=False, is_sponsored=False).all()
-    return render_template('members/cmte/individual_score_index.html', event_types=event_types)
+    return render_template('members/cmte/individual_score_index.html')
 
 
 @member.route('/cmte/individual-score-group/index', methods=['GET'])
@@ -466,9 +464,9 @@ def individual_score_group_index():
     return render_template('members/cmte/individual_score_group_index.html', event_types=event_types)
 
 
-@member.route('/cmte/individual-scores/<int:event_type_id>/form', methods=['GET', 'POST'])
+@member.route('/cmte/individual-scores/form', methods=['GET', 'POST'])
 @login_required
-def individual_score_form(event_type_id):
+def individual_score_form():
     if not current_user.license.get_active_cmte_fee_payment():
         flash('กรุณาชำระค่าธรรมเนียมการยื่นขอคะแนนส่วนบุคคลก่อนดำเนินการต่อ', 'warning')
         return redirect(url_for('member.index'))
@@ -478,7 +476,6 @@ def individual_score_form(event_type_id):
         form.populate_obj(record)
         record.individual = True
         record.license = current_user.license
-        record.event_type_id = event_type_id
         record.create_datetime = arrow.now('Asia/Bangkok').datetime
         s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                  aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
@@ -497,7 +494,7 @@ def individual_score_form(event_type_id):
         db.session.add(record)
         db.session.commit()
         flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
-        return redirect(url_for('member.index'))
+        return redirect(url_for('member.individual_score_index'))
     return render_template('members/cmte/individual_score_form.html', form=form)
 
 
@@ -539,11 +536,17 @@ def individual_score_group_form(event_type_id):
 @member.route('/cmte/scores', methods=['GET', 'POST'])
 @login_required
 def summarize_cmte_scores():
-    filter = request.args.get('filter', '')
+    filter = request.args.get('filter', 'approved_valid')
     records = []
     query = CMTEEventParticipationRecord.query.filter_by(license_number=current_user.license_number)
+    pending_query = query.filter(or_(
+        and_(CMTEEventParticipationRecord.individual == True,
+             CMTEEventParticipationRecord.approved_date == None,
+             CMTEEventParticipationRecord.closed_date == None),
+        and_(CMTEEventParticipationRecord.approved_date == None,
+             CMTEEventParticipationRecord.individual == False)))
     if filter == 'pending':
-        query = query.filter_by(approved_date=None)
+        query = pending_query
     elif filter == 'approved':
         query = query.filter(CMTEEventParticipationRecord.approved_date != None)
     elif filter == 'approved_valid':
@@ -555,14 +558,13 @@ def summarize_cmte_scores():
         if record.event:
             event_title = record.event.title
         else:
-            event_type = CMTEEventType.query.get(record.event_type_id)
-            event_title = event_type.name if event_type else 'No title'
+            event_title = 'กิจกรรมส่วนบุคคล'
         records.append({
             'ชื่อกิจกรรม': event_title,
             'รายละเอียด': record.desc or '',
             'เริ่ม': record.event.start_date.strftime('%d/%m/%Y') if record.event else '',
             'สิ้นสุด': record.event.end_date.strftime('%d/%m/%Y') if record.event else '',
-            'หน่วยคะแนนที่ได้รับ': record.score or '',
+            'หน่วยคะแนนที่ได้รับ': record.score or None,
             'สถาบันฝึกอบรม': record.event.sponsor if record.event else '',
             'วันที่อนุมัติ': record.approved_date.strftime('%d/%m/%Y') if record.approved_date else '',
             'วันหมดอายุ': record.score_valid_until.strftime('%d/%m/%Y') if record.score_valid_until else '',
@@ -573,13 +575,13 @@ def summarize_cmte_scores():
         total_scores = df['หน่วยคะแนนที่ได้รับ'].sum()
     else:
         total_scores = None
-    if current_user.license:
-        pending_record_counts = current_user.license.pending_cmte_records.count()
-    else:
-        pending_record_counts = 0
+    # if current_user.license:
+    #     pending_record_counts = current_user.license.pending_cmte_records.count()
+    # else:
+    #     pending_record_counts = 0
     score_table = df.to_html(index=False, classes='table table-striped')
     return render_template('members/cmte/score_summary.html',
-                           pending_record_counts=pending_record_counts,
+                           pending_record_counts=pending_query.count(),
                            score_table=score_table, filter=filter,
                            total_scores=total_scores)
 

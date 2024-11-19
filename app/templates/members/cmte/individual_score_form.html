@@ -1,15 +1,31 @@
 {% extends "base.html" %}
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
 
 {% block content %}
 {% include "members/cmte/nav.html" %}
 <section class="section">
     <div class="container">
         <div class="columns">
-            <div class="column">
+            <div class="column is-two-thirds is-offset-2">
                 <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคล</h1>
                 {% include "messages.html" %}
                 <form method="post" enctype="multipart/form-data">
                     {{form.hidden_tag()}}
+                    <div class="field">
+                        <label class="label">{{form.start_date.label}}</label>
+                        <div class="control">
+                            {{form.start_date(class="input", type="text")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.end_date.label}}</label>
+                        <div class="control">
+                            {{form.end_date(class="input", type="text")}}
+                        </div>
+                    </div>
                     <div class="field">
                         <label class="label">{{form.desc.label}}</label>
                         <div class="control">
@@ -34,4 +50,35 @@
         </div>
     </div>
 </section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+<script>
+    $("input[name='end_date']").daterangepicker({
+        buttonClasses: 'button is-small',
+        applyButtonClasses: 'is-link',
+        cancelButtonClasses: 'is-light',
+        startDate: moment(),
+        timePicker: false,
+        singleDatePicker: true,
+        locale: {
+        format: 'DD/MM/YYYY'
+    }
+    })
+    $("input[name='start_date']").daterangepicker({
+        buttonClasses: 'button is-small',
+        applyButtonClasses: 'is-link',
+        cancelButtonClasses: 'is-light',
+        startDate: moment(),
+        timePicker: false,
+        singleDatePicker: true,
+        locale: {
+            format: 'DD/MM/YYYY'
+        }
+    })
+
+</script>
 {% endblock %}

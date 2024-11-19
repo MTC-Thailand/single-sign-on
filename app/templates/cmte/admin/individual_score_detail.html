@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+<section class="section">
+  <div class="container">
+    <h1 class="title">Welcome to CMTE.</h1>
+    {% include "messages.html" %}
+    <div class="columns">
+      <div class="column">
+        <table id="events-table" class="table is-fullwidth">
+          <thead>
+          <th>ชื่อ</th>
+          <th>ท.น.</th>
+          <th>รายละเอียด</th>
+          <th>เริ่ม</th>
+          <th>สิ้นสุด</th>
+          <th>วันที่ยื่น</th>
+          <th>เอกสารประกอบ</th>
+          </thead>
+          <tbody>
+          <tr>
+            <td>{{record.license.member}}</td>
+            <td>{{record.license_number}}</td>
+            <td>{{record.desc}}</td>
+            <td>{{record.start_date}}</td>
+            <td>{{record.end_date}}</td>
+            <td>{{record.create_datetime|localdatetime}}</td>
+            <td>
+              <table class="table is-bordered">
+                <thead>
+                <th>คำอธิบาย</th>
+                <th>ไฟล์</th>
+                </thead>
+                <tbody>
+                {% for doc in record.docs %}
+                <tr>
+                  <td>{{doc.note}}</td>
+                  <td>
+                    <a href="{{url_for('cmte.download_file', key=doc.key, download_filename=doc.filename)}}">
+                      <span class="icon">
+                          <i class="fa-solid fa-file-arrow-down"></i>
+                      </span>
+                      <span>
+                        {{doc.filename}}
+                      </span>
+                    </a>
+                  </td>
+                </tr>
+                </tbody>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="columns">
+      <div class="column is-one-third">
+        <form method="post" class="box">
+          <h1 class="title is-size-4">อนุมัติ</h1>
+          <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+          <input type="hidden" name="approved" value="true">
+          <div class="field">
+            <label class="label">คะแนน</label>
+            <div class="control">
+              <input type="number" step="any" name="score" class="input">
+            </div>
+          </div>
+          <div class="field">
+            <div class="control">
+              <button type="submit" class="button is-success">Save</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="column is-one-third">
+        <form method="post" class="box">
+          <h1 class="title is-size-4">ไม่อนุมัติ</h1>
+          <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+          <input type="hidden" name="approved" value="false">
+          <div class="field">
+            <label class="label">เหตุผล</label>
+            <div class="control">
+              <textarea name="reason" class="textarea"></textarea>
+            </div>
+          </div>
+          <div class="field">
+            <div class="control">
+              <button type="submit" class="button is-danger">Reject</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
