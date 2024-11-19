@@ -24,9 +24,17 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTESponsorMemberLoginForm,
                             CMTEEventSponsorForm,
                             CMTEPaymentForm,
-                            CMTEParticipantFileUploadForm, CMTEFeePaymentForm, CMTEAdminEventForm, CMTEEventCodeForm)
-from app.cmte.models import CMTEEvent, CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, \
-    CMTESponsorMember, CMTEEventSponsor, CMTEEventActivity
+                            CMTEParticipantFileUploadForm,
+                            CMTEFeePaymentForm,
+                            CMTEAdminEventForm,
+                            CMTEEventCodeForm)
+from app.cmte.models import (CMTEEvent,
+                             CMTEEventType,
+                             CMTEEventParticipationRecord,
+                             CMTEEventDoc,
+                             CMTEFeePaymentRecord,
+                             CMTESponsorMember,
+                             CMTEEventSponsor)
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -606,18 +614,16 @@ def search_license():
 @login_required
 @cmte_admin_permission.require()
 def admin_edit_fee_payment_record(record_id=None):
-    print(request.method)
     if record_id:
         record = CMTEFeePaymentRecord.query.get(record_id)
         form = CMTEFeePaymentForm(obj=record)
-        return render_template('cmte/admin/fee_payment_form.html', form=form, record=record)
     else:
         record = None
         form = CMTEFeePaymentForm()
     today = datetime.today()
     active_payments = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.end_date >= today).all()
+    pending_payments = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.payment_datetime == None).all()
     if request.method == 'DELETE':
-        print(f'deleting {record}')
         db.session.delete(record)
         db.session.commit()
         resp = make_response()
@@ -625,26 +631,31 @@ def admin_edit_fee_payment_record(record_id=None):
         return resp
     if request.method == 'POST':
         if form.validate_on_submit():
-            record = CMTEFeePaymentRecord()
-            license = License.query.filter_by(number=form.license_number.data).one()
-            if license:
-                if license.get_active_cmte_fee_payment():
-                    flash('Fee payment has been recorded and active.', 'warning')
-                    return redirect(url_for('member.admin_index'))
-
-                form.populate_obj(record)
+            if not record:
+                license = License.query.filter_by(number=form.license_number.data).one()
+                if license:
+                    if license.get_active_cmte_fee_payment():
+                        flash('Fee payment has been recorded and active.', 'warning')
+                        return redirect(url_for('member.admin_index'))
+                    else:
+                        flash('Fee payment record update failed. No license number found.', 'danger')
+                record = CMTEFeePaymentRecord()
                 record.start_date = license.start_date
                 record.end_date = license.end_date
-                db.session.add(record)
-                db.session.commit()
-                flash('Fee payment record has been created.', 'success')
-                return redirect(url_for('user.cmte_admin_index'))
-            else:
-                flash('Fee payment record update failed. No license number found.', 'danger')
+                record.license_number = license.number
+
+            form.populate_obj(record)
+            db.session.add(record)
+            db.session.commit()
+            flash('Fee payment record has been created/approved.', 'success')
+            next = request.args.get('next')
+            return redirect(next or url_for('cmte.admin_edit_fee_payment_record'))
         else:
+            print('form is not valid')
             flash('Error updating fee payment record form.', 'danger')
     return render_template('cmte/admin/fee_payment_form.html',
-                           form=form, active_payments=active_payments, record=record)
+                           form=form, active_payments=active_payments, record=record,
+                           pending_payments=pending_payments)
 
 
 @cmte.route('/sponsors/members/login', methods=['GET', 'POST'])
@@ -801,3 +812,9 @@ def admin_individual_score_detail(record_id):
             flash('บันทึกข้อมูลเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_individual_score_index'))
     return render_template('cmte/admin/individual_score_detail.html', record=record)
+
+@cmte.route('/payments/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_approve_individual_score_payment(record_id):
+    pass

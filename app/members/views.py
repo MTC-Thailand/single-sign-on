@@ -21,8 +21,8 @@ from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, Membe
     MemberInfoForm
 
 from app.members.models import *
-from app.cmte.forms import IndividualScoreForm
-from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc
+from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm
+from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord
 from app import admin_permission
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
@@ -445,8 +445,8 @@ def index():
     license = current_user.license
     valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score)) \
         .filter(
-                CMTEEventParticipationRecord.license == license,
-                CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date).scalar()
+        CMTEEventParticipationRecord.license == license,
+        CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date).scalar()
     return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores)
 
 
@@ -655,6 +655,7 @@ def old_form_login():
 
 
 @member.route('/members/info', methods=['GET', 'POST'])
+@login_required
 def edit_member_info():
     form = MemberInfoForm(obj=current_user)
     if request.method == 'POST':
@@ -670,5 +671,35 @@ def edit_member_info():
 
 
 @member.route('/members/cmte-payments')
+@login_required
 def list_cmte_payments():
     return render_template('members/cmte_fee_payments.html')
+
+
+@member.route('/members/cmte-fee-payment-form', methods=['GET', 'POST'])
+@login_required
+def cmte_fee_payment_form():
+    form = MemberCMTEFeePaymentForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            record = CMTEFeePaymentRecord()
+            record.note = form.payment_datetime.data
+            record.license_number = current_user.license.number
+            record.start_date = current_user.license.start_date
+            record.end_date = current_user.license.end_date
+            _file = form.doc.upload_file.data
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            if _file:
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                record.doc = CMTEEventDoc(key=key, filename=filename)
+            db.session.add(record)
+            db.session.commit()
+            flash('บันทึกข้อมูลเรียบร้อย รอการตรวจสอบจากเจ้าหน้าที่', 'success')
+            return redirect(url_for('member.list_cmte_payments'))
+        else:
+            flash(f'{form.errors}', 'danger')
+    return render_template('members/cmte/individual_score_payment_form.html', form=form)

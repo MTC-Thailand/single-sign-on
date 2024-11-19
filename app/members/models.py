@@ -66,7 +66,8 @@ class License(db.Model):
         return f'{self.number}: {self.end_date}'
 
     def get_active_cmte_fee_payment(self):
-        record = self.cmte_fee_payment_records.filter_by(end_date=self.end_date).first()
+        record = self.cmte_fee_payment_records\
+            .filter_by(end_date=self.end_date).first()
         return record
 
     @property

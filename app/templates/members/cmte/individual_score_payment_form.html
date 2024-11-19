@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+{% include "members/cmte/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column is-two-thirds is-offset-2">
+                <h1 class="title has-text-centered">ชำระค่าธรรมเนียมส่วนบุคคล</h1>
+                {% include "messages.html" %}
+                <figure class="image is-3by4">
+                    <img src="{{url_for('static', filename='qrcode-payment.png')}}">
+                </figure>
+                <h2 class="title is-size-4 has-text-centered">เลขบัญชี 1420016105 ธนาคารกรุงไทย</h2>
+                <form method="post" enctype="multipart/form-data">
+                    {{form.hidden_tag()}}
+                    <div class="field">
+                        <label class="label">{{form.payment_datetime.label}}</label>
+                        <div class="control">
+                            {{form.payment_datetime(class="input", type="text")}}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.doc.upload_file.label}}</label>
+                        <div class="control">
+                            {{form.doc.upload_file(required=True)}}
+                        </div>
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <a class="button is-light" href="{{url_for('member.individual_score_index')}}">Cancel</a>
+                        </div>
+                        <div class="control">
+                            <button type="submit" class="button is-success">Submit</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+<script>
+    $("input[name='payment_datetime']").daterangepicker({
+        buttonClasses: 'button is-small',
+        applyButtonClasses: 'is-link',
+        cancelButtonClasses: 'is-light',
+        startDate: moment(),
+        timePicker: true,
+        singleDatePicker: true,
+        timePicker24Hour: true,
+        locale: {
+        format: 'DD/MM/YYYY HH:mm'
+    }
+    })
+</script>
+{% endblock %}

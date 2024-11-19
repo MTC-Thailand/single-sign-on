@@ -63,7 +63,12 @@
                         <tr>
                             <td><strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong></td>
                             <td>
-                                {{'ชำระแล้ว' if current_user.license.get_active_cmte_fee_payment() else 'ยังไม่ได้ชำระ'}}
+                                {% set fee_payment = current_user.license.get_active_cmte_fee_payment() %}
+                                {% if fee_payment and fee_payment.payment_datetime %}
+                                ทำรายการเมื่อ {{fee_payment.payment_datetime|localdatetime}}
+                                {% else %}
+                                ไม่มีรายการ <a href="{{url_for('member.cmte_fee_payment_form')}}">ทำรายการที่นี่</a>
+                                {% endif %}
                             </td>
                         </tr>
                     </table>

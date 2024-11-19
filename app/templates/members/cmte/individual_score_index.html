@@ -7,14 +7,17 @@
         <div class="columns">
             <div class="column">
                 <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนน</h1>
+                {% if not current_user.license.get_active_cmte_fee_payment() %}
+                <p class="is-warning is-light notification">กรุณาชำระค่าธรรมเนียม 500 บาทต่อรอบการต่อใบอนุญาตใน One Platform Application เพื่อยื่นคะแนนส่วนบุคคล
+                    <a href="{{url_for('member.cmte_fee_payment_form')}}">คลิกที่นี่</a> เพื่อทำรายการ
+
+                </p>
+                {% endif %}
                 <div class="buttons is-centered">
                     <a class="button is-primary" href="{{url_for('member.individual_score_form')}}"
                     >
                         ยื่นคะแนน
                     </a>
-                    {% if not current_user.license.get_active_cmte_fee_payment() %}
-                    <p class="is-danger">กรุณาชำระค่าธรรมเนียม 500 บาทต่อรอบการต่อใบอนุญาตใน One Platform Application เพื่อยื่นคะแนนส่วนบุคคล</p>
-                    {% endif %}
                 </div>
                 <h1 class="title has-text-centered is-size-4">รายการยื่นขออนุมัติคะแนนส่วนบุคคลที่รอการอนุมัติ</h1>
                 <table class="table is-fullwidth">
@@ -30,9 +33,9 @@
                         <tr>
                             <td>{{rec.desc}}</td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
-                            <td>{{rec.closed_date}}</td>
-                            <td>{{rec.score or 'ไม่อนุมัติ'}}</td>
-                            <td>{{rec.reason}}</td>
+                            <td>{{rec.closed_date or 'รอพิจารณา'}}</td>
+                            <td>{{rec.score or 'ไม่อนุมัติ' if rec.closed_date else '-'}}</td>
+                            <td>{{rec.reason or ''}}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

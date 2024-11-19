@@ -57,6 +57,31 @@
       </div>
     </div>
     <div class="columns">
+      <div class="column">
+        <h1 class="title is-size-5">รายการชำระเงินค่าธรรมเนียม</h1>
+        <p class="notification is-warning is-light">
+          {% set payment = record.license.get_active_cmte_fee_payment() %}
+          {% if payment and payment.payment_datetime %}
+            ชำระเมื่อ {{payment.payment_datetime|localdatetime}} ใช้ได้ตั้งแต่ {{payment.start_date|localdate}} - {{payment.end_date|localdate}}
+          {% elif payment and not payment.payment_datetime %}
+          ชำระเมื่อ {{payment.note}} <span class="tag is-danger is-rounded">รอตรวจสอบ</span>
+            <div class="buttons">
+              <a class="button" href="{{url_for('cmte.download_file', key=payment.doc.key, download_filename=payment.doc.filename)}}">
+                    <span class="icon">
+                      <i class="fa-solid fa-file-arrow-down"></i>
+                    </span>
+                <span>Slip หลักฐานการโอนเงิน</span>
+              </a>
+              <a href="{{url_for('cmte.admin_edit_fee_payment_record', record_id=payment.id, next=request.url)}}" class="button is-success">อนุมัติการชำระเงิน</a>
+            </div>
+          {% else %}
+          ยังไม่มีรายการชำระเงินค่าธรรมเนียม
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    {% if payment and payment.payment_datetime %}
+    <div class="columns">
       <div class="column is-one-third">
         <form method="post" class="box">
           <h1 class="title is-size-4">อนุมัติ</h1>
@@ -94,6 +119,9 @@
         </form>
       </div>
     </div>
+    {% else %}
+    <span>จะสามารถอนุมัติคะแนนได้เมื่อมีรายการชำระเงิน กรุณาตรวจสอบหลักฐานการโอนเงิน</span>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

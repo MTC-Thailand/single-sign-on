@@ -270,14 +270,17 @@ class CMTEEventDoc(db.Model):
 class CMTEFeePaymentRecord(db.Model):
     __tablename__ = 'cmte_fee_payment_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    payment_datetime = db.Column('payment_datetime', db.DateTime(timezone=True), nullable=False,
+    payment_datetime = db.Column('payment_datetime', db.DateTime(timezone=True), nullable=True,
                                  info={'label': 'วันที่ชำระ'})
     start_date = db.Column('start_date', db.Date(), nullable=False, info={'label': 'วันเริ่มต้น'})
     end_date = db.Column('end_date', db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
     license_number = db.Column('license_number', db.ForeignKey('licenses.number'),
                                info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
-    license = db.relationship('License', backref=db.backref('cmte_fee_payment_records', lazy='dynamic',
-                                                            cascade='all, delete-orphan'))
+    license = db.relationship('License', backref=db.backref('cmte_fee_payment_records',
+                                                            lazy='dynamic', cascade='all, delete-orphan'))
+    doc_id = db.Column('doc_id', db.ForeignKey('cmte_event_docs.id'))
+    doc = db.relationship(CMTEEventDoc, uselist=False)
+    note = db.Column('note', db.Text, info={'label': 'หมายเหตุ'})
 
     def to_dict(self):
         return {'end_date': self.end_date.strftime('%Y-%m-%d'),

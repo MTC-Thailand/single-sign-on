@@ -15,12 +15,24 @@
           <tbody>
           {% for r in current_user.license.cmte_fee_payment_records %}
           <tr>
-            <td>{{r.payment_datetime|localdatetime}}</td>
-            <td>{{r.start_date|localdate}} - {{r.end_date|localdate}}</td>
+            <td>{{r.payment_datetime|localdatetime or r.note}}</td>
+            <td>{{r.start_date|localdate}} - {{r.end_date|localdate}}
+            {% if not r.payment_datetime %}
+              <span class="tag is-warning is-rounded">
+                รอตรวจสอบ
+              </span>
+            {% endif %}
+            </td>
           </tr>
           {% endfor %}
           </tbody>
         </table>
+        <div class="buttons is-centered">
+          <a class="button is-primary" href="{{url_for('member.individual_score_form')}}"
+          >
+            ยื่นคะแนน
+          </a>
+        </div>
       </div>
     </div>
   </div>

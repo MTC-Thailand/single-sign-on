@@ -40,30 +40,67 @@
                         <label class="label">{{form.payment_datetime.label}}</label>
                         <div class="control">
                             {{form.payment_datetime(class="input", type="text", required=True)}}
+                            <p class="help is-danger">กรุณาใส่เวลาชำระเงินให้ตรงกับในสลิป</p>
                         </div>
                     </div>
                     <div class="field">
                         <div class="is-grouped is-grouped-centered">
                             <a href="{{url_for('users.cmte_admin_index')}}" class="button is-light">Cancel</a>
                             {% if record %}
-                            <a hx-delete="{{url_for('cmte.admin_edit_fee_payment_record', record_id=record.id)}}" class="button is-danger"
-                               hx-swap="none" hx-confirm="Are you sure?"
-                            >
+                            <a hx-delete="{{url_for('cmte.admin_edit_fee_payment_record', record_id=record.id)}}"
+                                hx-confirm="Are you sure?" class="button is-danger">
                                 Delete
                             </a>
                             {% endif %}
-                            <button type="submit" class="button is-success">Submit</button>
+                            <button type="submit" class="button is-success">Save</button>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
+        <div class="columns">
+            <div class="column">
+                <h1 class="title is-size-4 has-text-centered">Pending Payments</h1>
+                <table class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อ</th>
+                    <th>ท.น.</th>
+                    <th>วันที่ชำระ</th>
+                    <th>หลักฐาน</th>
+                    <th></th>
+                    </thead>
+                    <tbody>
+                    {% for payment in pending_payments %}
+                    <tr>
+                        <td>{{payment.license.member}}</td>
+                        <td>{{payment.license.number}}</td>
+                        <td>{{payment.note}}</td>
+                        <td>
+                            <a href="{{url_for('cmte.download_file', key=payment.doc.key, filename=payment.doc.filename)}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-file-arrow-down"></i>
+                                </span>
+                                <span>{{payment.doc.filename}}</span>
+                            </a>
+                        </td>
+                        <td>
+                            <a class="button is-link" href="{{url_for('cmte.admin_edit_fee_payment_record', record_id=payment.id)}}">
+                                อนุมัติ
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
         {% if active_payments %}
         <div class="columns">
             <div class="column">
-                <h1 class="title has-text-centered">Active Payment Records</h1>
+                <h1 class="title is-size-4 has-text-centered">Active Payments</h1>
                 <table id="active-payment-table" class="table is-bordered is-fullwidth">
                     <thead>
+                    <th>Name</th>
                     <th>License ID</th>
                     <th>Start</th>
                     <th>End</th>
@@ -72,9 +109,10 @@
                     </thead>
                     {% for record in active_payments %}
                     <tr>
+                        <td>{{record.license.member}}</td>
                         <td>{{record.license_number}}</td>
-                        <td>{{record.start_date}}</td>
-                        <td>{{record.end_date}}</td>
+                        <td>{{record.start_date|localdate}}</td>
+                        <td>{{record.end_date|localdate}}</td>
                         <td>{{record.payment_datetime|localdatetime}}</td>
                         <td>
                             <a class="button" href="{{url_for('cmte.admin_edit_fee_payment_record', record_id=record.id)}}">
@@ -110,7 +148,6 @@
             {% endif %}
             timePicker: true,
             timePicker24Hour: true,
-            timePickerIncrement: 30,
             singleDatePicker: true,
             locale: {
             format: 'DD/MM/YYYY HH:mm'

@@ -1,9 +1,9 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
-from wtforms.validators import NumberRange, DataRequired, EqualTo, Email, Optional
+from wtforms.validators import NumberRange, EqualTo, Email, Optional
 from wtforms_alchemy import model_form_factory, QuerySelectField
 from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField
-from wtforms_components import DateField
+from wtforms_components import DateField, DateTimeField
 
 from app.cmte.models import *
 
@@ -72,6 +72,15 @@ class CMTEFeePaymentForm(ModelForm):
         only = ['payment_datetime', 'license_number']
 
     license_number = StringField('License Number')
+
+
+class MemberCMTEFeePaymentForm(ModelForm):
+    class Meta:
+        model = CMTEFeePaymentRecord
+        exclude = ['start_date', 'end_date']
+
+    payment_datetime = DateTimeField('ชำระเมือ', format='%d/%m/%Y %H:%M')
+    doc = FormField(CMTEEventDocForm, default=CMTEEventDocForm)
 
 
 class CMTESponsorMemberForm(ModelForm):
