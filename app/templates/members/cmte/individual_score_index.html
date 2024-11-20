@@ -8,7 +8,7 @@
             <div class="column">
                 <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนน</h1>
                 {% if not current_user.license.get_active_cmte_fee_payment() %}
-                <p class="is-warning is-light notification">กรุณาชำระค่าธรรมเนียม 500 บาทต่อรอบการต่อใบอนุญาตใน One Platform Application เพื่อยื่นคะแนนส่วนบุคคล
+                <p class="is-warning is-light notification">กรุณาชำระค่าธรรมเนียม 500 บาทต่อรอบการต่อใบอนุญาตใน One Platform Application เพื่อยื่นคะแนนส่วนบุคคล หรือ
                     <a href="{{url_for('member.cmte_fee_payment_form')}}">คลิกที่นี่</a> เพื่อทำรายการ
 
                 </p>
