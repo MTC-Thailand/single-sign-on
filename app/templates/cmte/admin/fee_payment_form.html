@@ -76,7 +76,7 @@
                         <td>{{payment.license.number}}</td>
                         <td>{{payment.note}}</td>
                         <td>
-                            <a href="{{url_for('cmte.download_file', key=payment.doc.key, filename=payment.doc.filename)}}">
+                            <a href="{{url_for('cmte.download_file', key=payment.doc.key, download_filename=payment.doc.filename)}}">
                                 <span class="icon">
                                     <i class="fa-solid fa-file-arrow-down"></i>
                                 </span>
