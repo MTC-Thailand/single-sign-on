@@ -11,74 +11,12 @@
             <img src="{{url_for('static', filename='logo.png')}}">
           </figure>
         </div>
+        <p class="notification has-text-centered is-light is-warning">กรุณา log in เข้าใช้งานระบบใหม่เพื่อตรวจสอบคะแนน</p>
+        <div class="buttons is-centered">
+          <a href="{{url_for('member.index')}}" class="button is-link">Log In</a>
+        </div>
       </div>
     </div>
-    <div class="block has-text-centered">
-      <div class="notification is-light is-warning">
-        กรุณาระบุวันที่ต่ออายุใบอนุญาตล่าสุดหากท่านได้ดำเนินการต่ออายุใบอนุญาตในระบบ One Platform เนื่องจากระบบจะไม่แสดงรายการหลังจากวันหมดอายุใบอนุญาต
-      </div>
     </div>
-    <div class="grid">
-      <div class="cell">
-        <form class="box"
-              hx-swap="innerHTML"
-              hx-target="#result"
-              hx-indicator="#submit-btn"
-              hx-post="{{url_for('member.view_member_info')}}">
-          {{form.hidden_tag()}}
-          <div class="field is-horizontal">
-            <div class="field-label is-normal">
-              <label class="label">{{form.license_id.label}}</label>
-            </div>
-            <div class="field-body">
-              <div class="field">
-                <div class="control">
-                  {{form.license_id(class="input is-danger")}}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="field is-horizontal">
-            <div class="field-label is-normal">
-              <label class="label">{{form.password.label}}</label>
-            </div>
-            <div class="field-body">
-              <div class="field">
-                <div class="control">
-                  {{form.password(class="input is-danger")}}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="field is-horizontal">
-            <div class="field-label is-normal">
-              <label class="label">{{form.license_renewal_date.label}}</label>
-            </div>
-            <div class="field-body">
-              <div class="field">
-                <div class="control">
-                  {{form.license_renewal_date(class="input", placeholder="YYYY-MM-DD ปีพ.ศ. เช่น 2566-10-15")}}
-                </div>
-                <p class="help has-text-link">โปรดระบุหากท่านต่ออายุใบอนุญาตครั้งล่าสุดในระบบ One platform</p>
-              </div>
-            </div>
-          </div>
-          <div class="field is-horizontal">
-            <div class="field-label is-normal"></div>
-            <div class="field-body">
-              <div class="field">
-                <div class="control">
-                  <button id="submit-btn" type="submit" class="button is-info">ค้นหา</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </form>
-      </div>
-      <div class="cell">
-        <div id="result"></div>
-      </div>
-    </div>
-  </div>
 </section>
 {% endblock %}

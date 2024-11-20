@@ -328,64 +328,9 @@ def search_member():
     return render_template('members/search_form.html', form=form)
 
 
-@member.route('/info', methods=['GET', 'POST'])
+@member.route('/info')
 def view_member_info():
-    form = AnonymousMemberSearchForm()
-    if form.validate_on_submit():
-        data_ = load_from_mtc(license_id=form.license_id.data)
-        message = ''
-        engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
-        engine.connect()
-        for rec in data_:
-            exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
-            delta = exp_date - arrow.now()
-            license_status = check_license_status(delta, rec.get('status_license'))
-            if form.license_renewal_date.data:
-                renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
-                expire_date = renewal_date + relativedelta(years=5)
-                query = f'''
-                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
-                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
-                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-                    WHERE lic_id={form.license_id.data}
-                    AND member.login_password='{form.password.data}'
-                    AND cpd_work.w_bdate BETWEEN '{renewal_date}' AND '{expire_date}'
-                    AND cpd_work.w_appr_date IS NOT NULL
-                    ORDER BY cpd_work.w_bdate DESC
-                    '''
-            else:
-                query = f'''
-                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
-                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
-                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-                    WHERE lic_id={form.license_id.data}
-                    AND member.login_password='{form.password.data}'
-                    AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
-                    AND cpd_work.w_appr_date IS NOT NULL
-                    ORDER BY cpd_work.w_bdate DESC
-                    '''
-            valid_score_df = pd.read_sql_query(query, con=engine)
-            if valid_score_df.empty:
-                message += '<div class="notification is-light is-danger">ไม่พบข้อมูล กรุณาตรวจสอบหมายเลขท.น. รหัสผ่าน และวันหมดอายุใบอนุญาต</span>'
-            else:
-                message += template_cmte.format(rec.get('firstnameTH'),
-                                                rec.get('lastnameTH'),
-                                                rec.get('firstnameEN'),
-                                                rec.get('lastnameEN'),
-                                                int(rec.get('license_no')),
-                                                'has-text-success' if delta.days > 0 else 'has-text-danger',
-                                                exp_date.format('DD MMMM YYYY', locale='th'),
-                                                'success' if license_status == 'ปกติ' else 'danger',
-                                                exp_date.humanize(granularity=['year', 'day'], locale='th'),
-                                                license_status,
-                                                valid_score_df.cpd_score.sum(),
-                                                )
-                message += valid_score_df.to_html(classes='table is-fullwidth is-striped')
-        resp = make_response(message)
-        return resp
-    else:
-        print(form.errors)
-    return render_template('members/member_info.html', form=form)
+    return render_template('members/member_info.html')
 
 
 @member.route('/login', methods=['GET', 'POST'])
@@ -630,7 +575,7 @@ def get_login_otp():
             <input type="hidden" name="mobile_ref_id" value="{mobile_ref_id}">
             '''
     else:
-        return '<p class="help is-danger">Error!</p>'
+        return f'<p class="help is-danger">{response.json()}!</p>'
 
 
 @member.post('/login/old-form')
