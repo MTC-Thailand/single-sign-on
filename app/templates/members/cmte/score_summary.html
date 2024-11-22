@@ -18,12 +18,12 @@
                 </div>
                 {{score_table|safe}}
                 {% if filter=='approved_valid' %}
-                    {% if total_scores >= 50 %}
+                    {% if total_scores and total_scores >= 50 %}
                         <h1 class="title has-text-success">หน่วยคะแนนรวม {{total_scores}}</h1>
                     {% else %}
-                        <h1 class="title">หน่วยคะแนนรวม {{total_scores}}</h1>
+                        <h1 class="title">หน่วยคะแนนรวม {{total_scores or ''}}</h1>
                         <h1 class="subtitle">
-                            ท่านต้องสะสมเพิ่มอีก {{50-total_scores}} หน่วยคะแนน {{current_user.license.end_date|humanizedate}} เพื่อขอต่ออายุใบอนุญาต
+                            ท่านต้องสะสมเพิ่มอีก {{50-(total_scores or 0)}} หน่วยคะแนน {{current_user.license.end_date|humanizedate}} เพื่อขอต่ออายุใบอนุญาต
                         </h1>
                     {% endif %}
                 {% else %}
