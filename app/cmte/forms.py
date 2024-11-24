@@ -65,8 +65,11 @@ class IndividualScoreAdminForm(ModelForm):
         model = CMTEEventParticipationRecord
         only = ['start_date', 'end_date', 'desc', 'score', 'reason']
         date_format = '%d/%m/%Y'
-    activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query.all(),
-                                allow_blank=True, blank_text='กรุณาเลือกชนิดกิจกรรม')
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
+    activity = QuerySelectField('ชนิดกิจกรรม',
+                                query_factory=lambda: CMTEEventActivity.query.all(),
+                                allow_blank=True,
+                                blank_text='กรุณาเลือกชนิดกิจกรรม')
 
 
 class CMTEEventCodeForm(FlaskForm):

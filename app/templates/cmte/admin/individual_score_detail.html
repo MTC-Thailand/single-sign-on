@@ -54,6 +54,25 @@
           </tr>
           </tbody>
         </table>
+        <div class="buttons is-centered">
+          <a class="button is-danger"
+             hx-delete="{{url_for('cmte.admin_individual_score_edit', record_id=record.id)}}"
+             hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+             hx-confirm="Are you sure to delete this file?"
+             hx-swap="none"
+          >
+            <span class="icon">
+              <i class="fa-solid fa-trash-can"></i>
+            </span>
+            <span>ลบรายการ</span>
+          </a>
+          <a class="button is-link is-outlined" href="{{url_for('cmte.admin_individual_score_edit', record_id=record.id)}}">
+            <span class="icon">
+              <i class="fa-solid fa-pen"></i>
+            </span>
+            <span>แก้ไขข้อมูล</span>
+          </a>
+        </div>
       </div>
     </div>
     <div class="columns">

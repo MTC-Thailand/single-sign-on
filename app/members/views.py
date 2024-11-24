@@ -435,6 +435,7 @@ def individual_score_form():
                 doc = CMTEEventDoc(record=record, key=key, filename=filename)
                 doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                 doc.note = doc_form.note.data
+                record.docs.append(doc)
                 db.session.add(doc)
         db.session.add(record)
         db.session.commit()

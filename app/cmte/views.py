@@ -812,6 +812,58 @@ def admin_individual_score_detail(record_id):
             return redirect(url_for('cmte.admin_individual_score_index'))
     return render_template('cmte/admin/individual_score_detail.html', record=record, form=form)
 
+
+@cmte.route('/events/individuals/docs/<int:doc_id>', methods=['DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_delete_upload_file(doc_id: int):
+    doc = CMTEEventDoc.query.get(doc_id)
+    if doc:
+        db.session.delete(doc)
+        db.session.commit()
+        flash('The document has been deleted.', 'success')
+        resp = make_response(render_template('messages.html'))
+        return resp
+
+
+@cmte.route('/events/individuals/<int:record_id>/edit', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_individual_score_edit(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    form = IndividualScoreAdminForm(obj=record)
+    if request.method == 'DELETE':
+        db.session.delete(record)
+        db.session.commit()
+        resp = make_response()
+        resp.headers['HX-Redirect'] = url_for('cmte.admin_individual_score_index')
+        return resp
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(record)
+            record.create_datetime = arrow.now('Asia/Bangkok').datetime
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            for doc_form in form.upload_files:
+                _file = doc_form.upload_file.data
+                if _file:
+                    filename = _file.filename
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTEEventDoc(record=record, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = doc_form.note.data
+                    record.docs.append(doc)
+                    db.session.add(doc)
+                    print(doc.key)
+            db.session.add(record)
+            db.session.commit()
+            flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
+            return redirect(url_for('cmte.admin_individual_score_detail', record_id=record_id))
+    return render_template('cmte/admin/individual_score_form.html', form=form, record=record)
+
+
 @cmte.route('/payments/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
 @login_required
 @cmte_admin_permission.require()
