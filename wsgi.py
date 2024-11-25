@@ -401,3 +401,55 @@ def convert_event_year():
             e.end_date = new_end_date.astimezone(bangkok)
         db.session.add(e)
     db.session.commit()
+
+
+@app.cli.command('update-record-enddate')
+@click.option('--dry-run', is_flag=True, default=False, help='Dry run')
+@click.argument('license', required=False)
+def update_record_enddate(dry_run, license=None):
+    print('Dry running..')
+    n_enddate = 0
+    n_startdate = 0
+    query = CMTEEventParticipationRecord.query.filter_by(individual=False)
+    if license:
+        query = query.filter_by(license_number=license)
+    for record in query:
+        if record.score_valid_until:
+            if record.event:
+                if record.event.end_date:
+                    if record.event.end_date.date() >= record.license.start_date\
+                            and record.score_valid_until != record.license.end_date:
+                        print(f'{record.event.start_date.date()} - {record.event.end_date.date()}: {record.license.number}({record.license.start_date} - {record.license.end_date})')
+                        record.score_valid_until = record.license.end_date
+                        if not dry_run:
+                            db.session.add(record)
+                        n_enddate += 1
+                else:
+                    if record.event.start_date.date() and record.event.start_date >= record.license.start_date\
+                            and record.score_valid_until != record.license.end_date:
+                        print(f'{record.event.start_date.date()} - None: {record.license.start_date} - {record.license.end_date}')
+                        record.score_valid_until = record.license.end_date
+                        if not dry_run:
+                            db.session.add(record)
+                        n_startdate += 1
+    db.session.commit()
+    print(f'with end date = {n_enddate}, with no end date = {n_startdate}')
+
+
+@app.cli.command('update-individual-record-enddate')
+def update_individual_record_enddate():
+    for record in CMTEEventParticipationRecord.query.filter_by(individual=True):
+        if record.score_valid_until:
+            if record.end_date:
+                if record.end_date >= record.license.start_date\
+                        and record.score_valid_until != record.license.end_date:
+                    record.score_valid_until = record.license.end_date
+                    db.session.add(record)
+                    print('.', end='', flush=True)
+            else:
+                if record.start_date and record.start_date >= record.license.start_date\
+                        and record.score_valid_until != record.license.end_date:
+                    record.score_valid_until = record.license.end_date
+                    db.session.add(record)
+                    print('.', end='', flush=True)
+    db.session.commit()
