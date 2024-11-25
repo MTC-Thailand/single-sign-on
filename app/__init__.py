@@ -91,7 +91,7 @@ def create_app():
     from app.api.views import Login, CMTEScore, MemberInfo, RefreshToken, CMTEFeePaymentResource
 
     api.add_resource(Login, '/auth/login')
-    api.add_resource(CMTEScore, '/members/<int:lic_id>/cmte/scores')
+    api.add_resource(CMTEScore, '/members/<string:lic_id>/cmte/scores')
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
     api.add_resource(RefreshToken, '/auth/refresh')
     api.add_resource(CMTEFeePaymentResource, '/members/<string:lic_no>/cmte-fee-payment-record')
