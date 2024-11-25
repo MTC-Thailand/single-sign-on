@@ -449,7 +449,8 @@ class MemberInfo(Resource):
 
         member = Member.query.filter_by(pid=pin).first()
         cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
-        total_score = member.license.valid_cmte_scores
+        total_score = member.license.total_cmte_scores
+        valid_score = member.license.valid_cmte_scores
         data['active_cmte_payment'] = cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {}
         data['lic_b_date'] = member.license.start_date.strftime('%Y-%m-%d')
         data['lic_exp_date'] = member.license.end_date.strftime('%Y-%m-%d')

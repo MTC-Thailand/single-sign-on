@@ -85,6 +85,10 @@ class License(db.Model):
                 if rec.approved_date is not None)
 
     @property
+    def total_cmte_scores(self):
+        return sum([rec.score for rec in self.cmte_records if rec.approved_date is not None])
+
+    @property
     def valid_cmte_scores(self):
         return sum([rec.score for rec in self.valid_cmte_records])
 
