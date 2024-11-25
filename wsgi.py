@@ -8,7 +8,7 @@ from flask import session
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
 from flask_principal import identity_loaded, UserNeed, RoleNeed, ActionNeed
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, extract
 
 from app import create_app, admin
 
@@ -406,12 +406,16 @@ def convert_event_year():
 @app.cli.command('update-record-enddate')
 @click.option('--dry-run', is_flag=True, default=False, help='Dry run')
 @click.argument('license', required=False)
-def update_record_enddate(dry_run, license=None):
+@click.option('--year', required=False, help='Year to update')
+def update_record_enddate(dry_run, year=None, license=None):
     if dry_run:
         print('Dry running..')
     n_enddate = 0
     n_startdate = 0
     query = CMTEEventParticipationRecord.query.filter_by(individual=False)
+    if year:
+        query = query.join(CMTEEventParticipationRecord.event)\
+            .filter(extract('year', CMTEEvent.end_date) == int(year))
     if license:
         query = query.filter_by(license_number=license)
     for record in query:
