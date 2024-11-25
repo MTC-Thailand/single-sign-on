@@ -168,25 +168,19 @@ class CMTEScore(Resource):
             200:
                 description: Sum of the CMTE scores of the individual
         """
-        engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
-        engine.connect()
+        license = License.query.filter_by(number=lic_id).first()
+        total_score = license.total_cmte_scores
+        valid_score = license.valid_cmte_scores
 
+        cmte_fee_payment_record = license.get_active_cmte_fee_payment()
         type_ = request.args.get('type', 'valid')
         if type_ == 'valid':
-            query = f'''
-            SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-            INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-            WHERE lic_id={lic_id} AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
-            '''
+            score = valid_score
         elif type_ == 'total':
-            query = f'''
-            SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-            INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-            WHERE lic_id={lic_id} 
-            '''
-        score = pd.read_sql_query(query, con=engine).cpd_score.sum()
+            score = total_score
         return jsonify({'data': {'scores': score,
                                  'type': type_,
+                                 'active_cmte_payment_record': cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {},
                                  'datetime': datetime.datetime.now().isoformat()}})
 
 
