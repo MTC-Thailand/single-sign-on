@@ -407,7 +407,8 @@ def convert_event_year():
 @click.option('--dry-run', is_flag=True, default=False, help='Dry run')
 @click.argument('license', required=False)
 def update_record_enddate(dry_run, license=None):
-    print('Dry running..')
+    if dry_run:
+        print('Dry running..')
     n_enddate = 0
     n_startdate = 0
     query = CMTEEventParticipationRecord.query.filter_by(individual=False)
