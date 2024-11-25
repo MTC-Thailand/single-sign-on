@@ -420,7 +420,7 @@ def update_record_enddate(dry_run, license=None):
                 if record.event.end_date:
                     if record.event.end_date.date() >= record.license.start_date\
                             and record.score_valid_until != record.license.end_date:
-                        print(f'{record.event.start_date.date()} - {record.event.end_date.date()}: {record.license.number}({record.license.start_date} - {record.license.end_date})')
+                        # print(f'{record.event.start_date.date()} - {record.event.end_date.date()}: {record.license.number}({record.license.start_date} - {record.license.end_date})')
                         record.score_valid_until = record.license.end_date
                         if not dry_run:
                             db.session.add(record)
@@ -428,12 +428,13 @@ def update_record_enddate(dry_run, license=None):
                 else:
                     if record.event.start_date.date() and record.event.start_date >= record.license.start_date\
                             and record.score_valid_until != record.license.end_date:
-                        print(f'{record.event.start_date.date()} - None: {record.license.start_date} - {record.license.end_date}')
+                        # print(f'{record.event.start_date.date()} - None: {record.license.start_date} - {record.license.end_date}')
                         record.score_valid_until = record.license.end_date
                         if not dry_run:
                             db.session.add(record)
                         n_startdate += 1
-    db.session.commit()
+    if not dry_run:
+        db.session.commit()
     print(f'with end date = {n_enddate}, with no end date = {n_startdate}')
 
 
