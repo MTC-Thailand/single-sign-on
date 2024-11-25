@@ -443,19 +443,25 @@ def update_record_enddate(dry_run, year=None, license=None):
 
 
 @app.cli.command('update-individual-record-enddate')
-def update_individual_record_enddate():
+@click.option('--dry-run', is_flag=True, default=False, help='Dry run')
+def update_individual_record_enddate(dry_run):
+    n = 0
     for record in CMTEEventParticipationRecord.query.filter_by(individual=True):
         if record.score_valid_until:
             if record.end_date:
                 if record.end_date >= record.license.start_date\
                         and record.score_valid_until != record.license.end_date:
                     record.score_valid_until = record.license.end_date
-                    db.session.add(record)
-                    print('.', end='', flush=True)
+                    n += 1
+                    if not dry_run:
+                        db.session.add(record)
             else:
                 if record.start_date and record.start_date >= record.license.start_date\
                         and record.score_valid_until != record.license.end_date:
                     record.score_valid_until = record.license.end_date
-                    db.session.add(record)
-                    print('.', end='', flush=True)
-    db.session.commit()
+                    n += 1
+                    if not dry_run:
+                        db.session.add(record)
+    if not dry_run:
+        db.session.commit()
+    print(n)
