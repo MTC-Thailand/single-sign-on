@@ -31,7 +31,7 @@
                 <div class="field">
                     <label class="label">{{ form.license_number.label }}</label>
                     <div class="control" id="license-ctrl">
-                        {{ form.license_number(class="input", **{'hx-get': url_for('cmte.search_license', event_id=event_id), 'hx-trigger': 'keyup changed delay:500ms', 'hx-target': '#participant-form', 'hx-swap': 'innerHTML', 'hx-indicator': '#license-ctrl'}) }}
+                        {{ form.license_number(class="input", **{'hx-get': url_for('cmte.search_license', event_id=event_id), 'hx-trigger': 'keyup changed delay:2000ms', 'hx-target': '#participant-form', 'hx-swap': 'innerHTML', 'hx-indicator': '#license-ctrl'}) }}
                     </div>
                 </div>
                 <div class="field">
