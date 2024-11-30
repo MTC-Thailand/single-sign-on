@@ -386,16 +386,16 @@ class MemberInfo(Resource):
         # mem_status_data = pd.read_sql_query(query, con=engine)
         data['mem_status'] = member.status
 
-        if data['emp_function_id']:
-            query = f"""
-            SELECT emp_function.function_name,emp_owner.emp_owner_name,emp_contract.contract_name
-            FROM emp_function
-            INNER JOIN emp_owner ON emp_owner.emp_owner_id={data['emp_owner_id']}
-            INNER JOIN emp_contract ON emp_contract.emp_contract_id={data['emp_contract_id']}
-            WHERE emp_function.emp_function_id={data['emp_function_id']}
-            """
-            emp_data = pd.read_sql_query(query, con=engine)
-            data.update(emp_data.squeeze().to_dict())
+        # if data['emp_function_id']:
+        #     query = f"""
+        #     SELECT emp_function.function_name,emp_owner.emp_owner_name,emp_contract.contract_name
+        #     FROM emp_function
+        #     INNER JOIN emp_owner ON emp_owner.emp_owner_id={data['emp_owner_id']}
+        #     INNER JOIN emp_contract ON emp_contract.emp_contract_id={data['emp_contract_id']}
+        #     WHERE emp_function.emp_function_id={data['emp_function_id']}
+        #     """
+        #     emp_data = pd.read_sql_query(query, con=engine)
+        #     data.update(emp_data.squeeze().to_dict())
 
         data['lic_b_date'] = member.license.start_date.isoformat()
         data['lic_exp_date'] = member.license.end_date.isoformat()
