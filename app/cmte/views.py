@@ -429,7 +429,6 @@ def admin_approved_events():
 
 
 @cmte.get('/api/events')
-@login_required
 def get_events():
     orderable_columns = {
         1: CMTEEvent.start_date,
