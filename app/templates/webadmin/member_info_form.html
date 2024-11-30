@@ -74,7 +74,10 @@
                             {{form.email(class="input")}}
                         </div>
                     </div>
-                    <div class="field">
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <a class="button is-light" href="{{url_for('webadmin.index')}}">Cancel</a>
+                        </div>
                         <div class="control">
                             <input type="submit" class="button is-success" value="Save">
                         </div>

@@ -143,7 +143,7 @@ def search_member():
     if query:
         template = '''<table class="table is-fullwidth is-striped">'''
         template += '''
-        <thead><th>Name</th><th>License No.</th><th>License Date</th><th>Valid CMTE</th></thead>
+        <thead><th>Name</th><th>License No.</th><th>License Date</th><th colspan="2">Valid CMTE</th></thead>
         <tbody>
         '''
         licenses = License.query.filter_by(number=query).all()
@@ -153,7 +153,7 @@ def search_member():
             licenses = [member.license for member in members]
         for lic in licenses:
             url = url_for('webadmin.edit_member_info', member_id=lic.member_id)
-            template += f'<tr><td><a href="{url}">{lic.member.th_fullname}</a></td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.valid_cmte_scores}</td></tr>'
+            template += f'<tr><td>{lic.member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
         template += '</tbody></table>'
         return make_response(template)
     return 'Waiting for a search query...'
