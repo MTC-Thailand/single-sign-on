@@ -762,7 +762,6 @@ def admin_event_edit(event_id=None):
 
 
 @cmte.route('/upcoming-events')
-@login_required
 def upcoming_events():
     return render_template('members/cmte/upcoming_events.html')
 
