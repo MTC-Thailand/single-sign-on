@@ -397,10 +397,10 @@ class MemberInfo(Resource):
             emp_data = pd.read_sql_query(query, con=engine)
             data.update(emp_data.squeeze().to_dict())
 
-        data['lic_b_date'] = member.license.start_date.isoformat() if data['lic_b_date'] else None
-        data['lic_exp_date'] = member.license.end_date.isoformat() if data['lic_exp_date'] else None
+        data['lic_b_date'] = member.license.start_date.isoformat()
+        data['lic_exp_date'] = member.license.end_date.isoformat()
         data['document_addr'] = data.pop('address_id_doc', None) or ''
-        data['birthday'] = member.dob.isoformat() if data['birthday'] else None
+        data['birthday'] = member.dob.isoformat()
 
         work_office = {'office_position': data.pop('position', None) or '',
                        'office_name': data.pop('office_name', None) or '',
