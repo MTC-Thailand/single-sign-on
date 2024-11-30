@@ -9,14 +9,14 @@ class Member(db.Model, UserMixin):
     number = db.Column(db.String(), unique=True, nullable=False)
     code = db.Column(db.String())
     old_mem_id = db.Column('old_mem_id', db.Integer())
-    th_title = db.Column('th_title', db.String())
-    th_firstname = db.Column(db.String(), nullable=False)
-    th_lastname = db.Column(db.String(), nullable=False)
-    en_title = db.Column('en_title', db.String())
-    en_firstname = db.Column(db.String())
-    en_lastname = db.Column(db.String())
-    dob = db.Column(db.Date())
-    pid = db.Column(db.String(), nullable=False)
+    th_title = db.Column('th_title', db.String(), info={'label': 'คำนำหน้า'})
+    th_firstname = db.Column(db.String(), nullable=False, info={'label': 'ชื่อ'})
+    th_lastname = db.Column(db.String(), nullable=False, info={'label': 'นามสกุล'})
+    en_title = db.Column('en_title', db.String(), info={'label': 'Title'})
+    en_firstname = db.Column(db.String(), info={'label': 'Firstname'})
+    en_lastname = db.Column(db.String(), info={'label': 'Lastname'})
+    dob = db.Column(db.Date(), info={'label': 'วันเกิด'})
+    pid = db.Column(db.String(), nullable=False, info={'label': 'เลขบัตรประชาชน'})
     email = db.Column(db.String(), info={'label': 'E-mail'})
     tel = db.Column(db.String(), info={'label': 'โทรศัพท์'})
     username = db.Column(db.String())
@@ -92,10 +92,10 @@ class License(db.Model):
     def valid_cmte_scores(self):
         return sum([rec.score for rec in self.valid_cmte_records])
 
-    def to_dict(self):
-        return {
-            '',
-        }
+    @property
+    def dates(self):
+        date_format = '%d/%m/%Y'
+        return f'{self.start_date.strftime(date_format)} - {self.end_date.strftime(date_format)}'
 
 
 # class MemberAddress(db.Model):

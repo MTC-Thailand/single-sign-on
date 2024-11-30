@@ -3,12 +3,10 @@
 {% block content %}
 {% include "admin_nav.html" %}
 <section class="section">
-    <div class="content">
+    <div class="container">
+        {% include "messages.html" %}
         <div class="columns">
-            <div class="column">
-                <p>
-                    ระบบจัดการสมาชิกยังอยู่ในช่วงปรับปรุงระบบ อาจมีบางรายการที่จะยกเลิกการใช้งานในอนาคต
-                </p>
+            <div class="column is-one-third">
                 <h1>Menu</h1>
                 <ul>
                     <li>
@@ -23,7 +21,24 @@
                     <li>
                         <a href="{{url_for('webadmin.view_member_password')}}">ดูรหัสผ่านเข้าระบบของสมาชิก</a>
                     </li>
+                    <li>
+                        <a href="{{url_for('webadmin.view_member_password')}}">แก้ไขข้อมูลสมาชิก</a>
+                    </li>
                 </ul>
+            </div>
+            <div class="column">
+                <h1 class="title is-size-5">ค้นหาสมาชิก</h1>
+                <div class="field">
+                    <div class="control" id="queryInput">
+                        <input id="query" type="text" name="query" class="input is-large is-rounded" placeholder="ค้นหาด้วยชื่อหรือเลขท.น."
+                               hx-indicator="#queryInput"
+                               hx-target="#searchResult"
+                               hx-swap="innerHTML"
+                               hx-get="{{url_for('webadmin.search_member')}}"
+                               hx-trigger="keyup changed delay:1000ms">
+                    </div>
+                </div>
+                <div id="searchResult"></div>
             </div>
         </div>
     </div>

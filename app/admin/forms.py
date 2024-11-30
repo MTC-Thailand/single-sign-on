@@ -16,3 +16,5 @@ class ModelForm(BaseModelForm):
 class MemberInfoAdminForm(ModelForm):
     class Meta:
         model = Member
+        date_format = '%d/%m/%Y'
+        exclude = ['number']
