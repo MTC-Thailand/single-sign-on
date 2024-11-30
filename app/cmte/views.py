@@ -766,7 +766,6 @@ def upcoming_events():
 
 
 @cmte.route('/events/<int:event_id>/info')
-@login_required
 def show_event_detail_modal(event_id):
     event = CMTEEvent.query.get(event_id)
     return render_template('members/cmte/event_info_modal.html', event=event)
