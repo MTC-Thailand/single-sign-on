@@ -357,6 +357,8 @@ class MemberInfo(Resource):
                                         soi:
                                             type: string
         """
+        member = Member.query.filter_by(pid=pin).first()
+
         engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
         engine.connect()
         query = f'''
@@ -368,21 +370,21 @@ class MemberInfo(Resource):
         data = pd.read_sql_query(query, con=engine)
         data = data.squeeze().to_dict()
 
-        query = f'''
-        SELECT lic_mem.lic_exp_date,lic_mem.lic_b_date FROM lic_mem
-        INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
-        WHERE lic_mem.mem_id={data['mem_id']}
-        '''
-        lic_data = pd.read_sql_query(query, con=engine)
-        lic_data = lic_data.squeeze().to_dict()
-        data.update(lic_data)
-
-        query = f'''
-        SELECT status_name AS mem_status_name FROM mem_status WHERE {data['mem_status_id']}=mem_status.mem_status_id;
-        '''
-
-        mem_status_data = pd.read_sql_query(query, con=engine)
-        data['mem_status'] = mem_status_data.squeeze()
+        # query = f'''
+        # SELECT lic_mem.lic_exp_date,lic_mem.lic_b_date FROM lic_mem
+        # INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
+        # WHERE lic_mem.mem_id={data['mem_id']}
+        # '''
+        # lic_data = pd.read_sql_query(query, con=engine)
+        # lic_data = lic_data.squeeze().to_dict()
+        # data.update(lic_data)
+        #
+        # query = f'''
+        # SELECT status_name AS mem_status_name FROM mem_status WHERE {data['mem_status_id']}=mem_status.mem_status_id;
+        # '''
+        #
+        # mem_status_data = pd.read_sql_query(query, con=engine)
+        data['mem_status'] = member.status
 
         if data['emp_function_id']:
             query = f"""
@@ -395,10 +397,10 @@ class MemberInfo(Resource):
             emp_data = pd.read_sql_query(query, con=engine)
             data.update(emp_data.squeeze().to_dict())
 
-        data['lic_b_date'] = data['lic_b_date'].isoformat() if data['lic_b_date'] else None
-        data['lic_exp_date'] = data['lic_exp_date'].isoformat() if data['lic_exp_date'] else None
+        data['lic_b_date'] = member.license.start_date.isoformat() if data['lic_b_date'] else None
+        data['lic_exp_date'] = member.license.end_date.isoformat() if data['lic_exp_date'] else None
         data['document_addr'] = data.pop('address_id_doc', None) or ''
-        data['birthday'] = data['birthday'].isoformat() if data['birthday'] else None
+        data['birthday'] = member.dob.isoformat() if data['birthday'] else None
 
         work_office = {'office_position': data.pop('position', None) or '',
                        'office_name': data.pop('office_name', None) or '',
@@ -429,19 +431,18 @@ class MemberInfo(Resource):
             elif dict_['add_id'] == 3:
                 data['home_addr'] = dict_
 
-        query = f'''
-            SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-            INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-            WHERE lic_id={mem_id} AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
-            '''
-        valid_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
-        query = f'''
-            SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-            INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-            WHERE lic_id={mem_id} 
-            '''
+        # query = f'''
+        #     SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
+        #     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
+        #     WHERE lic_id={mem_id} AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
+        #     '''
+        # valid_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
+        # query = f'''
+        #     SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
+        #     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
+        #     WHERE lic_id={mem_id}
+        #     '''
 
-        member = Member.query.filter_by(pid=pin).first()
         cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
         total_score = member.license.total_cmte_scores
         valid_score = member.license.valid_cmte_scores
