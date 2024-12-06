@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask_login import UserMixin
 
 from app import db
@@ -54,13 +56,20 @@ class Member(db.Model, UserMixin):
 
 class License(db.Model):
     __tablename__ = 'licenses'
+    today = date.today().strftime('%Y-%m-%d')
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    number = db.Column(db.String(), unique=True, nullable=False)
-    issue_date = db.Column(db.Date(), nullable=False)
-    start_date = db.Column(db.Date(), nullable=False)
-    end_date = db.Column(db.Date(), nullable=False)
+    number = db.Column(db.String(), unique=True, nullable=False, info={'label': 'หมายเลข'})
+    issue_date = db.Column(db.Date(), nullable=False, info={'label': 'วันอนุมัติใบอนุญาต'})
+    start_date = db.Column(db.Date(), nullable=False, info={'label': 'วันเริ่ม'})
+    end_date = db.Column(db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
     member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
-    member = db.relationship(Member, backref=db.backref('license', uselist=False))
+    member = db.relationship(Member,
+                             backref=db.backref('license',
+                                                uselist=False,
+                                                primaryjoin=f'and_(License.member_id=={Member.id}, License.start_date <= "{today}", License.end_date >= "{today}")'),
+                             uselist=False)
+    status = db.Column(db.String(), info={'label': 'สถานะ',
+                                          'choices': [(c,c) for c in ('ปกติ', 'พักใช้', 'เพิกถอน')]})
 
     def __str__(self):
         return f'{self.number}: {self.end_date}'
