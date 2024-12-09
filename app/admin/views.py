@@ -5,7 +5,7 @@ from sqlalchemy import or_
 
 from app import db, admin_permission
 from app.admin import webadmin
-from app.admin.forms import MemberInfoAdminForm
+from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
 from app.members.forms import MemberInfoForm
 from app.members.models import License, Member
@@ -106,7 +106,33 @@ def edit_member_info(member_id):
     else:
         if form.errors:
             flash(f'{form.errors}', 'danger')
-    return render_template('webadmin/member_info_form.html', form=form)
+    return render_template('webadmin/member_info_form.html', form=form, member=member)
+
+
+@webadmin.route('/members/<int:member_id>/licenses/<license_action>', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def edit_license(member_id, license_action):
+    member = Member.query.get(member_id)
+    if license_action == 'renew':
+        license = License.query.filter_by(member_id=member.id) \
+            .order_by(License.end_date.desc()).first()
+        form = LicenseAdminForm(obj=license)
+        if request.method == 'POST':
+            if form.validate_on_submit():
+                form.populate_obj(license)
+                db.session.add(license)
+                db.session.commit()
+                flash('ต่ออายุใบอนุญาตแล้ว', 'success')
+                resp = make_response()
+                resp.headers['HX-Refresh'] = 'true'
+                return resp
+            else:
+                print(form.errors)
+    return render_template('webadmin/license_form.html',
+                           license_action=license_action,
+                           member_id=member_id,
+                           form=form)
 
 
 @webadmin.route('/members/password-view', methods=['GET', 'POST'])

@@ -17,6 +17,7 @@ class LicenseAdminForm(ModelForm):
     class Meta:
         model = License
         date_format = '%d/%m/%Y'
+        unique_validator = None
 
 
 class MemberInfoAdminForm(ModelForm):

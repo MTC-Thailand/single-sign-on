@@ -1,0 +1,113 @@
+<div class="modal is-active" id="license-form-modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Edit License</p>
+            <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
+        </header>
+        <form hx-post="{{ url_for('webadmin.edit_license', member_id=member_id, license_action=license_action) }}"
+              hx-swap="none"
+              hx-indicator="#save-btn"
+        >
+            {{form.hidden_tag()}}
+            <section class="modal-card-body">
+                <input type="hidden" name="license-action" value="{{license_action}}"/>
+                <div class="field">
+                    <label class="label">{{form.number.label}}</label>
+                    <div class="control">
+                        {{form.number(class="input", readonly=True)}}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.issue_date.label}}</label>
+                    <div class="control">
+                        {{form.issue_date(class="input", type="text")}}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.start_date.label}}</label>
+                    <div class="control">
+                        {{form.start_date(class="input", type="text")}}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.end_date.label}}</label>
+                    <div class="control">
+                        {{form.end_date(class="input", type="text")}}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.status.label}}</label>
+                    <div class="select">
+                        {{form.status()}}
+                    </div>
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <div class="buttons">
+                    <button class="button is-outlined is-dark" id="cancel-btn">Cancel</button>
+                    <button type="submit" class="button is-success" id="save-btn">Save</button>
+                </div>
+            </footer>
+        </form>
+    </div>
+</div>
+<script>
+    window.document.getElementById("cancel-btn").addEventListener("click", function (event) {
+        event.preventDefault()
+        htmx.removeClass(htmx.find('#license-form-modal'), 'is-active')
+    })
+    window.document.getElementById("cancelButton").addEventListener("click", function () {
+        htmx.removeClass(htmx.find('#license-form-modal'), 'is-active')
+    })
+    window.document.addEventListener('closeModal', (evt) => {
+        htmx.removeClass(htmx.find('#license-form-modal'), 'is-active')
+    })
+    $(document).ready(function () {
+        $("input[name='issue_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+        {% if not form.issue_date.data %}
+        startDate: moment().startOf('hour'),
+        {% else %}
+        startDate: {{form.issue_date.data.strftime('%d/%m/%Y')|tojson|safe}},
+        {% endif %}
+        timePicker: false,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY'
+        }
+    })
+        $("input[name='start_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+        {% if not form.start_date.data %}
+        startDate: moment().startOf('hour'),
+        {% else %}
+        startDate: {{form.start_date.data.strftime('%d/%m/%Y')|tojson|safe}},
+        {% endif %}
+        timePicker: false,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY'
+        }
+    })
+        $("input[name='end_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+        {% if not form.end_date.data %}
+        startDate: moment().startOf('hour'),
+        {% else %}
+        startDate: {{form.end_date.data.strftime('%d/%m/%Y')|tojson|safe}},
+        {% endif %}
+        timePicker: false,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY'
+        }
+    })
+    })
+</script>

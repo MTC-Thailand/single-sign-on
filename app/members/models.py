@@ -24,7 +24,7 @@ class Member(db.Model, UserMixin):
     username = db.Column(db.String())
     password = db.Column(db.String())
     status = db.Column(db.String(), info={'label': 'สถานะ',
-                                          'choices': [(c, c) for c in ('ปกติ', 'ลาออก', 'สิ้นสมาชิกภาพ')]})
+                                          'choices': [(c, c) for c in ('ปกติ', 'ลาออก', 'พ้นสมาชิกภาพ', 'ตาย')]})
     end_date = db.Column(db.Date(), info={'label': 'วันสิ้นอายุสมาชิกภาพ'})
     begin_date = db.Column(db.Date(), info={'label': 'วันเริ่มต้นสมาชิกภาพ'})
     # TODO: import begin date from the legacy database.
@@ -69,7 +69,7 @@ class License(db.Model):
                                                 primaryjoin=f'and_(License.member_id=={Member.id}, License.start_date <= "{today}", License.end_date >= "{today}")'),
                              uselist=False)
     status = db.Column(db.String(), info={'label': 'สถานะ',
-                                          'choices': [(c,c) for c in ('ปกติ', 'พักใช้', 'เพิกถอน')]})
+                                          'choices': [(c,c) for c in ('ปกติ', 'พักใช้', 'เพิกถอน', 'สิ้นสุด')]})
 
     def __str__(self):
         return f'{self.number}: {self.end_date}'
