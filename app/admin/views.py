@@ -172,14 +172,18 @@ def search_member():
         <thead><th>Name</th><th>License No.</th><th>License Date</th><th colspan="2">Valid CMTE</th></thead>
         <tbody>
         '''
-        licenses = License.query.filter_by(number=query).all()
+        licenses = [(license, license.member) for license in License.query.filter_by(number=query)]
         if not licenses:
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
                                               Member.th_lastname.like(f'%{query}%')))
-            licenses = [member.license for member in members]
-        for lic in licenses:
-            url = url_for('webadmin.edit_member_info', member_id=lic.member_id)
-            template += f'<tr><td>{lic.member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
+            licenses = [(member.license, member) for member in members]
+        for lic, member in licenses:
+            url = url_for('webadmin.edit_member_info', member_id=member.id)
+            if lic:
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
+            else:
+                lic = License.query.filter_by(member_id=member.id).first()
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
         template += '</tbody></table>'
         return make_response(template)
     return 'Waiting for a search query...'
