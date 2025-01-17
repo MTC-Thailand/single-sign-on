@@ -66,8 +66,12 @@ class License(db.Model):
     member = db.relationship(Member,
                              backref=db.backref('license',
                                                 uselist=False,
-                                                primaryjoin=f'and_(License.member_id=={Member.id}, License.start_date <= "{today}", License.end_date >= "{today}")'),
-                             uselist=False)
+                                                order_by='License.end_date.desc()'))
+    # member = db.relationship(Member,
+    #                          backref=db.backref('license',
+    #                                             uselist=False,
+    #                                             primaryjoin=f'and_(License.member_id=={Member.id}, License.start_date <= "{today}", License.end_date >= "{today}")'),
+    #                          uselist=False)
     status = db.Column(db.String(), info={'label': 'สถานะ',
                                           'choices': [(c,c) for c in ('ปกติ', 'พักใช้', 'เพิกถอน', 'สิ้นสุด')]})
 
