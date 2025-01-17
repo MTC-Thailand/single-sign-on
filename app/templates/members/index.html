@@ -50,7 +50,7 @@
                         <tr>
                             <td><strong>สถานะใบอนุญาต</strong></td>
                             <td>
-                                {{current_user.license.status}} {% if current_user.license.is_expired %} (หมดอายุ) {% endif %}
+                                {{current_user.license.status or 'ปกติ'}} {% if current_user.license.is_expired %} (หมดอายุ) {% endif %}
                             </td>
                         </tr>
                         <tr>
