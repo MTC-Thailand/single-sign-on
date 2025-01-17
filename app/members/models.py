@@ -110,6 +110,10 @@ class License(db.Model):
         date_format = '%d/%m/%Y'
         return f'{self.start_date.strftime(date_format)} - {self.end_date.strftime(date_format)}'
 
+    @property
+    def is_expired(self):
+        return self.end_date <= date.today()
+
 
 # class MemberAddress(db.Model):
 #     __tablename__ = 'member_addresses'
