@@ -17,7 +17,7 @@ from werkzeug.security import check_password_hash
 
 from app import db
 from app.members.models import Member, License
-from app.cmte.models import CMTEFeePaymentRecord
+from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
 
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
@@ -494,8 +494,8 @@ class CMTEEventResource(Resource):
                             type: string
                             description: Payment date
         """
-        query = CMTEEvent.query.filter(CMTEEvent.start_date >= datetime.today())
+        query = CMTEEvent.query.filter(CMTEEvent.start_date >= datetime.datetime.today())
         upcoming_events = []
         for event in query:
             upcoming_events.append(event.to_dict())
-        return jsonify(data=upcoming_events)
+        return jsonify({'data': upcoming_events})
