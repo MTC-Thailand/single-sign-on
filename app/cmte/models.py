@@ -195,8 +195,8 @@ class CMTEEvent(db.Model):
         return {
             'id': self.id,
             'title': self.title,
-            'start_date': self.start_date.isoformat() if self.start_date else None,
-            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'start_date': self.start_date.astimezone(BANGKOK).isoformat() if self.start_date else None,
+            'end_date': self.end_date.astimezone(BANGKOK).isoformat() if self.end_date else None,
             'event_type': str(self.event_type) if self.event_type else None,
             'fee_rate': str(self.fee_rate) if self.fee_rate else None,
             'submitted_datetime': self.submitted_datetime.astimezone(BANGKOK).isoformat() if self.submitted_datetime else None,
