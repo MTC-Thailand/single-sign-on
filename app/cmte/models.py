@@ -4,6 +4,7 @@ from flask_login import UserMixin
 from sqlalchemy_utils import EmailType
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.validators import DataRequired
+from pytz import timezone
 
 from app import db
 
@@ -13,6 +14,8 @@ event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
                                 db.Column('fee_rate_id', db.Integer,
                                           db.ForeignKey('cmte_event_fee_rates.id'))
                                 )
+
+BANGKOK = timezone('Asia/Bangkok')
 
 
 class CMTEEventSponsor(db.Model):
@@ -196,8 +199,8 @@ class CMTEEvent(db.Model):
             'end_date': self.end_date.isoformat() if self.end_date else None,
             'event_type': str(self.event_type) if self.event_type else None,
             'fee_rate': str(self.fee_rate) if self.fee_rate else None,
-            'submitted_datetime': self.submitted_datetime.isoformat() if self.submitted_datetime else None,
-            'approved_datetime': self.approved_datetime.isoformat() if self.approved_datetime else None,
+            'submitted_datetime': self.submitted_datetime.astimezone(BANGKOK).isoformat() if self.submitted_datetime else None,
+            'approved_datetime': self.approved_datetime.astimezone(BANGKOK).isoformat() if self.approved_datetime else None,
             'venue': self.venue,
             'points': self.cmte_points,
             'website': self.website,
