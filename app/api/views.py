@@ -452,3 +452,50 @@ class MemberInfo(Resource):
 
         data['cmte_score'] = {'total': total_score, 'valid': valid_score}
         return jsonify({'data': data})
+
+
+class CMTEEventResource(Resource):
+    @jwt_required()
+    def get(self):
+        """
+        This endpoint returns upcoming CMTE events.
+        ---
+        responses:
+            200:
+                description: List of all upcoming CMTE events
+                schema:
+                    id: CMTEEvent
+                    properties:
+                        id:
+                            type: number
+                            description: event ID
+                        title:
+                            type: string
+                            description: Event title
+                        venue:
+                            type: string
+                            description: Event venue
+                        score:
+                            type: number
+                            description: CMTE score
+                        website:
+                            type: string
+                            description: Website URL
+                        organizer:
+                            type: string
+                            description: Organizer
+                        start_date:
+                            type: string
+                            description: Start date
+                        end_date:
+                            type: string
+                            description: End date
+                        payment_datetime:
+                            type: string
+                            description: Payment date
+        """
+        query = CMTEEvent.query.filter(CMTEEvent.start_date >= datetime.today())
+        upcoming_events = []
+        for event in query:
+            upcoming_events.append(event.to_dict())
+        return jsonify(data=upcoming_events)
