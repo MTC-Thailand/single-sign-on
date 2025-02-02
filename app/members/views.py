@@ -699,4 +699,4 @@ def search_member_api():
                 template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.status or "ปกติ"}</tr>'
         template += '</tbody></table>'
         return make_response(template)
-    return 'Waiting for a search query...'
+    return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
