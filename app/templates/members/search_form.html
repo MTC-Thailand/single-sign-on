@@ -19,62 +19,18 @@
             </div>
         </div>
         <div class="columns">
-            <div class="column is-one-third is-offset-2">
-                <form class="box"
-                      hx-swap="innerHTML"
-                      hx-target="#result"
-                      hx-post="{{url_for('member.search_member')}}">
-                    {{form.hidden_tag()}}
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">{{form.firstname.label}}</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    {{form.firstname(class="input")}}
-                                </div>
-                            </div>
-                        </div>
+            <div class="column">
+                <div class="field">
+                    <div class="control is-large" id="queryInput">
+                        <input id="query" type="text" name="query" class="input is-large is-rounded" placeholder="ค้นหาด้วยชื่อหรือเลขท.น."
+                               hx-indicator="#queryInput"
+                               hx-target="#searchResult"
+                               hx-swap="innerHTML"
+                               hx-get="{{url_for('member.search_member_api')}}"
+                               hx-trigger="keyup changed delay:1000ms">
                     </div>
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">{{form.lastname.label}}</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    {{form.lastname(class="input")}}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">{{form.license_id.label}}</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    {{form.license_id(class="input")}}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal"></div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    <button id="submit-btn" type="submit" class="button is-info">ค้นหา</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="column is-one-third">
-                <div id="result"></div>
+                </div>
+                <div id="searchResult"></div>
             </div>
         </div>
     </div>
@@ -85,16 +41,4 @@
         </div>
     </footer>
 </section>
-{% endblock %}
-{% block scripts %}
-{{super()}}
-<script>
-    document.addEventListener('htmx:beforeSend', function () {
-        htmx.addClass(htmx.find('#submit-btn'), 'is-loading')
-    })
-    document.addEventListener('stopLoading', function (evt) {
-        console.log(evt.detail.value)
-        htmx.removeClass(htmx.find(evt.detail.value), 'is-loading')
-    })
-</script>
 {% endblock %}
