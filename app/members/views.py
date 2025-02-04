@@ -1,4 +1,6 @@
 import json
+from datetime import datetime
+
 import arrow
 
 import os
@@ -676,7 +678,7 @@ def search_member_api():
         <thead><th>Name</th><th>License No.</th><th>License Date</th><th>Status</th></thead>
         <tbody>
         '''
-        licenses = [(license, license.member) for license in License.query.filter_by(number=query)]
+        licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
         if not licenses:
             try:
                 firstname, lastname = query.split(" ")
@@ -691,11 +693,17 @@ def search_member_api():
                                               Member.th_lastname.like(f'%{query}%')))
             licenses = [(member.license, member) for member in members]
         for lic, member in licenses:
+            if lic.end_date <= datetime.today().date():
+                lic_status = 'หมดอายุ'
+            elif lic.status:
+                lic_status = lic.status
+            else:
+                lic_status = 'ปกติ'
             if lic:
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.status or "ปกติ"}</tr>'
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.status or "ปกติ"}</tr>'
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
         template += '</tbody></table>'
         return make_response(template)
     return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
