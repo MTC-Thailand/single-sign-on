@@ -693,12 +693,16 @@ def search_member_api():
                                               Member.th_lastname.like(f'%{query}%')))
             licenses = [(member.license, member) for member in members]
         for lic, member in licenses:
+            status_tag = '<span class="tag {}">{}</span>'
             if lic.end_date <= datetime.today().date():
-                lic_status = 'หมดอายุ'
+                lic_status = status_tag.format('is-danger', 'หมดอายุ')
             elif lic.status:
-                lic_status = lic.status
+                if lic.status == 'ปกติ':
+                    lic_status = status_tag.format('is-success', lic.status)
+                else:
+                    lic_status = status_tag.format('is-warning', lic.status)
             else:
-                lic_status = 'ปกติ'
+                lic_status = status_tag.format('is-success', 'ปกติ')
             if lic:
                 template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
             else:
