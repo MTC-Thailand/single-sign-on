@@ -668,7 +668,6 @@ def cmte_fee_payment_form():
 
 
 @member.route('/api/members/search', methods=['GET', 'POST'])
-@login_required
 def search_member_api():
     query = request.args.get('query')
     if query:
