@@ -36,7 +36,7 @@
                         <th>สถาบัน</th>
                         <th>วันที่ขึ้นทะเบียน</th>
                         <th>วันที่หมดอายุ</th>
-                        <th></th>
+                        <th>สถานะ</th>
                         <th></th>
                         </thead>
                         <tbody>
@@ -46,7 +46,12 @@
                                     <td style="width: 20em;" {% if not sponsor.registered_datetime %}class="has-text-danger"{% endif %}>{{ sponsor.name }}</td>
                                     <td>{{ sponsor.registered_datetime|localdatetime or ''}}</td>
                                     <td>{{ sponsor.expire_date|localdate or '' }}</td>
-                                    <td>{{ sponsor.expire_status() }}</td>
+                                    <td {% if sponsor.expire_status() == 'expired'%}
+                                            class="has-text-danger"
+                                        {% elif sponsor.expire_status() == 'nearly_expire'%}
+                                            class="has-text-warning" {% endif %}>
+                                        {{ sponsor.expire_status() }}
+                                    </td>
                                     <td>
                                         <div id="sponsor-modal-container"></div>
                                         <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"

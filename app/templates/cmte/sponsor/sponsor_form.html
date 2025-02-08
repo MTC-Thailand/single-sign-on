@@ -7,7 +7,7 @@
 <section class="section">
   <h1 class="title has-text-centered">ลงทะเบียนสถาบันการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
   <div class="columns">
-    <div class="column is-one-third is-offset-4 box">
+    <div class="column box">
       {% include "messages.html" %}
       <form method="post">
         {{form.hidden_tag()}}
@@ -19,14 +19,25 @@
         </div>
         <div class="field">
           <label class="label">ลักษณะองค์กร</label>
+          <div class="select">
+            {{form.type(class="select is-danger")}}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">รายละเอียดลักษณะองค์กร</label>
           <div class="control">
-
+            {{form.type_detail(class="input")}}
           </div>
         </div>
         <div class="field">
           <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
-          <div class="control">
-
+          <div class="control has-icons-left">
+           {% for qualification in qualifications %}
+            <div class="field">
+             <input type="checkbox" name="qualifications" value="{{ qualification.id }}">
+              {{ qualification.type }}
+             </div>
+            {% endfor %}
           </div>
         </div>
         <div class="field">
@@ -76,9 +87,7 @@
         </div>
       </form>
     </div>
-    <div class="column">
-
-    </div>
   </div>
 </section>
 {% endblock %}
+

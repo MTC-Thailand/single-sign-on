@@ -36,11 +36,15 @@
                     </tr>
                     <tr>
                         <td><strong>ลักษณะองค์กร</strong></td>
-                        <td></td>
+                        <td>{{ sponsor.type }} {{ sponsor.type_detail or '' }}</td>
                     </tr>
                     <tr>
                         <td><strong>หลักฐานแสดงคุณสมบัติขององค์กร</strong></td>
-                        <td></td>
+                        <td>
+                            {% for q in sponsor.qualifications %}
+                                <li>{{ q }}</li>
+                            {% endfor %}
+                        </td>
                     </tr>
                     <tr>
                         <td><strong>ที่อยู่</strong></td>

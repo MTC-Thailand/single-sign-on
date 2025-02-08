@@ -34,7 +34,8 @@ from app.cmte.models import (CMTEEvent,
                              CMTEEventDoc,
                              CMTEFeePaymentRecord,
                              CMTESponsorMember,
-                             CMTEEventSponsor)
+                             CMTEEventSponsor,
+                             CMTESponsorQualification)
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -705,6 +706,7 @@ def register_sponsor():
     if current_user.sponsor:
         return redirect(url_for('cmte.manage_sponsor', sponsor_id=current_user.sponsor_id))
     form = CMTEEventSponsorForm()
+    qualifications = CMTESponsorQualification.query.all()
     if request.method == 'POST':
         if form.validate_on_submit():
             sponsor = CMTEEventSponsor()
@@ -712,11 +714,19 @@ def register_sponsor():
             sponsor.members.append(current_user)
             db.session.add(sponsor)
             db.session.commit()
+
+            sponsor.qualifications = []
+            form = request.form
+            for quali_id in form.getlist("qualifications"):
+                qualification = CMTESponsorQualification.query.get(int(quali_id))
+                sponsor.qualifications.append(qualification)
+                db.session.add(sponsor)
+                db.session.commit()
             flash(f'ลงทะเบียนเรียบร้อย', 'success')
             return redirect(url_for('cmte.cmte_index'))
         else:
             flash(f'Errors: {form.errors}', 'danger')
-    return render_template('cmte/sponsor/sponsor_form.html', form=form)
+    return render_template('cmte/sponsor/sponsor_form.html', form=form, qualifications=qualifications)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>', methods=['GET', 'POST'])
@@ -726,10 +736,18 @@ def manage_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
     form = CMTEEventSponsorForm(obj=sponsor)
     if form.validate_on_submit():
-        sponsor_item = CMTEEventSponsor.query.get(sponsor_id)
-        form.populate_obj(sponsor_item)
-        db.session.add(sponsor_item)
+        event_sponsor = CMTEEventSponsor.query.get(sponsor_id)
+        form.populate_obj(event_sponsor)
+        db.session.add(event_sponsor)
         db.session.commit()
+
+        event_sponsor.qualifications = []
+        form = request.form
+        for quali_id in form.getlist("qualifications"):
+            qualification = CMTESponsorQualification.query.get(int(quali_id))
+            event_sponsor.qualifications.append(qualification)
+            db.session.add(event_sponsor)
+            db.session.commit()
         flash('อัพเดทข้อมูลเรียบร้อยแล้ว', 'success')
     else:
         for er in form.errors:
@@ -772,7 +790,9 @@ def sponsor_modal(sponsor_id):
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form = CMTEEventSponsorForm(obj=sponsor)
     is_admin = True if cmte_admin_permission else False
-    return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor_id=sponsor_id, is_admin=is_admin)
+    qualifications = CMTESponsorQualification.query.all()
+    return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor_id=sponsor_id, is_admin=is_admin,
+                           qualifications=qualifications)
 
 
 @cmte.get('/admin/sponsor')

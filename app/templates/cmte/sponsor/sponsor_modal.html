@@ -8,6 +8,12 @@
         <section class="modal-card-body">
             <form hx-post="{{ url_for('cmte.manage_sponsor', sponsor_id=sponsor_id) }}">
                 {{ form.hidden_tag() }}
+                <div class="field">
+                    <label class="label">ชื่อสถาบัน</label>
+                    <div class="control">
+                        {{ form.name(class="input", required=True) }}
+                    </div>
+                </div>
                 {% if is_admin %}
                     <div class="field">
                         <label class="label">รหัสสถาบัน</label>
@@ -27,13 +33,30 @@
                             {{ form.expire_date(class="input") }}
                         </div>
                     </div>
-                {% endif %}
-                <div class="field">
-                    <label class="label">ชื่อสถาบัน</label>
+                    <div class="field">
+                        <label class="label">ลักษณะองค์กร</label>
+                        <div class="select">
+                            {{ form.type() }}
+                        </div>
+                    </div>
+                    <div class="field">
+                    <label class="label">รายละเอียดลักษณะองค์กร(ถ้ามี)</label>
                     <div class="control">
-                        {{ form.name(class="input", required=True) }}
+                        {{ form.type_detail(class="input") }}
+                    </div>
+                    <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
+                    <div class="control has-icons-left">
+                       {% for qualification in qualifications %}
+                        <div class="field">
+                         <input type="checkbox"
+                           {% if qualification in form.qualifications %} checked {% endif %}
+                                name="qualifications" value="{{ qualification.id }}">
+                          {{ qualification.type }}
+                         </div>
+                        {% endfor %}
                     </div>
                 </div>
+                {% endif %}
                 <div class="field">
                     <label class="label">สังกัด</label>
                     <div class="control">
