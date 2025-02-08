@@ -28,6 +28,8 @@ class CMTEEventSponsor(db.Model):
     address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
     zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
     telephone = db.Column('telephone', db.String(), info={'label': 'หมายเลขโทรศัพท์'})
+    email = db.Column('email', EmailType(), info={'label': 'E-mail'})
+    website = db.Column('website', db.String(), info={'label': 'website'})
     registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
     expire_date = db.Column('expire_date', db.Date())
 
