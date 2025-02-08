@@ -49,6 +49,16 @@ class CMTEEventSponsor(db.Model):
                     status = "nearly_expire"
         return status
 
+
+class CMTESponsorQualification(db.Model):
+    __tablename__ = 'cmte_sponsor_qualification'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    type = db.Column('type', db.String(255), nullable=False)
+
+    def __str__(self):
+        return self.type
+
+
 class CMTESponsorMember(UserMixin, db.Model):
     __tablename__ = 'cmte_sponsor_members'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
