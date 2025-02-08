@@ -31,18 +31,23 @@
           </div>
         </div>
         <div class="field">
+          <label class="label">{{form.position.label}}ในองค์กร</label>
+          <div class="control">
+            {{form.position(class="input is-danger")}}
+          </div>
+        </div>
+        <div class="field">
           <label class="label">{{form.email.label}}</label>
           <div class="control">
             {{form.email(class="input is-danger")}}
           </div>
-          <p class="help is-info">กรุณากรอกเฉพาะหมายเลข เช่น 09099045xx</p>
         </div>
         <div class="field">
           <label class="label">{{form.mobile_phone.label}}</label>
           <div class="control">
             {{form.mobile_phone(class="input")}}
           </div>
-          <p class="help is-info">กรุณากรอกเฉพาะหมายเลข เช่น 09099045xx</p>
+          <p class="help is-info">กรอกเฉพาะหมายเลข เช่น 09099045xx</p>
         </div>
         <div class="field">
           <label class="label">{{form.password.label}}</label>

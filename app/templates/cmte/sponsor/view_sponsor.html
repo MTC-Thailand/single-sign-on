@@ -3,53 +3,100 @@
 {% block title %}Sponsor Detail{% endblock %}
 
 {% block content %}
-{% include "cmte/nav.html" %}
-<section class="section">
-  <h1 class="title has-text-centered">สถาบันฝึกอบรม</h1>
-  {% include "messages.html" %}
-  <div class="columns">
-    <div class="column">
-      <table class="table is-fullwidth is-striped is-bordered">
-        <thead>
-        </thead>
-        <tbody>
-        <tr>
-          <td><strong>ชื่อ</strong></td>
-          <td>{{sponsor.name}}</td>
-        </tr>
-        <tr>
-          <td><strong>สังกัด</strong></td>
-          <td>{{sponsor.affiliation or ''}}</td>
-        </tr>
-        <tr>
-          <td><strong>ที่อยู่</strong></td>
-          <td>{{sponsor.address}}</td>
-        </tr>
-        <tr>
-          <td><strong>โทรศัพท์</strong></td>
-          <td>{{sponsor.telephone}}</td>
-        </tr>
-        <tr>
-          <td><strong>สมาชิก</strong></td>
-          <td>
-            <ul>
-              {% for member in sponsor.members %}
-              <li>{{member}}</li>
-              {% endfor %}
-            </ul>
-          </td>
-        </tr>
-        <tr>
-          <td><strong>วันที่ขึ้นทะเบียน</strong></td>
-          <td>{{sponsor.registered_datetime|localdatetime or 'รอการตรวจสอบและอนุมัติ'}}</td>
-        </tr>
-        <tr>
-          <td><strong>วันที่หมดอายุ</strong></td>
-          <td>{{sponsor.expire_date|localdate or 'รอการตรวจสอบและอนุมัติ'}}</td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
+    {% include "cmte/nav.html" %}
+    <section class="section" id="app">
+        <h1 class="title has-text-centered">สถาบันฝึกอบรม</h1>
+        <div id="sponsor-modal-container"></div>
+        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
+           hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+           class="button is-success">
+            <span class="icon">
+                <i class="fa-solid fa-pencil"></i>
+            </span>
+            <span>แก้ไขข้อมูลสถาบัน</span>
+        </a>
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column">
+                <table class="table is-fullwidth is-striped is-bordered">
+                    <thead>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><strong>รหัส</strong></td>
+                        <td>{{ sponsor.code or 'รอการตรวจสอบและอนุมัติ' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ชื่อ</strong></td>
+                        <td>{{ sponsor.name }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>สังกัด</strong></td>
+                        <td>{{ sponsor.affiliation or '' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ลักษณะองค์กร</strong></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><strong>หลักฐานแสดงคุณสมบัติขององค์กร</strong></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ที่อยู่</strong></td>
+                        <td>{{ sponsor.address }} {{ sponsor.zipcode }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>โทรศัพท์</strong></td>
+                        <td>{{ sponsor.telephone }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>email</strong></td>
+                        <td>{{ sponsor.email or '' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>website</strong></td>
+                        <td>{{ sponsor.website or '' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>สมาชิก</strong></td>
+                        <td>
+                            <ul>
+                                {% for member in sponsor.members %}
+                                    <li>{{ member }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>วันที่ขึ้นทะเบียน</strong></td>
+                        <td>{{ sponsor.registered_datetime|localdatetime or 'รอการตรวจสอบและอนุมัติ' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>วันที่หมดอายุ</strong></td>
+                        <td>{{ sponsor.expire_date|localdate or 'รอการตรวจสอบและอนุมัติ' }}
+                            {% if sponsor.expire_status() != "active" %}
+                                <a href="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
+                                   class="button is-warning">
+                                    <span class="icon">
+                                        <i class="fa-solid fa-history"></i>
+                                    </span>
+                                    <span>ส่งคำขอต่ออายุสถาบัน</span>
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="buttons is-centered">
+            <a href="{{ url_for('cmte.cmte_index') }}" class="button is-light">
+                <span class="icon">
+                    <i class="far fa-arrow-left"></i>
+                </span>
+                <span>กลับ</span>
+            </a>
+        </div>
+    </section>
 {% endblock %}

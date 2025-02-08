@@ -721,10 +721,72 @@ def register_sponsor():
 
 @cmte.route('/sponsors/<int:sponsor_id>', methods=['GET', 'POST'])
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def manage_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    form = CMTEEventSponsorForm(obj=sponsor)
+    if form.validate_on_submit():
+        sponsor_item = CMTEEventSponsor.query.get(sponsor_id)
+        form.populate_obj(sponsor_item)
+        db.session.add(sponsor_item)
+        db.session.commit()
+        flash('อัพเดทข้อมูลเรียบร้อยแล้ว', 'success')
+    else:
+        for er in form.errors:
+            flash("{}:{}".format(er, form.errors[er]), 'danger')
+    if request.headers.get('HX-Request') == 'true':
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
     return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor)
+
+
+@cmte.route('/sponsors/<int:sponsor_id>/renew', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def renew_sponsor(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    form = CMTEEventSponsorForm(obj=sponsor)
+    if form.validate_on_submit():
+        sponsor_item = CMTEEventSponsor.query.get(sponsor_id)
+        form.populate_obj(sponsor_item)
+        db.session.add(sponsor_item)
+        db.session.commit()
+        flash('อัพเดทข้อมูลเรียบร้อยแล้ว', 'success')
+    else:
+        for er in form.errors:
+            flash("{}:{}".format(er, form.errors[er]), 'danger')
+    if request.headers.get('HX-Request') == 'true':
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
+    return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor)
+
+
+@cmte.route('/sponsors/modal/<int:sponsor_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
+def sponsor_modal(sponsor_id):
+    #edit backref url in template after edit sponsor info depends on permission
+    if sponsor_id:
+        sponsor = CMTEEventSponsor.query.get(sponsor_id)
+        form = CMTEEventSponsorForm(obj=sponsor)
+    is_admin = True if cmte_admin_permission else False
+    return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor_id=sponsor_id, is_admin=is_admin)
+
+
+@cmte.get('/admin/sponsor')
+@login_required
+@cmte_admin_permission.require()
+def all_sponsor():
+    tab = request.args.get('tab')
+    if tab == 'new':
+        sponsors = CMTEEventSponsor.query.filter(CMTEEventSponsor.registered_datetime == None).all()
+    elif tab == 'renew':
+        sponsors = CMTEEventSponsor.query.all()
+    else:
+        sponsors = CMTEEventSponsor.query.all()
+    return render_template('cmte/admin/sponsor_registration.html', sponsors=sponsors, tab=tab)
 
 
 @cmte.route('/admin/events', methods=['GET', 'POST'])

@@ -5,6 +5,7 @@ from sqlalchemy_utils import EmailType
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.validators import DataRequired
 from pytz import timezone
+from datetime import datetime, timedelta
 
 from app import db
 
@@ -36,6 +37,17 @@ class CMTEEventSponsor(db.Model):
     def __str__(self):
         return self.name
 
+    def expire_status(self):
+        today = datetime.now().date()
+        status = "active"
+        if self.expire_date:
+            delta = today - self.expire_date
+            if delta.days <= 90:
+                if self.expire_date < today:
+                    status = "expired"
+                else:
+                    status = "nearly_expire"
+        return status
 
 class CMTESponsorMember(UserMixin, db.Model):
     __tablename__ = 'cmte_sponsor_members'

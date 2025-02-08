@@ -32,6 +32,10 @@ admin.add_view(ClientAdminView(Client, db.session))
 admin.add_view(ModelView(Role, db.session, category='Permissions'))
 
 from app.cmte.models import *
+admin.add_view(ModelView(CMTESponsorMember, db.session, category='Sponsor'))
+
+
+from app.cmte.models import *
 
 admin.add_view(ModelView(CMTEEvent, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventCategory, db.session, category='CMTE'))

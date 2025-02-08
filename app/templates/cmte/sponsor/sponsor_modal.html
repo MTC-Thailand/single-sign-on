@@ -1,0 +1,90 @@
+<div class="modal is-active animate__animated" id="sponsor-modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">สถาบันฝึกอบรม</p>
+            <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+            <form hx-post="{{ url_for('cmte.manage_sponsor', sponsor_id=sponsor_id) }}">
+                {{ form.hidden_tag() }}
+                {% if is_admin %}
+                    <div class="field">
+                        <label class="label">รหัสสถาบัน</label>
+                        <div class="control">
+                            {{ form.code(class="input") }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">วันที่ขึ้นทะเบียน</label>
+                        <div class="control">
+                            {{ form.registered_datetime(class="input") }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">วันที่หมดอายุ</label>
+                        <div class="control">
+                            {{ form.expire_date(class="input") }}
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="field">
+                    <label class="label">ชื่อสถาบัน</label>
+                    <div class="control">
+                        {{ form.name(class="input", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">สังกัด</label>
+                    <div class="control">
+                        {{ form.affiliation(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">ที่อยู่</label>
+                    <div class="control">
+                        {{ form.address(class="textarea", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">รหัสไปรษณีย์</label>
+                    <div class="control">
+                        {{ form.zipcode(class="input", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">โทรศัพท์</label>
+                    <div class="control">
+                        {{ form.telephone(class="input", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">email</label>
+                    <div class="control">
+                        {{ form.email(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">website</label>
+                    <div class="control">
+                        {{ form.website(class="input") }}
+                    </div>
+                </div>
+                <button class="button" id="cancel-btn">Cancel</button>
+                <button class="button is-success" id="save-btn" type="submit">Save</button>
+            </form>
+        </section>
+    </div>
+</div>
+<script>
+    window.document.getElementById("cancel-btn").addEventListener("click", function (event) {
+        event.preventDefault()
+        htmx.removeClass(htmx.find('#sponsor-modal'), 'is-active')
+    })
+    window.document.getElementById("cancelButton").addEventListener("click", function () {
+        htmx.removeClass(htmx.find('#sponsor-modal'), 'is-active')
+    })
+    window.addEventListener('closeModal', (evt) => {
+        htmx.removeClass(htmx.find('#sponsor-modal'), 'is-active')
+    })
+</script>
