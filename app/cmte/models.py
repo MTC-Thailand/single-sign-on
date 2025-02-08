@@ -80,6 +80,8 @@ class CMTEEventCategory(db.Model):
 
 
 class CMTEEventType(db.Model):
+    """ประเภทกิจกรรม
+    """
     __tablename__ = 'cmte_event_types'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_id = db.Column('old_id', db.Integer)
@@ -93,12 +95,14 @@ class CMTEEventType(db.Model):
     score_criteria = db.Column('score_criteria', db.String())
     fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'))
     desc = db.Column('desc', db.Text(), info={'label': 'รายละเอียด'})
+    deprecated = db.Column('deprecated', db.Boolean(), default=False)
 
     def __str__(self):
         return self.name
 
 
 class CMTEEventActivity(db.Model):
+    """ชนิดกิจกรรม"""
     __tablename__ = 'cmte_event_activities'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_id = db.Column('old_id', db.Integer)
@@ -106,9 +110,11 @@ class CMTEEventActivity(db.Model):
     type_id = db.Column('type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
     en_name = db.Column('en_name', db.String(255))
     detail = db.Column('detail', db.Text())
+    group_submission_allowed = db.Column('group_submission_allowed', db.Boolean(), default=False)
     event_type = db.relationship('CMTEEventType', backref=db.backref('activities',
                                                                      lazy='dynamic',
                                                                      cascade='all, delete-orphan'))
+    deprecated = db.Column('deprecated', db.Boolean(), default=False)
 
     def __str__(self):
         return self.name
