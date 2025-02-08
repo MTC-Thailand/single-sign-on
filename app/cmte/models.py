@@ -16,6 +16,12 @@ event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
                                           db.ForeignKey('cmte_event_fee_rates.id'))
                                 )
 
+sponsor_qualifications = db.Table('sponsor_qualification_assoc',
+                                           db.Column('event_sponsor_id', db.ForeignKey('cmte_event_sponsors.id')),
+                                           db.Column('qualification_id',
+                                                     db.ForeignKey('cmte_sponsor_qualification.id')),
+                                           )
+
 BANGKOK = timezone('Asia/Bangkok')
 
 
@@ -33,6 +39,7 @@ class CMTEEventSponsor(db.Model):
     website = db.Column('website', db.String(), info={'label': 'website'})
     registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
     expire_date = db.Column('expire_date', db.Date())
+    qualifications = db.relationship('CMTESponsorQualification', secondary=sponsor_qualifications)
 
     def __str__(self):
         return self.name
