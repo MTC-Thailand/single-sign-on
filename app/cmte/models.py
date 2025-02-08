@@ -48,6 +48,7 @@ class CMTESponsorMember(UserMixin, db.Model):
     _password_hash = db.Column(db.String(255))
     mobile_phone = db.Column('mobile_phone', db.String(), info={'label': 'โทรศัพท์มือถือ'})
     telephone = db.Column('telephone', db.String(), info={'label': 'โทรศัพท์'})
+    position = db.Column('position', db.String(), info={'label': 'ตำแหน่ง'})
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship(CMTEEventSponsor,
                               backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
