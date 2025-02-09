@@ -5,6 +5,7 @@ from sqlalchemy_utils import EmailType
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.validators import DataRequired
 from pytz import timezone
+from wtforms.widgets.core import RadioInput
 
 from app import db
 
@@ -84,21 +85,24 @@ class CMTEEventType(db.Model):
     """
     __tablename__ = 'cmte_event_types'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    number = db.Column('number', db.Integer(), info={'label': 'ลำดับ'})
     old_id = db.Column('old_id', db.Integer)
-    name = db.Column('name', db.String(255), unique=True, nullable=False)
-    for_group = db.Column('for_group', db.Boolean(), default=False)
-    is_sponsored = db.Column('is_sponsored', db.Boolean(), default=False)
+    name = db.Column('name', db.String(255), unique=True, nullable=False, info={'label': 'ประเภท'})
+    for_group = db.Column('for_group', db.Boolean(), default=False, info={'label': 'ขอคะแนนแบบกลุ่มได้'})
+    is_sponsored = db.Column('is_sponsored', db.Boolean(), default=False, info={'label': 'จัดโดยสถาบัน'})
     category_id = db.Column('category_id', db.Integer, db.ForeignKey('cmte_event_categories.id'))
     category = db.relationship('CMTEEventCategory', backref=db.backref('types'))
-    submission_due = db.Column('submission_due', db.Integer(), default=30)
-    max_score = db.Column('max_score', db.Integer(), default=25)
-    score_criteria = db.Column('score_criteria', db.String())
-    fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'))
+    submission_due = db.Column('submission_due', db.Integer(), default=30, info={'label': 'กำหนดส่งรายชื่อผู้เข้าร่วม'})
+    max_score = db.Column('max_score', db.Integer(), default=25, info={'label': 'คะแนนสูงสุดที่อนุมัติได้'})
+    score_criteria = db.Column('score_criteria', db.String(), info={'label': 'เกณฑ์การพิจารณาอนุมัติคะแนน'})
+    fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'), info={'label': 'อัตราค่าธรรมเนียม'})
     desc = db.Column('desc', db.Text(), info={'label': 'รายละเอียด'})
-    deprecated = db.Column('deprecated', db.Boolean(), default=False)
+    deprecated = db.Column('deprecated', db.Boolean(), default=False, info={'label': 'ยกเลิก'})
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
 
     def __str__(self):
-        return self.name
+        return f'{self.number}. {self.name}'
 
 
 class CMTEEventActivity(db.Model):

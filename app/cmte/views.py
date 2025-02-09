@@ -27,7 +27,7 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEParticipantFileUploadForm,
                             CMTEFeePaymentForm,
                             CMTEAdminEventForm,
-                            CMTEEventCodeForm, IndividualScoreAdminForm)
+                            CMTEEventCodeForm, IndividualScoreAdminForm, CMTEAdminEventTypeForm)
 from app.cmte.models import (CMTEEvent,
                              CMTEEventType,
                              CMTEEventParticipationRecord,
@@ -866,3 +866,41 @@ def admin_individual_score_edit(record_id):
 @cmte_admin_permission.require()
 def admin_approve_individual_score_payment(record_id):
     pass
+
+
+@cmte.route('/admin/events/management', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_manage_events():
+    event_types = CMTEEventType.query.order_by(CMTEEventType.number)
+    return render_template('cmte/admin/event_management_index.html', event_types=event_types)
+
+
+@cmte.route('/admin/event-types/add', methods=['GET', 'POST'])
+@cmte.route('/admin/event-types/<int:event_type_id>/management', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def admin_manage_event_type(event_type_id=None):
+    if event_type_id:
+        event_type = CMTEEventType.query.get(event_type_id)
+        form = CMTEAdminEventTypeForm(obj=event_type)
+    else:
+        form = CMTEAdminEventTypeForm()
+    if form.validate_on_submit():
+        if not event_type_id:
+            existing_event_type = CMTEEventType.query.filter_by(name=form.name.data)\
+                .filter(CMTEEventType.deprecated!=True).first()
+            if not existing_event_type:
+                event_type = CMTEEventType()
+                event_type.created_at = arrow.now('Asia/Bangkok').datetime
+        else:
+            event_type.updated_at = arrow.now('Asia/Bangkok').datetime
+        form.populate_obj(event_type)
+        db.session.add(event_type)
+        db.session.commit()
+        flash('บันทึกข้อมูลแล้ว', 'success')
+        return redirect(url_for('cmte.admin_manage_events'))
+    else:
+        if form.errors:
+            flash(form.errors, 'danger')
+    return render_template('cmte/admin/event_type_form.html', form=form)
