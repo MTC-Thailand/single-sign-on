@@ -110,15 +110,24 @@ class CMTEEventActivity(db.Model):
     __tablename__ = 'cmte_event_activities'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_id = db.Column('old_id', db.Integer)
-    name = db.Column('name', db.String(255), unique=True, nullable=False)
+    number = db.Column('number', db.Integer(), info={'label': 'ลำดับ'})
+    name = db.Column('name', db.String(255), unique=True, nullable=False, info={'label': 'ชื่อชนิดกิจกรรม'})
     type_id = db.Column('type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
     en_name = db.Column('en_name', db.String(255))
-    detail = db.Column('detail', db.Text())
-    group_submission_allowed = db.Column('group_submission_allowed', db.Boolean(), default=False)
+    detail = db.Column('detail', db.Text(), info={'label': 'รายละเอียด'})
+    group_submission_only = db.Column('group_submission_only', db.Boolean(),
+                                      default=False,
+                                      info={'label': 'ยื่นขอคะแนนแบบกลุ่มเท่านั้น'})
+    group_submission_allowed = db.Column('group_submission_allowed', db.Boolean(),
+                                         default=False,
+                                         info={'label': 'ยื่นขออนุมัติคะแนนแบบกลุ่มและส่วนตัว'})
     event_type = db.relationship('CMTEEventType', backref=db.backref('activities',
                                                                      lazy='dynamic',
+                                                                     order_by='CMTEEventActivity.number',
                                                                      cascade='all, delete-orphan'))
-    deprecated = db.Column('deprecated', db.Boolean(), default=False)
+    deprecated = db.Column('deprecated', db.Boolean(), default=False, info={'label': 'ยกเลิก'})
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
 
     def __str__(self):
         return self.name
@@ -198,7 +207,6 @@ class CMTEEvent(db.Model):
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
     cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
     event_code = db.Column('event_code', db.String(), info={'label': 'Code'})
-
     # TODO: add a field for an approver
 
     def to_dict(self):

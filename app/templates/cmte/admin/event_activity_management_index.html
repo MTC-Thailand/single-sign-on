@@ -7,30 +7,30 @@
         {% include "messages.html" %}
         <div class="columns">
             <div class="column">
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        <li><a href="{{url_for('cmte.admin_manage_events')}}">ประเภทกิจกรรม</a></li>
+                        <li class="is-active"><a href="{{url_for('cmte.admin_manage_event_activity', event_type_id=event_type.id)}}">ชนิดกิจกรรม</a></li>
+                    </ul>
+                </nav>
                 <table class="table is-fullwidth is-striped">
                     <thead>
                     <th>ลำดับ</th>
-                    <th>ประเภท</th>
+                    <th>ชนิดกิจกรรม</th>
                     <th>เพิ่มเมื่อ</th>
                     <th>แก้ไขเมื่อ</th>
-                    <th>ชนิดกิจกรรม</th>
                     <th>การใช้งาน</th>
                     <th></th>
                     </thead>
                     <tbody>
-                    {% for type_ in event_types %}
+                    {% for activity in event_type.activities %}
                     <tr>
-                        <td>{{type_.number}}</td>
-                        <td>{{type_.name}}</td>
-                        <td>{{type_.created_at|localdatetime or ""}}</td>
-                        <td>{{type_.updated_at|localdatetime or ""}}</td>
+                        <td>{{activity.number}}</td>
+                        <td>{{activity.name}}</td>
+                        <td>{{activity.created_at|localdatetime or ""}}</td>
+                        <td>{{activity.updated_at|localdatetime or ""}}</td>
                         <td>
-                            <a href="{{url_for('cmte.admin_manage_event_activity', event_type_id=type_.id)}}">
-                                {{type_.activities.count()}}
-                            </a>
-                        </td>
-                        <td>
-                            {% if type_.deprecated %}
+                            {% if activity.deprecated %}
                             <span class="tag is-danger">
                                 ยกเลิก
                             </span>
@@ -41,7 +41,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{{url_for('cmte.admin_manage_event_type', event_type_id=type_.id)}}">
+                            <a href="{{url_for('cmte.admin_edit_event_activity', event_type_id=event_type.id, event_activity_id=activity.id)}}">
                                 <span class="icon">
                                     <i class="fas fa-pencil-alt"></i>
                                 </span>
@@ -52,7 +52,7 @@
                     </tbody>
                 </table>
                 <div class="buttons">
-                    <a href="{{url_for('cmte.admin_manage_event_type')}}" class="button is-link">
+                    <a href="{{url_for('cmte.admin_edit_event_activity', event_type_id=event_type.id)}}" class="button is-link">
                         <span class="icon">
                             <i class="fas fa-plus"></i>
                         </span>

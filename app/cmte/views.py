@@ -27,14 +27,15 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEParticipantFileUploadForm,
                             CMTEFeePaymentForm,
                             CMTEAdminEventForm,
-                            CMTEEventCodeForm, IndividualScoreAdminForm, CMTEAdminEventTypeForm)
+                            CMTEEventCodeForm, IndividualScoreAdminForm, CMTEAdminEventTypeForm,
+                            CMTEAdminEventActivityForm)
 from app.cmte.models import (CMTEEvent,
                              CMTEEventType,
                              CMTEEventParticipationRecord,
                              CMTEEventDoc,
                              CMTEFeePaymentRecord,
                              CMTESponsorMember,
-                             CMTEEventSponsor)
+                             CMTEEventSponsor, CMTEEventActivity)
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -904,3 +905,42 @@ def admin_manage_event_type(event_type_id=None):
         if form.errors:
             flash(form.errors, 'danger')
     return render_template('cmte/admin/event_type_form.html', form=form)
+
+
+@cmte.route('/admin/event-types/<int:event_type_id>/event-activities/management')
+@login_required
+@cmte_admin_permission.require()
+def admin_manage_event_activity(event_type_id):
+    event_type = CMTEEventType.query.get(event_type_id)
+    return render_template('cmte/admin/event_activity_management_index.html',
+                           event_type=event_type)
+
+
+@cmte.route('/admin/event-types/<int:event_type_id>/event-activities/edit',
+            methods=['GET', 'POST'])
+@cmte.route('/admin/event-types/<int:event_type_id>/event-activities/<int:event_activity_id>/edit',
+            methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def admin_edit_event_activity(event_type_id, event_activity_id=None):
+    if event_activity_id:
+        event_activity = CMTEEventActivity.query.get(event_activity_id)
+        form = CMTEAdminEventActivityForm(obj=event_activity)
+    else:
+        form = CMTEAdminEventActivityForm()
+    if form.validate_on_submit():
+        if not event_activity_id:
+            event_activity = CMTEEventActivity(event_type_id=event_type_id)
+            event_activity.created_at = arrow.now('Asia/Bangkok').datetime
+        else:
+            event_activity.updated_at = arrow.now('Asia/Bangkok').datetime
+
+        form.populate_obj(event_activity)
+        db.session.add(event_activity)
+        db.session.commit()
+        flash('บันทึกชนิดกิจกรรมแล้ว', 'success')
+        return redirect(url_for('cmte.admin_manage_event_activity', event_type_id=event_type_id))
+    return render_template('cmte/admin/event_activity_form.html',
+                           form=form, event_type_id=event_type_id)
+
+
