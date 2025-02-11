@@ -6,8 +6,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.validators import DataRequired
 from pytz import timezone
 from datetime import datetime, timedelta
+from sqlalchemy_continuum import make_versioned
+import sqlalchemy as sa
 
 from app import db
+
+make_versioned(user_cls=None)
 
 event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
                                 db.Column('event_type_id', db.Integer,
@@ -26,6 +30,7 @@ BANGKOK = timezone('Asia/Bangkok')
 
 
 class CMTEEventSponsor(db.Model):
+    __versioned__ = {}
     __tablename__ = 'cmte_event_sponsors'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_id = db.Column(db.Integer)
@@ -75,6 +80,7 @@ class CMTESponsorQualification(db.Model):
 
 
 class CMTESponsorMember(UserMixin, db.Model):
+    __versioned__ = {}
     __tablename__ = 'cmte_sponsor_members'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_user_id = db.Column('old_user_id', db.Integer())
@@ -96,14 +102,15 @@ class CMTESponsorMember(UserMixin, db.Model):
 
     @property
     def password(self):
-        raise ValueError
+        #raise ValueError
+        return 'Password is not accessible'
 
     @password.setter
     def password(self, pw):
         self._password_hash = generate_password_hash(pw)
 
     def __str__(self):
-        return f'{self.firstname} {self.lastname}'
+        return f'{self.title or ""} {self.firstname} {self.lastname}'
 
     @property
     def unique_id(self):
@@ -334,3 +341,5 @@ class CMTEFeePaymentRecord(db.Model):
                 'start_date': self.start_date.strftime('%Y-%m-%d'),
                 'payment_datetime': self.payment_datetime.isoformat(),
                 'license_number': self.license_number}
+
+sa.orm.configure_mappers()
