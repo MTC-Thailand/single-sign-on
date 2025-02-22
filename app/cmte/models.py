@@ -79,6 +79,15 @@ class CMTESponsorQualification(db.Model):
         return self.type
 
 
+class CMTERenewSponsorRequest(db.Model):
+    __tablename__ = 'cmte_renew_sponsor_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('renew_sponsor', lazy='dynamic'))
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+
+
 class CMTESponsorMember(UserMixin, db.Model):
     __versioned__ = {}
     __tablename__ = 'cmte_sponsor_members'
