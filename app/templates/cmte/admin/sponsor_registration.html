@@ -42,8 +42,16 @@
                         <tbody>
                             {% for sponsor in sponsors %}
                                 <tr>
-                                    <td>{{ sponsor.code }}</td>
-                                    <td style="width: 20em;" {% if not sponsor.registered_datetime %}class="has-text-danger"{% endif %}>{{ sponsor.name }}</td>
+                                    <td>{{ sponsor.code or '' }}</td>
+                                    <td style="width: 20em;">
+                                        <a href={{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}
+                                           {% if not sponsor.registered_datetime %}class="has-text-danger"{% endif %}>
+                                            <span>{{ sponsor.name }}</span>
+                                            <span class="icon">
+                                                <i class="fa-solid fa-info-circle"></i>
+                                            </span>
+                                        </a>
+                                    </td>
                                     <td>{{ sponsor.registered_datetime|localdatetime or ''}}</td>
                                     <td>{{ sponsor.expire_date|localdate or '' }}</td>
                                     <td {% if sponsor.expire_status() == 'expired'%}
@@ -55,11 +63,11 @@
                                     <td>
                                         <div id="sponsor-modal-container"></div>
                                         <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
-                                            class="button is-success">
+                                            class="button is-success is-light">
                                             <span class="icon">
                                                 <i class="fa-solid fa-pencil"></i>
                                             </span>
-                                            <span>แก้ไข</span>
+                                            <span>อัพเดทข้อมูล</span>
                                         </a>
                                     </td>
                                 </tr>
