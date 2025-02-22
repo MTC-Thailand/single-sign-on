@@ -99,3 +99,4 @@ wheel==0.37.1
 WTForms==2.3.3
 WTForms-Alchemy==0.18.0
 WTForms-Components==0.10.5
+sqlalchemy_continuum==0.40.0
