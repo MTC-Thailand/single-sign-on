@@ -31,10 +31,6 @@ admin.add_view(ModelView(User, db.session))
 admin.add_view(ClientAdminView(Client, db.session))
 admin.add_view(ModelView(Role, db.session, category='Permissions'))
 
-from app.cmte.models import *
-admin.add_view(ModelView(CMTESponsorMember, db.session, category='Sponsor'))
-admin.add_view(ModelView(CMTESponsorQualification, db.session, category='Sponsor'))
-
 
 from app.cmte.models import *
 
@@ -42,12 +38,15 @@ admin.add_view(ModelView(CMTEEvent, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventCategory, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventType, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventFormat, db.session, category='CMTE'))
-admin.add_view(ModelView(CMTEEventSponsor, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventFeeRate, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventCode, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventDoc, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventParticipationRecord, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventActivity, db.session, category='CMTE'))
+
+admin.add_view(ModelView(CMTESponsorMember, db.session, category='Sponsor'))
+admin.add_view(ModelView(CMTEEventSponsor, db.session, category='Sponsor'))
+admin.add_view(ModelView(CMTESponsorQualification, db.session, category='Sponsor'))
 
 admin.add_view(ModelView(CMTEFeePaymentRecord, db.session, category='Members'))
 
