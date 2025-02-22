@@ -86,6 +86,7 @@ class CMTERenewSponsorRequest(db.Model):
     sponsor = db.relationship(CMTEEventSponsor,
                               backref=db.backref('renew_sponsor', lazy='dynamic'))
     created_at = db.Column('created_at', db.DateTime(timezone=True))
+    approved_at = db.Column('approved_at', db.DateTime(timezone=True))
 
 
 class CMTESponsorMember(UserMixin, db.Model):
