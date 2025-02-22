@@ -1,7 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms.validators import NumberRange, EqualTo, Email, Optional
-from wtforms_alchemy import model_form_factory, QuerySelectField
+from wtforms.widgets import ListWidget, CheckboxInput
+from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
 from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField
 from wtforms_components import DateField, DateTimeField
 
@@ -103,6 +104,18 @@ class CMTESponsorMemberForm(ModelForm):
     confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
 
 
+class CMTESponsorMemberEditForm(ModelForm):
+    class Meta:
+        model = CMTESponsorMember
+
+
+class CMTESponsorMemberChangePasswordForm(FlaskForm):
+    password = PasswordField('รหัสผ่าน',
+                             validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
+    confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
+
+
+
 class CMTESponsorMemberLoginForm(ModelForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('รหัสผ่าน', validators=[DataRequired()])
@@ -111,6 +124,10 @@ class CMTESponsorMemberLoginForm(ModelForm):
 class CMTEEventSponsorForm(ModelForm):
     class Meta:
         model = CMTEEventSponsor
+    qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
+                                              query_factory=lambda:CMTESponsorQualification.query.all(),
+                                              widget=ListWidget(prefix_label=False),
+                                              option_widget=CheckboxInput())
 
 
 class CMTEPaymentForm(FlaskForm):
