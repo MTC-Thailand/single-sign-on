@@ -5,17 +5,19 @@
 {% block content %}
     {% include "cmte/nav.html" %}
     <section class="section" id="app">
-        <h1 class="title has-text-centered">สถาบันฝึกอบรม</h1>
-        <div id="sponsor-modal-container"></div>
-        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
-           hx-target="#sponsor-modal-container" hx-swap="innerHTML"
-           class="button is-success">
-            <span class="icon">
-                <i class="fa-solid fa-pencil"></i>
-            </span>
-            <span>แก้ไขข้อมูลสถาบัน</span>
-        </a>
         {% include "messages.html" %}
+        <h1 class="title has-text-centered">สถาบันฝึกอบรม {{ sponsor.name }}</h1>
+        <div id="sponsor-modal-container"></div>
+        <div class="has-text-centered">
+            <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
+               hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+               class="button is-success">
+                <span class="icon">
+                    <i class="fa-solid fa-pencil"></i>
+                </span>
+                <span>แก้ไขข้อมูลสถาบัน</span>
+            </a>
+        </div>
         <div class="columns">
             <div class="column">
                 <table class="table is-fullwidth is-striped is-bordered">
@@ -25,10 +27,6 @@
                     <tr>
                         <td><strong>รหัส</strong></td>
                         <td>{{ sponsor.code or 'รอการตรวจสอบและอนุมัติ' }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>ชื่อ</strong></td>
-                        <td>{{ sponsor.name }}</td>
                     </tr>
                     <tr>
                         <td><strong>สังกัด</strong></td>
@@ -63,13 +61,11 @@
                         <td>{{ sponsor.website or '' }}</td>
                     </tr>
                     <tr>
-                        <td><strong>สมาชิก</strong></td>
+                        <td><strong>ผู้ประสานงาน</strong></td>
                         <td>
-                            <ul>
-                                {% for member in sponsor.members %}
-                                    <li>{{ member }}</li>
-                                {% endfor %}
-                            </ul>
+                            {% for member in sponsor.members|sort(attribute="id") %}
+                                <li>{{ member }}</li>
+                            {% endfor %}
                         </td>
                     </tr>
                     <tr>
@@ -79,14 +75,16 @@
                     <tr>
                         <td><strong>วันที่หมดอายุ</strong></td>
                         <td>{{ sponsor.expire_date|localdate or 'รอการตรวจสอบและอนุมัติ' }}
-                            {% if sponsor.expire_status() != "active" %}
-                                <a href="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
-                                   class="button is-warning">
-                                    <span class="icon">
-                                        <i class="fa-solid fa-history"></i>
-                                    </span>
-                                    <span>ส่งคำขอต่ออายุสถาบัน</span>
-                                </a>
+                            {% if not is_admin %}
+                                {% if sponsor.expire_status() != "active" %}
+                                    <a href="{{ url_for('cmte.request_renew_sponsor', sponsor_id=sponsor.id) }}"
+                                       class="button is-warning">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-history"></i>
+                                        </span>
+                                        <span>ส่งคำขอต่ออายุสถาบัน</span>
+                                    </a>
+                                {% endif %}
                             {% endif %}
                         </td>
                     </tr>
@@ -94,6 +92,74 @@
                 </table>
             </div>
         </div>
+        <h1 class="title has-text-centered">รายชื่อผู้ประสานงาน</h1>
+        <div class="has-text-centered">
+            <a href="{{ url_for('cmte.register_sponsor_member', sponsor_id=sponsor.id) }}"
+               class="button is-info">
+                <span class="icon">
+                    <i class="fa-solid fa-user-plus"></i>
+                </span>
+                <span>เพิ่มผู้ประสานงาน</span>
+            </a>
+        </div>
+        <div class="columns">
+            <div class="column">
+                <table class="table is-fullwidth is-striped is-bordered">
+                    <thead>
+                        <th>ชื่อ - นามสกุล</th>
+                        <th>ตำแหน่ง</th>
+                        <th>email</th>
+                        <th colspan="2">โทรศัพท์</th>
+                    </thead>
+                    <tbody>
+                    {% for member in sponsor.members|sort(attribute="id") %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('cmte.manage_member', member_id=member.id) }}">{{ member }}</a>
+                            {% if member.is_coordinator %}
+                                <span class="tag is-info is-light">
+                                    <i class="far fa-tag"></i>
+                                    ผู้ประสานงานหลัก
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ member.position or '' }}</td>
+                        <td>{{ member.email or '' }}</td>
+                        <td>{{ member.mobile_phone or '' }} {{ member.telephone or '' }}</td>
+                        {% if is_admin or current_user.is_coordinator %}
+                            {% if not member.id == current_user.id %}
+                        <td>
+                            <div class="buttons">
+                                <a class="button"
+                                    hx-swap="outerHTML swap:1s"
+                                    hx-target="closest tr"
+                                    hx-confirm="คุณต้องการลบรายการนี้หรือไม่"
+                                    hx-delete="{{ url_for('cmte.del_member',
+                                    sponsor_id=sponsor.id, member_id=member.id) }}">
+                                    <span class="icon is-small">
+                                        <i class="fa-solid fa-trash-can has-text-danger"></i>
+                                    </span>
+                                </a>
+                            </div>
+                        </td>
+                            {% endif %}
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if is_admin %}
+        <div class="buttons is-centered">
+            <a href="{{ url_for('cmte.all_sponsor') }}" class="button is-light">
+                <span class="icon">
+                    <i class="far fa-arrow-left"></i>
+                </span>
+                <span>กลับ</span>
+            </a>
+        </div>
+        {% else %}
         <div class="buttons is-centered">
             <a href="{{ url_for('cmte.cmte_index') }}" class="button is-light">
                 <span class="icon">
@@ -102,5 +168,6 @@
                 <span>กลับ</span>
             </a>
         </div>
+        {% endif %}
     </section>
 {% endblock %}

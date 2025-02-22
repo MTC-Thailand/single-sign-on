@@ -27,7 +27,8 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEParticipantFileUploadForm,
                             CMTEFeePaymentForm,
                             CMTEAdminEventForm,
-                            CMTEEventCodeForm, IndividualScoreAdminForm)
+                            CMTEEventCodeForm, IndividualScoreAdminForm,
+                            CMTESponsorMemberEditForm)
 from app.cmte.models import (CMTEEvent,
                              CMTEEventType,
                              CMTEEventParticipationRecord,
@@ -35,7 +36,8 @@ from app.cmte.models import (CMTEEvent,
                              CMTEFeePaymentRecord,
                              CMTESponsorMember,
                              CMTEEventSponsor,
-                             CMTESponsorQualification)
+                             CMTESponsorQualification,
+                             CMTERenewSponsorRequest)
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -682,7 +684,8 @@ def sponsor_member_login():
 
 
 @cmte.route('/sponsors/members/register', methods=['GET', 'POST'])
-def register_sponsor_member():
+@cmte.route('/sponsors/members/register/add-member/<int:sponsor_id>', methods=['GET', 'POST'])
+def register_sponsor_member(sponsor_id=None):
     form = CMTESponsorMemberForm()
     if form.validate_on_submit():
         member = CMTESponsorMember.query.filter_by(email=form.email.data).first()
@@ -692,11 +695,74 @@ def register_sponsor_member():
             member.password = form.password.data
             db.session.add(member)
             db.session.commit()
-            flash(f'ลงทะเบียนเรียบร้อยแล้ว กรุณาลงชื่อเข้าใช้งาน', 'success')
-            return redirect(url_for('cmte.sponsor_member_login'))
+            if sponsor_id:
+                member.sponsor_id = sponsor_id
+                db.session.add(member)
+                db.session.commit()
+                flash(f'เพิ่มผู้ประสานงานเรียบร้อยแล้ว', 'success')
+                # is_admin = True if cmte_admin_permission else False
+                # if not is_admin:
+                #     print('send notification to admin of CMTE')
+                return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+            else:
+                member.is_coordinator = True
+                db.session.add(member)
+                db.session.commit()
+                flash(f'ลงทะเบียนเรียบร้อยแล้ว กรุณาลงชื่อเข้าใช้งาน', 'success')
+                return redirect(url_for('cmte.sponsor_member_login'))
         else:
             flash(f'{form.email.data} มีการลงทะเบียนแล้ว หากลืมรหัสผ่านกรุณาติดต่อเจ้าหน้าที่', 'warning')
     return render_template('cmte/sponsor/member_form.html', form=form)
+
+
+@cmte.route('/sponsors/member/manage/<int:member_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
+def manage_member(member_id):
+    member = CMTESponsorMember.query.filter_by(id=member_id).first()
+    form = CMTESponsorMemberEditForm(obj=member)
+    if form.validate_on_submit():
+        member = CMTESponsorMember.query.get(member_id)
+        form.populate_obj(member)
+        db.session.add(member)
+        db.session.commit()
+        flash('อัพเดทข้อมูลเรียบร้อยแล้ว', 'success')
+        # is_admin = True if cmte_admin_permission else False
+        # if not is_admin:
+        #     print('send notification to admin of CMTE')
+    else:
+        for er in form.errors:
+            flash("{}:{}".format(er, form.errors[er]), 'danger')
+    if request.headers.get('HX-Request') == 'true':
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
+    return render_template('cmte/sponsor/view_each_member.html', member=member)
+
+
+@cmte.route('/sponsors/member/modal/<int:member_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
+def member_modal(member_id):
+    if member_id:
+        member = CMTESponsorMember.query.get(member_id)
+        form = CMTESponsorMemberEditForm(obj=member)
+    is_admin = True if cmte_admin_permission else False
+    return render_template('cmte/sponsor/member_modal.html', form=form, member=member, is_admin=is_admin)
+
+
+@cmte.route('/sponsors/member/del/<int:sponsor_id>/<int:member_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
+def del_member(sponsor_id, member_id):
+    member = CMTESponsorMember.query.get(member_id)
+    if member.is_coordinator:
+        flash('{}เป็นผู้ประสานงานหลัก หากต้องการลบบัญชีนี้ กรุณาแก้ไขสถานะผู้ประสานงานหลักก่อน'.format(member), 'warning')
+    else:
+        db.session.delete(member)
+        db.session.commit()
+        flash('ลบบัญชี {} เรียบร้อยแล้ว'.format(member), 'warning')
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
 @cmte.route('/sponsors/register', methods=['GET', 'POST'])
@@ -709,21 +775,17 @@ def register_sponsor():
     qualifications = CMTESponsorQualification.query.all()
     if request.method == 'POST':
         if form.validate_on_submit():
-            sponsor = CMTEEventSponsor()
-            form.populate_obj(sponsor)
-            sponsor.members.append(current_user)
-            db.session.add(sponsor)
-            db.session.commit()
-
-            sponsor.qualifications = []
-            form = request.form
-            for quali_id in form.getlist("qualifications"):
-                qualification = CMTESponsorQualification.query.get(int(quali_id))
-                sponsor.qualifications.append(qualification)
+            sponsor = CMTEEventSponsor.query.filter_by(name=form.name.data).first()
+            if not sponsor:
+                sponsor = CMTEEventSponsor()
+                form.populate_obj(sponsor)
+                sponsor.members.append(current_user)
                 db.session.add(sponsor)
                 db.session.commit()
-            flash(f'ลงทะเบียนเรียบร้อย', 'success')
-            return redirect(url_for('cmte.cmte_index'))
+                flash(f'ลงทะเบียนเรียบร้อย', 'success')
+                return redirect(url_for('cmte.cmte_index'))
+            else:
+                flash(f'{form.name.data} มีการลงทะเบียนแล้ว กรุณาติดต่อเจ้าหน้าที่', 'warning')
         else:
             flash(f'Errors: {form.errors}', 'danger')
     return render_template('cmte/sponsor/sponsor_form.html', form=form, qualifications=qualifications)
@@ -741,14 +803,12 @@ def manage_sponsor(sponsor_id):
         db.session.add(event_sponsor)
         db.session.commit()
 
-        event_sponsor.qualifications = []
-        form = request.form
-        for quali_id in form.getlist("qualifications"):
-            qualification = CMTESponsorQualification.query.get(int(quali_id))
-            event_sponsor.qualifications.append(qualification)
-            db.session.add(event_sponsor)
-            db.session.commit()
         flash('อัพเดทข้อมูลเรียบร้อยแล้ว', 'success')
+        for version in event_sponsor.versions:
+            print(version.changeset)
+        # is_admin = True if cmte_admin_permission else False
+        # if not is_admin:
+        #     print('send notification to admin of CMTE')
     else:
         for er in form.errors:
             flash("{}:{}".format(er, form.errors[er]), 'danger')
@@ -756,43 +816,33 @@ def manage_sponsor(sponsor_id):
         resp = make_response()
         resp.headers['HX-Refresh'] = 'true'
         return resp
-    return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor)
+    is_admin = True if cmte_admin_permission else False
+    return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor, is_admin=is_admin)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/renew', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.require()
-def renew_sponsor(sponsor_id):
-    sponsor = CMTEEventSponsor.query.get(sponsor_id)
-    form = CMTEEventSponsorForm(obj=sponsor)
-    if form.validate_on_submit():
-        sponsor_item = CMTEEventSponsor.query.get(sponsor_id)
-        form.populate_obj(sponsor_item)
-        db.session.add(sponsor_item)
-        db.session.commit()
-        flash('อัพเดทข้อมูลเรียบร้อยแล้ว', 'success')
-    else:
-        for er in form.errors:
-            flash("{}:{}".format(er, form.errors[er]), 'danger')
-    if request.headers.get('HX-Request') == 'true':
-        resp = make_response()
-        resp.headers['HX-Refresh'] = 'true'
-        return resp
-    return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor)
+def request_renew_sponsor(sponsor_id):
+    create_request = CMTERenewSponsorRequest(
+        sponsor_id=sponsor_id,
+        created_at=arrow.now('Asia/Bangkok').datetime
+    )
+    db.session.add(create_request)
+    db.session.commit()
+    flash('ส่งคำขอต่ออายุสถาบันเรียบร้อยแล้ว', 'success')
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
 @cmte.route('/sponsors/modal/<int:sponsor_id>', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def sponsor_modal(sponsor_id):
-    #edit backref url in template after edit sponsor info depends on permission
     if sponsor_id:
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form = CMTEEventSponsorForm(obj=sponsor)
     is_admin = True if cmte_admin_permission else False
-    qualifications = CMTESponsorQualification.query.all()
-    return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor_id=sponsor_id, is_admin=is_admin,
-                           qualifications=qualifications)
+    return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor_id=sponsor_id, is_admin=is_admin)
 
 
 @cmte.get('/admin/sponsor')
@@ -807,6 +857,15 @@ def all_sponsor():
     else:
         sponsors = CMTEEventSponsor.query.all()
     return render_template('cmte/admin/sponsor_registration.html', sponsors=sponsors, tab=tab)
+
+
+# @cmte.route('/sponsors/<int:sponsor_id>/renew', methods=['GET', 'POST'])
+# @login_required
+# @cmte_sponsor_admin_permission.require()
+# def renew_sponsor(sponsor_id):
+#     #need to keep old expired_date?
+#
+#     return render_template('')
 
 
 @cmte.route('/admin/events', methods=['GET', 'POST'])
