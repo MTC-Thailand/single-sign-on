@@ -22,7 +22,7 @@
                     <span>เมนูหลัก</span>
                 </a>
                 {% if current_user.is_authenticated %}
-                <a class="navbar-item">
+                <a class="navbar-item" href="{{ url_for('cmte.manage_member', member_id=current_user.id) }}">
                     <span class="icon">
                         <i class="fas fa-user-cog"></i>
                     </span>
