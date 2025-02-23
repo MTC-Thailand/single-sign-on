@@ -59,14 +59,17 @@ class CMTEEventSponsor(db.Model):
 
     def expire_status(self):
         today = datetime.now().date()
-        status = "active"
         if self.expire_date:
-            delta = today - self.expire_date
-            if delta.days <= 90:
-                if self.expire_date < today:
-                    status = "expired"
-                else:
-                    status = "nearly_expire"
+            status = "active"
+            if self.expire_date:
+                delta = today - self.expire_date
+                if delta.days <= 90:
+                    if self.expire_date < today:
+                        status = "expired"
+                    else:
+                        status = "nearly_expire"
+        else:
+            status = "inactive"
         return status
 
 
@@ -79,15 +82,17 @@ class CMTESponsorQualification(db.Model):
         return self.type
 
 
-class CMTERenewSponsorRequest(db.Model):
-    __tablename__ = 'cmte_renew_sponsor_requests'
+class CMTESponsorRequest(db.Model):
+    __tablename__ = 'cmte_sponsor_requests'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship(CMTEEventSponsor,
-                              backref=db.backref('renew_sponsor', lazy='dynamic'))
+                              backref=db.backref('requests', lazy='dynamic'))
+    type = db.Column('type', db.String())
     created_at = db.Column('created_at', db.DateTime(timezone=True))
-    expire_date = db.Column('expire_date', db.Date())
+    expired_sponsor_date = db.Column('expired_sponsor_date', db.Date())
     approved_at = db.Column('approved_at', db.DateTime(timezone=True))
+    paid_at = db.Column('paid_at', db.DateTime(timezone=True))
 
 
 class CMTESponsorMember(UserMixin, db.Model):
