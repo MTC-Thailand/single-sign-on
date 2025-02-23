@@ -4,33 +4,33 @@
 {% include "cmte/admin_nav.html" %}
     <section class="section">
         <div class="container">
-            <h1 class="title">ข้อมูลสถาบัน</h1>
+            <h1 class="title">ข้อมูลคำขอขึ้นทะเบียน/ต่ออายุสถาบัน</h1>
             {% include 'messages.html' %}
             <div class="columns">
                 <div class="column">
                     <div class="tabs is-boxed">
                         <ul>
                             <li {% if tab == 'new' %}class="is-active"{% endif %}>
-                                <a href="{{ url_for('cmte.all_sponsor', tab='new') }}">
+                                <a href="{{ url_for('cmte.all_requests', tab='new') }}">
                                     <span class="icon is-small"><i class="fas fa-hourglass-half"></i></span>
                                     <span>ขอขึ้นทะเบียน</span>
                                 </a>
                             </li>
                             <li {% if tab == 'renew' %}class="is-active"{% endif %}>
-                                <a href="{{ url_for('cmte.all_sponsor', tab='renew') }}">
+                                <a href="{{ url_for('cmte.all_requests', tab='renew') }}">
                                     <span class="icon is-small"><i class="fas fa-history"></i></span>
                                     <span>ต่ออายุ</span>
                                 </a>
                             </li>
                             <li {% if tab == 'all' %}class="is-active"{% endif %}>
-                                <a href="{{ url_for('cmte.all_sponsor', tab='all') }}">
+                                <a href="{{ url_for('cmte.all_requests', tab='all') }}">
                                     <span class="icon is-small"><i class="fas fa-list"></i></span>
                                     <span>ทั้งหมด</span>
                                 </a>
                             </li>
                         </ul>
                     </div>
-                    <table id="sponsors" class="table is-fullwidth">
+                    <table id="requests" class="table is-fullwidth">
                         <thead>
                         <th>รหัส</th>
                         <th>สถาบัน</th>
@@ -40,35 +40,62 @@
                         <th></th>
                         </thead>
                         <tbody>
-                            {% for sponsor in sponsors %}
+                            {% for req in requests %}
                                 <tr>
-                                    <td>{{ sponsor.code or '' }}</td>
+                                    <td>{{ req.sponsor.code or '' }}</td>
                                     <td style="width: 20em;">
-                                        <a href={{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}
-                                           {% if not sponsor.registered_datetime %}class="has-text-danger"{% endif %}>
-                                            <span>{{ sponsor.name }}</span>
+                                        <a href={{ url_for('cmte.manage_sponsor', sponsor_id=req.sponsor.id) }}
+                                           {% if not req.sponsor.registered_datetime %}class="has-text-danger"{% endif %}>
+                                            <span>{{ req.sponsor.name }}</span>
                                             <span class="icon">
                                                 <i class="fa-solid fa-info-circle"></i>
                                             </span>
                                         </a>
                                     </td>
-                                    <td>{{ sponsor.registered_datetime|localdatetime or ''}}</td>
-                                    <td>{{ sponsor.expire_date|localdate or '' }}</td>
-                                    <td {% if sponsor.expire_status() == 'expired'%}
+                                    <td>{{ req.sponsor.registered_datetime|localdatetime or ''}}</td>
+                                    <td>{{ req.sponsor.expire_date|localdate or '' }}</td>
+                                    <td {% if req.sponsor.expire_status() == 'expired'%}
                                             class="has-text-danger"
-                                        {% elif sponsor.expire_status() == 'nearly_expire'%}
+                                        {% elif req.sponsor.expire_status() == 'nearly_expire'%}
                                             class="has-text-warning" {% endif %}>
-                                        {{ sponsor.expire_status() }}
+                                        {{ req.sponsor.expire_status() }}
                                     </td>
                                     <td>
                                         <div id="sponsor-modal-container"></div>
-                                        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
-                                            class="button is-success is-light">
+                                        {% if tab == 'new' %}
+                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการขึ้นทะเบียน')"
+                                            href="{{ url_for('cmte.approved_new_sponsor', sponsor_id=req.sponsor.id) }}"
+                                            class="button is-success is-outlined">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-check-square"></i>
+                                            </span>
+                                            <span>อนุมัติการขึ้นทะเบียน</span>
+                                        </a>
+                                        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=req.sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                                            class="button is-info is-light">
                                             <span class="icon">
                                                 <i class="fa-solid fa-pencil"></i>
                                             </span>
                                             <span>อัพเดทข้อมูล</span>
                                         </a>
+                                        {% elif tab == 'renew' %}
+                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการต่ออายุสถาบัน')"
+                                            href="{{ url_for('cmte.approved_renew_sponsor', sponsor_id=req.sponsor.id) }}"
+                                            class="button is-success is-outlined">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-check-square"></i>
+                                            </span>
+                                            <span>อนุมัติการต่ออายุ</span>
+                                        </a>
+                                        {% else %}
+                                        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=req.sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                                            class="button is-info is-light">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-pencil"></i>
+                                            </span>
+                                            <span>อัพเดทข้อมูล</span>
+                                        </a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -91,7 +118,7 @@
     {{ super() }}
     <script>
         $(document).ready(function () {
-            $('#sponsors').DataTable({
+            $('#requests').DataTable({
             })
         });
     </script>

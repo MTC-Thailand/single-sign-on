@@ -5,7 +5,7 @@ from werkzeug.security import check_password_hash
 
 from app import db, admin_permission, cmte_admin_permission
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent, CMTEEventParticipationRecord, CMTEEventSponsor, \
-    CMTERenewSponsorRequest
+    CMTESponsorRequest
 from app.models import User, Client
 from app.user import user_bp as user
 from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm
@@ -94,15 +94,13 @@ def admin_index():
 @login_required
 @cmte_admin_permission.require()
 def cmte_admin_index():
-    pending_sponsors = CMTEEventSponsor.query.filter_by(registered_datetime=None).count()
-    pending_requests = CMTERenewSponsorRequest.query.filter_by(approved_at=None).count()
+    pending_requests = CMTESponsorRequest.query.filter_by(approved_at=None).count()
     pending_payments = CMTEFeePaymentRecord.query.filter_by(payment_datetime=None).count()
     pending_individual_records = CMTEEventParticipationRecord.query.filter_by(individual=True,
                                                                               approved_date=None,
                                                                               closed_date=None).count()
     pending_events = CMTEEvent.query.filter_by(approved_datetime=None, cancelled_datetime=None).count()
     return render_template('cmte/admin/index.html',
-                           pending_sponsors=pending_sponsors,
                            pending_payments=pending_payments,
                            pending_events=pending_events,
                            pending_individual_records=pending_individual_records,

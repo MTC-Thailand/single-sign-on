@@ -9,10 +9,8 @@
             <div class="column is-one-third is-offset-4">
                 <article class="panel is-info">
                     <p class="panel-heading">Admin</p>
-                    <a class="panel-block" href="{{url_for('cmte.all_sponsor', tab='new')}}">
-                        ขอขึ้นทะเบียน
-                        <span class="tag is-success is-rounded">{{pending_sponsors or 0}}</span>
-                        ต่ออายุสถาบัน
+                    <a class="panel-block" href="{{url_for('cmte.all_requests', tab='new')}}">
+                        ขอขึ้นทะเบียน /ต่ออายุสถาบัน
                         <span class="tag is-success is-rounded">{{pending_requests or 0}}</span>
                     </a>
                     <a class="panel-block" href="{{url_for('cmte.admin_pending_events')}}">

@@ -76,16 +76,66 @@
                         <td><strong>วันที่หมดอายุ</strong></td>
                         <td>{{ sponsor.expire_date|localdate or 'รอการตรวจสอบและอนุมัติ' }}
                             {% if not is_admin %}
-                                {% if sponsor.expire_status() != "active" %}
-                                    <a href="{{ url_for('cmte.request_renew_sponsor', sponsor_id=sponsor.id) }}"
-                                       class="button is-warning">
-                                        <span class="icon">
-                                            <i class="fa-solid fa-history"></i>
+                                {% if sponsor.expire_status() == "expired" or sponsor.expire_status() == "nearly_expire" %}
+                                    {% if pending_request %}
+                                        {% if not pending_request.approved_at %}
+                                            <span class="button is-success is-light">ส่งคำขอต่ออายุเรียบร้อยแล้ว
+                                                {{ pending_request.created_at|localdatetime }}
+                                            </span>
+                                        {% elif not pending_request.paid_at %}
+                                            <span class="button is-warning">อนุมัติคำขอต่ออายุ กรุณาดำเนินการชำระค่าธรรมเนียม
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <a href="{{ url_for('cmte.request_renew_sponsor', sponsor_id=sponsor.id) }}"
+                                           class="button is-warning">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-history"></i>
+                                            </span>
+                                            <span>ส่งคำขอต่ออายุสถาบัน</span>
+                                        </a>
+                                    {% endif %}
+                                {% elif sponsor.expire_status() == "inactive" %}
+                                    {% if not pending_request.paid_at %}
+                                        <span class="button is-warning">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม
                                         </span>
-                                        <span>ส่งคำขอต่ออายุสถาบัน</span>
-                                    </a>
+                                    {% endif %}
                                 {% endif %}
                             {% endif %}
+                            <hr>
+                            <span>ประวัติการขึ้นทะเบียน/ต่ออายุสถาบัน</span>
+                            <table class="table is-fullwidth is-striped is-bordered">
+                                <thead>
+                                    <th>วันที่ส่งคำขอ</th>
+                                    <th>ประเภท</th>
+                                    <th>วันที่อนุมัติคำขอ</th>
+                                    <th>วันที่ชำระเงิน</th>
+                                </thead>
+                                <tbody>
+                                {% for req in sponsor.requests %}
+                                    <tr>
+                                        <td>{{ req.created_at|localdatetime }}</td>
+                                        <td>{% if req.type=='new' %}ขอขึ้นทะเบียน{% else %}ขอต่ออายุ{% endif %}</td>
+                                        <td>
+                                            {% if is_admin %}
+                                                {% if not req.approved_at %}
+                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการต่ออายุสถาบัน')"
+                                                        href="{{ url_for('cmte.approved_renew_sponsor', sponsor_id=sponsor.id) }}"
+                                                        class="button is-success is-outlined">
+                                                        <span class="icon">
+                                                            <i class="fa-solid fa-check-square"></i>
+                                                        </span>
+                                                        <span>อนุมัติการต่ออายุ</span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                            {{ req.approved_at|localdatetime or '' }}
+                                        </td>
+                                        <td>{{ req.paid_at|localdatetime or '' }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
                         </td>
                     </tr>
                     </tbody>
@@ -129,18 +179,14 @@
                         {% if is_admin or current_user.is_coordinator %}
                             {% if not member.id == current_user.id %}
                         <td>
-                            <div class="buttons">
-                                <a class="button"
-                                    hx-swap="outerHTML swap:1s"
-                                    hx-target="closest tr"
-                                    hx-confirm="คุณต้องการลบรายการนี้หรือไม่"
-                                    hx-delete="{{ url_for('cmte.del_member',
-                                    sponsor_id=sponsor.id, member_id=member.id) }}">
-                                    <span class="icon is-small">
-                                        <i class="fa-solid fa-trash-can has-text-danger"></i>
-                                    </span>
-                                </a>
-                            </div>
+                            <a onclick="return confirm('คุณต้องการลบรายการนี้หรือไม่')"
+                                href="{{ url_for('cmte.del_member',
+                                    sponsor_id=sponsor.id, member_id=member.id) }}"
+                                class="button">
+                                <span class="icon is-small">
+                                    <i class="fa-solid fa-trash-can has-text-danger"></i>
+                                </span>
+                            </a>
                         </td>
                             {% endif %}
                         {% endif %}
@@ -152,7 +198,7 @@
         </div>
         {% if is_admin %}
         <div class="buttons is-centered">
-            <a href="{{ url_for('cmte.all_sponsor') }}" class="button is-light">
+            <a href="{{ url_for('cmte.all_requests') }}" class="button is-light">
                 <span class="icon">
                     <i class="far fa-arrow-left"></i>
                 </span>

@@ -59,6 +59,7 @@ class CMTEEventSponsor(db.Model):
 
     def expire_status(self):
         today = datetime.now().date()
+        status = "inactive"
         if self.expire_date:
             status = "active"
             if self.expire_date:
@@ -68,8 +69,6 @@ class CMTEEventSponsor(db.Model):
                         status = "expired"
                     else:
                         status = "nearly_expire"
-        else:
-            status = "inactive"
         return status
 
 

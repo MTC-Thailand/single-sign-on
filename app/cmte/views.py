@@ -37,7 +37,7 @@ from app.cmte.models import (CMTEEvent,
                              CMTESponsorMember,
                              CMTEEventSponsor,
                              CMTESponsorQualification,
-                             CMTERenewSponsorRequest)
+                             CMTESponsorRequest)
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -60,7 +60,19 @@ def download_file(key):
 
 @cmte.get('/')
 def cmte_index():
-    return render_template('cmte/index.html')
+    warning_msg = ''
+    if current_user.sponsor:
+        is_request = CMTESponsorRequest.query.filter_by(sponsor=current_user.sponsor, paid_at=None).first()
+        if current_user.sponsor.expire_status() == 'inactive':
+            if is_request:
+                warning_msg = 'กรุณาดำเนินการชำระค่าธรรมเนียม ขออภัยหากท่านชำระแล้ว' if is_request.approved_at else ''
+        elif current_user.sponsor.expire_status() == 'expired' or current_user.sponsor.expire_status() == 'nearly_expire' :
+            if is_request:
+                if is_request.approved_at:
+                    warning_msg = 'กรุณาดำเนินการชำระค่าธรรมเนียม'
+            else:
+                warning_msg = 'กรุณาดำเนินการต่ออายุใบรับรองสถาบัน'
+    return render_template('cmte/index.html', warning_msg=warning_msg)
 
 
 @cmte.get('/events/registration')
@@ -751,7 +763,7 @@ def member_modal(member_id):
     return render_template('cmte/sponsor/member_modal.html', form=form, member=member, is_admin=is_admin)
 
 
-@cmte.route('/sponsors/member/del/<int:sponsor_id>/<int:member_id>', methods=['GET', 'POST', 'DELETE'])
+@cmte.route('/sponsors/member/del/<int:sponsor_id>/<int:member_id>', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def del_member(sponsor_id, member_id):
@@ -782,6 +794,19 @@ def register_sponsor():
                 sponsor.members.append(current_user)
                 db.session.add(sponsor)
                 db.session.commit()
+
+                member = CMTESponsorMember.query.filter_by(id=current_user.id).first()
+                member.is_coordinator = True
+                db.session.add(member)
+                db.session.commit()
+
+                create_request = CMTESponsorRequest(
+                    sponsor=sponsor,
+                    created_at=arrow.now('Asia/Bangkok').datetime,
+                    type='new'
+                )
+                db.session.add(create_request)
+                db.session.commit()
                 flash(f'ลงทะเบียนเรียบร้อย', 'success')
                 return redirect(url_for('cmte.cmte_index'))
             else:
@@ -797,6 +822,8 @@ def register_sponsor():
 def manage_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
     form = CMTEEventSponsorForm(obj=sponsor)
+    pending_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id,
+                                                              expired_sponsor_date=sponsor.expire_date).first()
     if form.validate_on_submit():
         event_sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form.populate_obj(event_sponsor)
@@ -817,20 +844,28 @@ def manage_sponsor(sponsor_id):
         resp.headers['HX-Refresh'] = 'true'
         return resp
     is_admin = True if cmte_admin_permission else False
-    return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor, is_admin=is_admin)
+    return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor, is_admin=is_admin,
+                           pending_request=pending_request)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/renew', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.require()
 def request_renew_sponsor(sponsor_id):
-    create_request = CMTERenewSponsorRequest(
-        sponsor_id=sponsor_id,
-        created_at=arrow.now('Asia/Bangkok').datetime
-    )
-    db.session.add(create_request)
-    db.session.commit()
-    flash('ส่งคำขอต่ออายุสถาบันเรียบร้อยแล้ว', 'success')
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    is_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, paid_at=None).first()
+    if not is_request:
+        create_request = CMTESponsorRequest(
+            sponsor_id=sponsor_id,
+            created_at=arrow.now('Asia/Bangkok').datetime,
+            expired_sponsor_date=sponsor.expire_date,
+            type='renew'
+        )
+        db.session.add(create_request)
+        db.session.commit()
+        flash('ส่งคำขอต่ออายุสถาบันเรียบร้อยแล้ว', 'success')
+    else:
+        flash('มีการส่งคำขอต่ออายุสถาบันแล้ว', 'success')
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
@@ -845,27 +880,45 @@ def sponsor_modal(sponsor_id):
     return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor_id=sponsor_id, is_admin=is_admin)
 
 
-@cmte.get('/admin/sponsor')
+@cmte.get('/admin/requests')
 @login_required
 @cmte_admin_permission.require()
-def all_sponsor():
+def all_requests():
     tab = request.args.get('tab')
     if tab == 'new':
-        sponsors = CMTEEventSponsor.query.filter(CMTEEventSponsor.registered_datetime == None).all()
+        requests = CMTESponsorRequest.query.filter_by(type='new').all()
     elif tab == 'renew':
-        sponsors = CMTEEventSponsor.query.all()
+        requests = CMTESponsorRequest.query.filter_by(type='renew').all()
     else:
-        sponsors = CMTEEventSponsor.query.all()
-    return render_template('cmte/admin/sponsor_registration.html', sponsors=sponsors, tab=tab)
+        requests = CMTESponsorRequest.query.all()
+    return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
 
 
-# @cmte.route('/sponsors/<int:sponsor_id>/renew', methods=['GET', 'POST'])
-# @login_required
-# @cmte_sponsor_admin_permission.require()
-# def renew_sponsor(sponsor_id):
-#     #need to keep old expired_date?
-#
-#     return render_template('')
+@cmte.route('/sponsors/<int:sponsor_id>/approved-new', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def approved_new_sponsor(sponsor_id):
+    renew_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, paid_at=None).first()
+    renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(renew_request)
+    db.session.commit()
+    flash('อนุมัติคำขอขึ้นสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
+    #send email to sponsor member
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+
+@cmte.route('/sponsors/<int:sponsor_id>/approved-renew', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def approved_renew_sponsor(sponsor_id):
+    #need to keep old expired_date?
+    renew_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, paid_at=None).first()
+    renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(renew_request)
+    db.session.commit()
+    flash('อนุมัติคำขอต่ออายุสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
+    #send email to sponsor member
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
 @cmte.route('/admin/events', methods=['GET', 'POST'])
