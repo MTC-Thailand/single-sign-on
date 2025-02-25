@@ -81,6 +81,18 @@ class CMTESponsorQualification(db.Model):
         return self.type
 
 
+class CMTESponsorDoc(db.Model):
+    __tablename__ = 'cmte_sponsor_docs'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor, backref=db.backref('docs', cascade='all, delete-orphan', lazy='dynamic'))
+    key = db.Column('key', db.Text(), nullable=False)
+    filename = db.Column('filename', db.Text(), nullable=False)
+    upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
+    note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
+    is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
+
+
 class CMTESponsorRequest(db.Model):
     __tablename__ = 'cmte_sponsor_requests'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
