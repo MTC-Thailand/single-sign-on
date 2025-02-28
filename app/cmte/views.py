@@ -37,7 +37,8 @@ from app.cmte.models import (CMTEEvent,
                              CMTESponsorMember,
                              CMTEEventSponsor,
                              CMTESponsorQualification,
-                             CMTESponsorRequest)
+                             CMTESponsorRequest,
+                             CMTESponsorDoc)
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -59,6 +60,7 @@ def download_file(key):
 
 
 @cmte.get('/')
+@login_required
 def cmte_index():
     warning_msg = ''
     if current_user.sponsor:
@@ -792,9 +794,22 @@ def register_sponsor():
                 sponsor = CMTEEventSponsor()
                 form.populate_obj(sponsor)
                 sponsor.members.append(current_user)
+
+                s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                         aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                         region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+                for doc_form in form.upload_files:
+                    _file = doc_form.upload_file.data
+                    if _file:
+                        filename = _file.filename
+                        key = uuid.uuid4()
+                        s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                        doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                        doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                        doc.note = doc_form.note.data
+                        db.session.add(doc)
                 db.session.add(sponsor)
                 db.session.commit()
-
                 member = CMTESponsorMember.query.filter_by(id=current_user.id).first()
                 member.is_coordinator = True
                 db.session.add(member)
@@ -886,9 +901,12 @@ def sponsor_modal(sponsor_id):
 def all_requests():
     tab = request.args.get('tab')
     if tab == 'new':
-        requests = CMTESponsorRequest.query.filter_by(type='new').all()
+        requests = CMTESponsorRequest.query.filter_by(type='new')\
+                    .join(CMTEEventSponsor).filter(CMTEEventSponsor.expire_status=='inactive').all()
     elif tab == 'renew':
         requests = CMTESponsorRequest.query.filter_by(type='renew').all()
+    elif tab == 'paid':
+        requests = CMTESponsorRequest.query.filter_by().all()
     else:
         requests = CMTESponsorRequest.query.all()
     return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
