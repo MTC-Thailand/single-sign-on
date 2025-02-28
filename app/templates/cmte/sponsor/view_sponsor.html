@@ -96,9 +96,11 @@
                                         </a>
                                     {% endif %}
                                 {% elif sponsor.expire_status() == "inactive" %}
-                                    {% if not pending_request.paid_at %}
-                                        <span class="button is-warning">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม
-                                        </span>
+                                    {% if pending_request %}
+                                        {% if not pending_request.paid_at %}
+                                            <span class="button is-warning">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม
+                                            </span>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             {% endif %}
