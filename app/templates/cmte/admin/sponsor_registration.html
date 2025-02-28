@@ -34,9 +34,11 @@
                         <thead>
                         <th>รหัส</th>
                         <th>สถาบัน</th>
+                        <th>วันที่ส่งคำขอ</th>
                         <th>วันที่ขึ้นทะเบียน</th>
                         <th>วันที่หมดอายุ</th>
-                        <th>สถานะ</th>
+                        <th>วันที่แจ้งชำระเงิน</th>
+                        <th>สถานะบัญชี</th>
                         <th></th>
                         </thead>
                         <tbody>
@@ -52,8 +54,10 @@
                                             </span>
                                         </a>
                                     </td>
+                                    <td>{{ req.created_at|localdatetime }}</td>
                                     <td>{{ req.sponsor.registered_datetime|localdatetime or ''}}</td>
                                     <td>{{ req.sponsor.expire_date|localdate or '' }}</td>
+                                    <td>{{ req.paid_at|localdate or '' }}</td>
                                     <td {% if req.sponsor.expire_status() == 'expired'%}
                                             class="has-text-danger"
                                         {% elif req.sponsor.expire_status() == 'nearly_expire'%}
@@ -62,7 +66,7 @@
                                     </td>
                                     <td>
                                         <div id="sponsor-modal-container"></div>
-                                        {% if tab == 'new' %}
+                                        {% if tab == 'new' and not req.approved_at %}
                                         <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการขึ้นทะเบียน')"
                                             href="{{ url_for('cmte.approved_new_sponsor', sponsor_id=req.sponsor.id) }}"
                                             class="button is-success is-outlined">
@@ -71,14 +75,7 @@
                                             </span>
                                             <span>อนุมัติการขึ้นทะเบียน</span>
                                         </a>
-                                        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=req.sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
-                                            class="button is-info is-light">
-                                            <span class="icon">
-                                                <i class="fa-solid fa-pencil"></i>
-                                            </span>
-                                            <span>อัพเดทข้อมูล</span>
-                                        </a>
-                                        {% elif tab == 'renew' %}
+                                        {% elif tab == 'renew' and not req.approved_at %}
                                         <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการต่ออายุสถาบัน')"
                                             href="{{ url_for('cmte.approved_renew_sponsor', sponsor_id=req.sponsor.id) }}"
                                             class="button is-success is-outlined">
@@ -87,7 +84,7 @@
                                             </span>
                                             <span>อนุมัติการต่ออายุ</span>
                                         </a>
-                                        {% else %}
+                                        {% endif %}
                                         <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=req.sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
                                             class="button is-info is-light">
                                             <span class="icon">
@@ -95,7 +92,6 @@
                                             </span>
                                             <span>อัพเดทข้อมูล</span>
                                         </a>
-                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
