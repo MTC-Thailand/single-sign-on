@@ -121,6 +121,15 @@ class CMTESponsorMemberLoginForm(ModelForm):
     password = PasswordField('รหัสผ่าน', validators=[DataRequired()])
 
 
+class CMTESponsorDocForm(ModelForm):
+    class Meta:
+        model = CMTESponsorDoc
+        only = ['note']
+
+    upload_file = FileField('Document Upload')
+    note = TextAreaField('คำอธิบาย', render_kw={'class': 'textarea'})
+
+
 class CMTEEventSponsorForm(ModelForm):
     class Meta:
         model = CMTEEventSponsor
@@ -128,6 +137,7 @@ class CMTEEventSponsorForm(ModelForm):
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
+    upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
 
 
 class CMTEPaymentForm(FlaskForm):
