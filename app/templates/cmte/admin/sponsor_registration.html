@@ -22,6 +22,12 @@
                                     <span>ต่ออายุ</span>
                                 </a>
                             </li>
+                            <li {% if tab == 'payment' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='payment') }}">
+                                    <span class="icon is-small"><i class="fas fa-paperclip"></i></span>
+                                    <span>การชำระเงิน</span>
+                                </a>
+                            </li>
                             <li {% if tab == 'all' %}class="is-active"{% endif %}>
                                 <a href="{{ url_for('cmte.all_requests', tab='all') }}">
                                     <span class="icon is-small"><i class="fas fa-list"></i></span>
