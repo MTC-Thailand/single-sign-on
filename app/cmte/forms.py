@@ -133,11 +133,16 @@ class CMTESponsorDocForm(ModelForm):
 class CMTEEventSponsorForm(ModelForm):
     class Meta:
         model = CMTEEventSponsor
+
     qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
     upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
+
+
+class CMTESponsorPaymentForm(FlaskForm):
+    upload_file = FormField(CMTESponsorDocForm, default=CMTESponsorDoc)
 
 
 class CMTEPaymentForm(FlaskForm):
