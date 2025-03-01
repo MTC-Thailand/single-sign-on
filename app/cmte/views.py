@@ -28,7 +28,8 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEFeePaymentForm,
                             CMTEAdminEventForm,
                             CMTEEventCodeForm, IndividualScoreAdminForm,
-                            CMTESponsorMemberEditForm)
+                            CMTESponsorMemberEditForm,
+                            CMTESponsorPaymentForm)
 from app.cmte.models import (CMTEEvent,
                              CMTEEventType,
                              CMTEEventParticipationRecord,
@@ -794,6 +795,8 @@ def register_sponsor():
                 sponsor = CMTEEventSponsor()
                 form.populate_obj(sponsor)
                 sponsor.members.append(current_user)
+                db.session.add(sponsor)
+                db.session.commit()
 
                 s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                          aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
@@ -808,8 +811,6 @@ def register_sponsor():
                         doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                         doc.note = doc_form.note.data
                         db.session.add(doc)
-                db.session.add(sponsor)
-                db.session.commit()
                 member = CMTESponsorMember.query.filter_by(id=current_user.id).first()
                 member.is_coordinator = True
                 db.session.add(member)
@@ -863,6 +864,41 @@ def manage_sponsor(sponsor_id):
                            pending_request=pending_request)
 
 
+@cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/payment', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def sponsor_payment(sponsor_id, request_id):
+    form = CMTESponsorPaymentForm()
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            doc = CMTESponsorDoc.query.filter_by(sponsor_id=sponsor_id, is_payment_slip=True, request_id=request_id).first()
+            if doc:
+                db.session.delete(doc)
+                db.session.commit()
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            _file = form.upload_file.upload_file.data
+            if _file:
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename, request_id=request_id)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = form.upload_file.note.data
+                doc.is_payment_slip = True
+                db.session.add(doc)
+            flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
+
+            req = CMTESponsorRequest.query.get(request_id)
+            req.paid_at = arrow.now('Asia/Bangkok').datetime
+            db.session.add(req)
+            db.session.commit()
+            return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+    return render_template('cmte/sponsor/sponsor_payment_form.html', sponsor=sponsor, form=form)
+
+
 @cmte.route('/sponsors/<int:sponsor_id>/renew', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.require()
@@ -901,12 +937,12 @@ def sponsor_modal(sponsor_id):
 def all_requests():
     tab = request.args.get('tab')
     if tab == 'new':
-        requests = CMTESponsorRequest.query.filter_by(type='new')\
-                    .join(CMTEEventSponsor).filter(CMTEEventSponsor.expire_status=='inactive').all()
+        requests = CMTESponsorRequest.query.filter_by(type='new', approved_at=None).all()
     elif tab == 'renew':
         requests = CMTESponsorRequest.query.filter_by(type='renew').all()
-    elif tab == 'paid':
-        requests = CMTESponsorRequest.query.filter_by().all()
+    elif tab == 'payment':
+        requests = CMTESponsorRequest.query.filter(CMTESponsorRequest.approved_at != None,
+                                                   CMTEEventSponsor.registered_datetime == None).all()
     else:
         requests = CMTESponsorRequest.query.all()
     return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
