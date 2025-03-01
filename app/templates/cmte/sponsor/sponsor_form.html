@@ -17,6 +17,26 @@
                             {{ form.name(class="input is-danger") }}
                         </div>
                     </div>
+                    {% if is_admin %}
+                        <div class="field">
+                            <label class="label">รหัส</label>
+                            <div class="control">
+                                {{ form.code(class="input") }}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">วันที่ขึ้นทะเบียน</label>
+                            <div class="control">
+                                {{ form.registered_datetime(class="input") }}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">วันที่หมดอายุ</label>
+                            <div class="control">
+                                {{ form.expire_date(class="input") }}
+                            </div>
+                        </div>
+                    {% endif %}
                     <div class="field">
                         <label class="label">ลักษณะองค์กร</label>
                         <div class="select">
@@ -94,7 +114,11 @@
                     </div>
                     <div class="field is-grouped">
                         <div class="control">
-                            <a type="button" href="{{ url_for('cmte.cmte_index') }}" class="button is-light">Cancel</a>
+                            {% if is_admin %}
+                                <a type="button" href="{{ url_for('users.cmte_admin_index') }}" class="button is-light">Cancel</a>
+                            {% else %}
+                                <a type="button" href="{{ url_for('cmte.cmte_index') }}" class="button is-light">Cancel</a>
+                            {% endif %}
                         </div>
                         <div class="control">
                             <input type="submit" value="Register" class="button is-danger">

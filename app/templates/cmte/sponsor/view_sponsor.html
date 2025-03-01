@@ -7,6 +7,18 @@
     <section class="section" id="app">
         {% include "messages.html" %}
         <h1 class="title has-text-centered">สถาบันฝึกอบรม {{ sponsor.name }}</h1>
+        {% if is_admin %}
+        <div class="column has-text-centered">
+            <a onclick="return confirm('แน่ใจหรือไม่ ที่จะลบสถาบันนี้')"
+               href="{{ url_for('cmte.delete_sponsor', sponsor_id=sponsor.id) }}"
+               class="button is-danger">
+                <span class="icon">
+                    <i class="fa-solid fa-trash"></i>
+                </span>
+                <span>ลบสถาบัน</span>
+            </a>
+        </div>
+        {% endif %}
         <div id="sponsor-modal-container"></div>
         <div class="has-text-centered">
             <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="container">
+            <h1 class="title">ข้อมูลสถาบัน</h1>
+            {% include 'messages.html' %}
+            <div class="columns">
+                <div class="column">
+                    <div class="buttons is-centered">
+                        <a href="{{url_for('cmte.register_sponsor')}}" class="button is-info">
+                            <span class="icon">
+                              <i class="far fa-plus"></i>
+                            </span>
+                            <span>เพิ่มสถาบัน</span>
+                        </a>
+                    </div>
+                    <table id="sponsors" class="table is-fullwidth">
+                        <thead>
+                        <th>รหัส</th>
+                        <th>สถาบัน</th>
+                        <th>วันที่ขึ้นทะเบียน</th>
+                        <th>วันที่หมดอายุ</th>
+                        <th>สถานะบัญชี</th>
+                        <th></th>
+                        </thead>
+                        <tbody>
+                            {% for sponsor in sponsors %}
+                                <tr>
+                                    <td>{{ sponsor.code or '' }}</td>
+                                    <td style="width: 20em;">
+                                        <a href={{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}
+                                           {% if not registered_datetime %}class="has-text-danger"{% endif %}>
+                                            <span>{{ sponsor.name }}</span>
+                                            <span class="icon">
+                                                <i class="fa-solid fa-info-circle"></i>
+                                            </span>
+                                        </a>
+                                    </td>
+                                    <td>{{ sponsor.registered_datetime|localdatetime or ''}}</td>
+                                    <td>{{ sponsor.expire_date|localdate or '' }}</td>
+                                    <td {% if sponsor.expire_status() == 'expired'%}
+                                            class="has-text-danger"
+                                        {% elif sponsor.expire_status() == 'nearly_expire'%}
+                                            class="has-text-warning" {% endif %}>
+                                        {{ sponsor.expire_status() }}
+                                    </td>
+                                    <td>
+                                        <div id="sponsor-modal-container"></div>
+                                        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
+                                           hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                                            class="button is-info is-light">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-pencil"></i>
+                                            </span>
+                                            <span>อัพเดทข้อมูล</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="buttons is-centered">
+                <a href="{{url_for('users.cmte_admin_index')}}" class="button is-light">
+                    <span class="icon">
+                      <i class="far fa-arrow-left"></i>
+                    </span>
+                    <span>กลับ</span>
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(document).ready(function () {
+            $('#sponsors').DataTable({
+            })
+        });
+    </script>
+{% endblock %}

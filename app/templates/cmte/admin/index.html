@@ -13,6 +13,9 @@
                         ขอขึ้นทะเบียน /ต่ออายุสถาบัน
                         <span class="tag is-success is-rounded">{{pending_requests or 0}}</span>
                     </a>
+                    <a class="panel-block" href="{{url_for('cmte.all_sponsors')}}">
+                        ข้อมูลสถาบัน
+                    </a>
                     <a class="panel-block" href="{{url_for('cmte.admin_pending_events')}}">
                         อนุมัติกิจกรรม
                         <span class="tag is-success is-rounded">{{pending_events or 0}}</span>

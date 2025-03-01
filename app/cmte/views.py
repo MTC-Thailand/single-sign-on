@@ -782,19 +782,20 @@ def del_member(sponsor_id, member_id):
 
 @cmte.route('/sponsors/register', methods=['GET', 'POST'])
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def register_sponsor():
-    if current_user.sponsor:
-        return redirect(url_for('cmte.manage_sponsor', sponsor_id=current_user.sponsor_id))
+    if not cmte_admin_permission:
+        if current_user.sponsor:
+            return redirect(url_for('cmte.manage_sponsor', sponsor_id=current_user.sponsor_id))
     form = CMTEEventSponsorForm()
     qualifications = CMTESponsorQualification.query.all()
+    is_admin = True if cmte_admin_permission else False
     if request.method == 'POST':
         if form.validate_on_submit():
             sponsor = CMTEEventSponsor.query.filter_by(name=form.name.data).first()
             if not sponsor:
                 sponsor = CMTEEventSponsor()
                 form.populate_obj(sponsor)
-                sponsor.members.append(current_user)
                 db.session.add(sponsor)
                 db.session.commit()
 
@@ -811,25 +812,31 @@ def register_sponsor():
                         doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                         doc.note = doc_form.note.data
                         db.session.add(doc)
-                member = CMTESponsorMember.query.filter_by(id=current_user.id).first()
-                member.is_coordinator = True
-                db.session.add(member)
-                db.session.commit()
+                if not cmte_admin_permission:
+                    sponsor.members.append(current_user)
+                    db.session.add(sponsor)
+                    member = CMTESponsorMember.query.filter_by(id=current_user.id).first()
+                    member.is_coordinator = True
+                    db.session.add(member)
+                    db.session.commit()
 
-                create_request = CMTESponsorRequest(
-                    sponsor=sponsor,
-                    created_at=arrow.now('Asia/Bangkok').datetime,
-                    type='new'
-                )
-                db.session.add(create_request)
-                db.session.commit()
-                flash(f'ลงทะเบียนเรียบร้อย', 'success')
-                return redirect(url_for('cmte.cmte_index'))
+                    create_request = CMTESponsorRequest(
+                        sponsor=sponsor,
+                        created_at=arrow.now('Asia/Bangkok').datetime,
+                        type='new'
+                    )
+                    db.session.add(create_request)
+                    db.session.commit()
+                    flash(f'ลงทะเบียนเรียบร้อย', 'success')
+                    return redirect(url_for('cmte.cmte_index'))
+                else:
+                    flash(f'เพิ่มสถาบันใหม่เรียบร้อย', 'success')
+                    return redirect(url_for('cmte.all_sponsors'))
             else:
                 flash(f'{form.name.data} มีการลงทะเบียนแล้ว กรุณาติดต่อเจ้าหน้าที่', 'warning')
         else:
             flash(f'Errors: {form.errors}', 'danger')
-    return render_template('cmte/sponsor/sponsor_form.html', form=form, qualifications=qualifications)
+    return render_template('cmte/sponsor/sponsor_form.html', form=form, qualifications=qualifications, is_admin=is_admin)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>', methods=['GET', 'POST'])
@@ -946,6 +953,25 @@ def all_requests():
     else:
         requests = CMTESponsorRequest.query.all()
     return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
+
+
+@cmte.get('/admin/sponsors')
+@login_required
+@cmte_admin_permission.require()
+def all_sponsors():
+    sponsors = CMTEEventSponsor.query.all()
+    return render_template('cmte/admin/all_sponsors.html', sponsors=sponsors)
+
+
+@cmte.get('/admin/sponsors/<int:sponsor_id>/del')
+@login_required
+@cmte_admin_permission.require()
+def delete_sponsor(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    db.session.delete(sponsor)
+    db.session.commit()
+    flash('ลบบัญชี {} เรียบร้อยแล้ว'.format(sponsor.name), 'warning')
+    return redirect(url_for('cmte.all_sponsors'))
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/approved-new', methods=['GET', 'POST'])
