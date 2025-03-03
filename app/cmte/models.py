@@ -275,6 +275,16 @@ class CMTEEventParticipationRecord(db.Model):
         else:
             self.score_valid_until = self.license.end_date
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.license.member.th_fullname,
+            'license_number': self.license_number,
+            'score': self.score,
+            'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
+            'approved_at': self.approved_date.astimezone(BANGKOK).isoformat() if self.approved_date else None,
+        }
+
 
 class CMTEEventDoc(db.Model):
     __tablename__ = 'cmte_event_docs'

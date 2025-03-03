@@ -14,7 +14,9 @@ from flask import render_template, flash, redirect, url_for, make_response, requ
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
+from numpy.core import records
 from pytz import timezone
+from sqlalchemy import or_
 
 from app import db, sponsor_event_management_permission
 from app.cmte import cmte_bp as cmte
@@ -36,7 +38,7 @@ from app.cmte.models import (CMTEEvent,
                              CMTEFeePaymentRecord,
                              CMTESponsorMember,
                              CMTEEventSponsor, CMTEEventActivity)
-from app.members.models import License
+from app.members.models import License, Member
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
 bangkok = timezone('Asia/Bangkok')
@@ -214,7 +216,54 @@ def admin_preview_event(event_id):
     form = CMTEEventCodeForm()
     participant_form = CMTEParticipantFileUploadForm()
     return render_template('cmte/admin/event_preview.html',
-                           event=event, next_url=next_url, form=form, participant_form=participant_form)
+                           event=event,
+                           next_url=next_url,
+                           form=form,
+                           participant_form=participant_form)
+
+
+@cmte.route('/api/events/<int:event_id>/participants', methods=('GET', 'POST'))
+@login_required
+@cmte_admin_permission.require()
+def admin_preview_event_participants(event_id):
+    query = CMTEEventParticipationRecord.query.filter_by(event_id=event_id)
+    records_total = query.count()
+    search = request.args.get('search[value]')
+    query = (query.join(License).join(Member, aliased=True)
+             .filter(or_(Member.th_firstname.contains(search),
+                         Member.th_lastname.contains(search),
+                         Member.en_firstname.contains(search),
+                         Member.en_lastname.contains(search),
+                         License.number.contains(search))))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    participants = []
+    for record in query:
+        rec_dict = record.to_dict()
+        rec_dict['actions'] = f'''
+         <a class="icon"
+           hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
+           hx-headers='{{"X-CSRF-Token": {generate_csrf()} }}'
+           hx-target="closest tr"
+           hx-delete="{url_for('cmte.edit_participants', rec_id=record.id, event_id=event_id, _method='DELETE')}">
+            <span class="icon">
+                <i class="fa-solid fa-trash-can has-text-danger"></i>
+            </span>
+        </a>
+        <a class="icon" hx-get="{url_for('cmte.edit_participants', rec_id=record.id, event_id=event_id, _method='GET')}"
+           hx-target="#participant-form" hx-swap="innerHTML">
+            <span class="icon">
+                <i class="fa-solid fa-pencil has-text-dark"></i>
+            </span>
+        </a>
+        '''
+        participants.append(rec_dict)
+    return jsonify({'data': participants,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
 
 
 @cmte.route('/admin/events/<int:event_id>/code', methods=('GET', 'POST'))
@@ -889,8 +938,8 @@ def admin_manage_event_type(event_type_id=None):
         form = CMTEAdminEventTypeForm()
     if form.validate_on_submit():
         if not event_type_id:
-            existing_event_type = CMTEEventType.query.filter_by(name=form.name.data)\
-                .filter(CMTEEventType.deprecated!=True).first()
+            existing_event_type = CMTEEventType.query.filter_by(name=form.name.data) \
+                .filter(CMTEEventType.deprecated != True).first()
             if not existing_event_type:
                 event_type = CMTEEventType()
                 event_type.created_at = arrow.now('Asia/Bangkok').datetime
@@ -942,5 +991,3 @@ def admin_edit_event_activity(event_type_id, event_activity_id=None):
         return redirect(url_for('cmte.admin_manage_event_activity', event_type_id=event_type_id))
     return render_template('cmte/admin/event_activity_form.html',
                            form=form, event_type_id=event_type_id)
-
-

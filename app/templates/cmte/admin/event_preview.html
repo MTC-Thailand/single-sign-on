@@ -296,32 +296,6 @@
                         <th></th>
                         </thead>
                         <tbody>
-                        {% for rec in event.participants %}
-                        <tr>
-                            <td>{{rec.license.member.th_fullname}}</td>
-                            <td>{{rec.license_number}}</td>
-                            <td>{{rec.score}}</td>
-                            <td>{{rec.create_datetime|localdatetime}}</td>
-                            <td>{{rec.approved_date|localdate or 'รออนุมัติ'}}</td>
-                            <td>
-                                <a class="icon"
-                                   hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
-                                   hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
-                                   hx-target="closest tr"
-                                   hx-delete="{{url_for('cmte.edit_participants', rec_id=rec.id, event_id=rec.event.id, _method='DELETE')}}">
-                                    <span class="icon">
-                                        <i class="fa-solid fa-trash-can has-text-danger"></i>
-                                    </span>
-                                </a>
-                                <a class="icon" hx-get="{{url_for('cmte.edit_participants', rec_id=rec.id, event_id=rec.event.id, _method='GET')}}"
-                                   hx-target="#participant-form" hx-swap="innerHTML">
-                                    <span class="icon">
-                                        <i class="fa-solid fa-pencil has-text-dark"></i>
-                                    </span>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
                         </tbody>
                     </table>
                     <div class="buttons is-centered">
@@ -357,8 +331,38 @@
 {% block scripts %}
 {{super()}}
 <script>
+    $.fn.dataTable.moment('lll');
     $(document).ready(()=>{
-        $('#participant-list-table').DataTable();
+        $('#participant-list-table').DataTable({
+            ajax: {{url_for('cmte.admin_preview_event_participants', event_id=event.id)|tojson|safe}},
+            processing: true,
+            serverSide: true,
+            drawCallback: function (settings) {
+                htmx.process('#participant-table')
+            },
+                columns: [
+            {data: 'name'},
+            {data: 'license_number'},
+            {data: 'score'},
+            {
+                data: 'created_at',
+                render: function (data, type) {
+                    return moment(data).format('lll')
+                }
+            },
+            {
+                data: 'approved_at',
+                render: function (data, type) {
+                    if (data) {
+                        return moment(data).format('lll')
+                    } else {
+                        return "รออนุมัติ"
+                    }
+                }
+            },
+            {data: 'actions'}
+        ],
+        });
     })
 </script>
 {% endblock %}
