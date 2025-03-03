@@ -347,7 +347,11 @@
             {
                 data: 'created_at',
                 render: function (data, type) {
-                    return moment(data).format('lll')
+                    if (data) {
+                        return moment(data).format('lll')
+                    } else {
+                        return null
+                    }
                 }
             },
             {
