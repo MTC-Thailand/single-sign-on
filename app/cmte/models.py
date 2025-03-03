@@ -282,7 +282,7 @@ class CMTEEventParticipationRecord(db.Model):
             'license_number': self.license_number,
             'score': self.score,
             'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
-            'approved_at': self.approved_date.astimezone(BANGKOK).isoformat() if self.approved_date else None,
+            'approved_at': self.approved_date.isoformat() if self.approved_date else None,
         }
 
 

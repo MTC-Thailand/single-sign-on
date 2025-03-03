@@ -229,6 +229,19 @@ def admin_preview_event_participants(event_id):
     query = CMTEEventParticipationRecord.query.filter_by(event_id=event_id)
     records_total = query.count()
     search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    if col_name:
+        try:
+            column = getattr(CMTEEventParticipationRecord, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
     query = (query.join(License).join(Member, aliased=True)
              .filter(or_(Member.th_firstname.contains(search),
                          Member.th_lastname.contains(search),
@@ -242,10 +255,11 @@ def admin_preview_event_participants(event_id):
     participants = []
     for record in query:
         rec_dict = record.to_dict()
+        csrf_token = f'{{"X-CSRF-Token": "{generate_csrf()}" }}'
         rec_dict['actions'] = f'''
          <a class="icon"
            hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
-           hx-headers='{{"X-CSRF-Token": {generate_csrf()} }}'
+           hx-headers='{csrf_token}'
            hx-target="closest tr"
            hx-delete="{url_for('cmte.edit_participants', rec_id=record.id, event_id=event_id, _method='DELETE')}">
             <span class="icon">
@@ -399,6 +413,7 @@ def edit_participants(event_id: int = None, rec_id: int = None):
                                rec_id=rec_id)
 
     if request.method == 'DELETE':
+        print(request.headers.get('X-CSRF-Token'))
         rec = CMTEEventParticipationRecord.query.get(rec_id)
         db.session.delete(rec)
         db.session.commit()
