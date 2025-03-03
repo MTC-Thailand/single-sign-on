@@ -338,7 +338,7 @@
             processing: true,
             serverSide: true,
             drawCallback: function (settings) {
-                htmx.process('#participant-table')
+                htmx.process(htmx.find('#participant-table'))
             },
                 columns: [
             {data: 'name'},
