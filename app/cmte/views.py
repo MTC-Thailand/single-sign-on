@@ -987,14 +987,15 @@ def admin_manage_event_activity(event_type_id):
 @login_required
 @cmte_admin_permission.require()
 def admin_edit_event_activity(event_type_id, event_activity_id=None):
+    event_type = CMTEEventType.query.get(event_type_id)
     if event_activity_id:
         event_activity = CMTEEventActivity.query.get(event_activity_id)
         form = CMTEAdminEventActivityForm(obj=event_activity)
     else:
-        form = CMTEAdminEventActivityForm()
+        form = CMTEAdminEventActivityForm(data={'event_type': event_type})
     if form.validate_on_submit():
         if not event_activity_id:
-            event_activity = CMTEEventActivity(event_type_id=event_type_id)
+            event_activity = CMTEEventActivity(type_id=event_type_id)
             event_activity.created_at = arrow.now('Asia/Bangkok').datetime
         else:
             event_activity.updated_at = arrow.now('Asia/Bangkok').datetime
