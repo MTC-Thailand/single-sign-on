@@ -5,7 +5,6 @@ from sqlalchemy_utils import EmailType
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.validators import DataRequired
 from pytz import timezone
-from wtforms.widgets.core import RadioInput
 
 from app import db
 
@@ -153,9 +152,9 @@ class CMTEEventFeeRate(db.Model):
     def __str__(self):
         format = 'รูปแบบ Online' if self.is_online else 'รูปแบบ Onsite'
         if self.fee_rate and self.max_participants:
-            return f'{format} ไม่เกิน {self.max_participants} คน: {self.fee_rate} บาท'
+            return f'{format} ไม่เกิน {self.max_participants} คน: {self.fee_rate} บาท {self.desc or ""}'
         elif self.fee_rate:
-            return f'{format}: {self.fee_rate} บาท'
+            return f'{format}: {self.fee_rate} บาท {self.desc or ""}'
         elif self.max_participants:
             return f'{format} ไม่เกิน {self.max_participants} คน: ไม่มีค่าธรรมเนียม'
         else:
