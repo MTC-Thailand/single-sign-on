@@ -57,6 +57,7 @@
                                 </li>
                             {% endfor %}
                             {% for doc in sponsor.docs %}
+                                {% if not doc.is_payment_slip %}
                                 <a class="button is-small" href="{{url_for('cmte.download_file', key=doc.key,
                                     download_filename=doc.filename)}}">
                                     <span class="icon">
@@ -64,6 +65,7 @@
                                     </span>
                                     <span>{{ doc.filename }}</span>
                                 </a>
+                                {% endif %}
                             {% endfor %}
                         </td>
                     </tr>
@@ -157,19 +159,21 @@
                                             {{ req.approved_at|localdatetime or '' }}
                                         </td>
                                         <td>
+                                            {{ req.paid_at|localdatetime or '' }}
                                             {% if req.paid_at %}
                                                 {% for doc in req.docs %}
                                                     {% if doc.is_payment_slip %}
-                                                    <a class="button is-small" href="{{url_for('cmte.download_file',
+                                                    <a class="is-small" href="{{url_for('cmte.download_file',
                                                         key=doc.key, download_filename=doc.filename)}}">
                                                         <span class="icon">
                                                             <i class="fas fa-cloud-download-alt"></i>
                                                         </span>
-                                                        <span>{{ doc.filename }}</span>
+                                                        <span>slip</span>
                                                     </a>
                                                     {% endif %}
                                                 {% endfor %}
                                             {% endif %}
+                                            {% if not req.verified_at %}
                                             <a class="button is-small" href="{{url_for('cmte.sponsor_payment',
                                                 sponsor_id=sponsor.id, request_id=req.id)}}">
                                                 <span class="icon">
@@ -177,7 +181,7 @@
                                                 </span>
                                                 <span>แนบ slip การชำระเงิน</span>
                                             </a>
-                                            {{ req.paid_at|localdatetime or '' }}
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 {% endfor %}

@@ -22,10 +22,10 @@
                                     <span>ต่ออายุ</span>
                                 </a>
                             </li>
-                            <li {% if tab == 'payment' %}class="is-active"{% endif %}>
-                                <a href="{{ url_for('cmte.all_requests', tab='payment') }}">
+                            <li {% if tab == 'paid' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='paid') }}">
                                     <span class="icon is-small"><i class="fas fa-paperclip"></i></span>
-                                    <span>การชำระเงิน</span>
+                                    <span>ชำระเงินแล้ว รอขึ้นทะเบียน</span>
                                 </a>
                             </li>
                             <li {% if tab == 'all' %}class="is-active"{% endif %}>
@@ -74,7 +74,7 @@
                                         <div id="sponsor-modal-container"></div>
                                         {% if tab == 'new' and not req.approved_at %}
                                         <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการขึ้นทะเบียน')"
-                                            href="{{ url_for('cmte.approved_new_sponsor', sponsor_id=req.sponsor.id) }}"
+                                            href="{{ url_for('cmte.approved_new_sponsor', request_id=req.id) }}"
                                             class="button is-success is-outlined">
                                             <span class="icon">
                                                 <i class="fa-solid fa-check-square"></i>
@@ -83,13 +83,22 @@
                                         </a>
                                         {% elif tab == 'renew' and not req.approved_at %}
                                         <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการต่ออายุสถาบัน')"
-                                            href="{{ url_for('cmte.approved_renew_sponsor', sponsor_id=req.sponsor.id) }}"
+                                            href="{{ url_for('cmte.approved_renew_sponsor', request_id=req.id) }}"
                                             class="button is-success is-outlined">
                                             <span class="icon">
                                                 <i class="fa-solid fa-check-square"></i>
                                             </span>
                                             <span>อนุมัติการต่ออายุ</span>
                                         </a>
+                                        {% elif tab == 'paid' and not req.verified_at %}
+                                            <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยืนยันการชำระเงินค่าธรรมเนียม $$')"
+                                                href="{{ url_for('cmte.verified_payment_sponsor', request_id=req.id) }}"
+                                                class="button is-success is-outlined">
+                                                <span class="icon">
+                                                    <i class="fa-solid fa-check-double"></i>
+                                                </span>
+                                                <span>verify payment</span>
+                                            </a>
                                         {% endif %}
                                         <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=req.sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
                                             class="button is-info is-light">

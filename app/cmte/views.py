@@ -899,10 +899,14 @@ def sponsor_payment(sponsor_id, request_id):
             flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
 
             req = CMTESponsorRequest.query.get(request_id)
-            req.paid_at = arrow.now('Asia/Bangkok').datetime
+            dt = '{} {}'.format(form.paid_date.data, form.paid_time.data)
+            paid_datetime = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+            req.paid_at = paid_datetime
             db.session.add(req)
             db.session.commit()
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+        else:
+            flash(f'Error {form.errors}', 'danger')
     return render_template('cmte/sponsor/sponsor_payment_form.html', sponsor=sponsor, form=form)
 
 
@@ -947,9 +951,8 @@ def all_requests():
         requests = CMTESponsorRequest.query.filter_by(type='new', approved_at=None).all()
     elif tab == 'renew':
         requests = CMTESponsorRequest.query.filter_by(type='renew').all()
-    elif tab == 'payment':
-        requests = CMTESponsorRequest.query.filter(CMTESponsorRequest.approved_at != None,
-                                                   CMTEEventSponsor.registered_datetime == None).all()
+    elif tab == 'paid':
+        requests = CMTESponsorRequest.query.filter_by(verified_at=None).filter(CMTESponsorRequest.paid_at != None).all()
     else:
         requests = CMTESponsorRequest.query.all()
     return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
@@ -974,31 +977,44 @@ def delete_sponsor(sponsor_id):
     return redirect(url_for('cmte.all_sponsors'))
 
 
-@cmte.route('/sponsors/<int:sponsor_id>/approved-new', methods=['GET', 'POST'])
+@cmte.route('/sponsors/<int:request_id>/approved-new', methods=['GET', 'POST'])
 @login_required
 @cmte_admin_permission.require()
-def approved_new_sponsor(sponsor_id):
-    renew_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, paid_at=None).first()
+def approved_new_sponsor(request_id):
+    renew_request = CMTESponsorRequest.query.get(request_id)
     renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(renew_request)
     db.session.commit()
     flash('อนุมัติคำขอขึ้นสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
     #send email to sponsor member
-    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
 
 
-@cmte.route('/sponsors/<int:sponsor_id>/approved-renew', methods=['GET', 'POST'])
+@cmte.route('/sponsors/<int:request_id>/approved-renew', methods=['GET', 'POST'])
 @login_required
 @cmte_admin_permission.require()
-def approved_renew_sponsor(sponsor_id):
+def approved_renew_sponsor(request_id):
     #need to keep old expired_date?
-    renew_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, paid_at=None).first()
+    renew_request = CMTESponsorRequest.query.get(request_id)
     renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(renew_request)
     db.session.commit()
     flash('อนุมัติคำขอต่ออายุสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
     #send email to sponsor member
-    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
+
+
+@cmte.route('/sponsors/<int:request_id>/verified-payment', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def verified_payment_sponsor(request_id):
+    payment_request = CMTESponsorRequest.query.get(request_id)
+    payment_request.verified_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(payment_request)
+    db.session.commit()
+    flash('ตรวจสอบการชำระเงินเรียบร้อยแล้ว กรุณา update ช่วงเวลาขึ้นทะเบียนใหม่ สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
+    #send email to sponsor member
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=payment_request.sponsor_id))
 
 
 @cmte.route('/admin/events', methods=['GET', 'POST'])
