@@ -4,7 +4,7 @@ from wtforms.validators import NumberRange, EqualTo, Email, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
 from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField
-from wtforms_components import DateField, DateTimeField
+from wtforms_components import DateField, DateTimeField, TimeField
 
 from app.cmte.models import *
 
@@ -142,6 +142,8 @@ class CMTEEventSponsorForm(ModelForm):
 
 
 class CMTESponsorPaymentForm(FlaskForm):
+    paid_date = DateField()
+    paid_time = TimeField()
     upload_file = FormField(CMTESponsorDocForm, default=CMTESponsorDoc)
 
 
