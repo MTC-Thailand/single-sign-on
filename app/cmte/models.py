@@ -92,6 +92,7 @@ class CMTESponsorRequest(db.Model):
     expired_sponsor_date = db.Column('expired_sponsor_date', db.Date())
     approved_at = db.Column('approved_at', db.DateTime(timezone=True))
     paid_at = db.Column('paid_at', db.DateTime(timezone=True))
+    verified_at = db.Column('verified_at', db.DateTime(timezone=True))
 
 
 class CMTESponsorDoc(db.Model):
