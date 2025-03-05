@@ -63,7 +63,21 @@
                                     <td>{{ req.created_at|localdatetime }}</td>
                                     <td>{{ req.sponsor.registered_datetime|localdatetime or ''}}</td>
                                     <td>{{ req.sponsor.expire_date|localdate or '' }}</td>
-                                    <td>{{ req.paid_at|localdate or '' }}</td>
+                                    <td>
+                                        {{ req.paid_at|localdate or '' }}
+                                        {% for doc in req.docs %}
+                                            {% if doc.is_payment_slip %}
+                                            <br>
+                                            <a class="is-small" href="{{url_for('cmte.download_file',
+                                                key=doc.key, download_filename=doc.filename)}}">
+                                                <span class="icon">
+                                                    <i class="fas fa-cloud-download-alt"></i>
+                                                </span>
+                                                <span>slip</span>
+                                            </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
                                     <td {% if req.sponsor.expire_status() == 'expired'%}
                                             class="has-text-danger"
                                         {% elif req.sponsor.expire_status() == 'nearly_expire'%}

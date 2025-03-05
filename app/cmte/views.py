@@ -895,6 +895,7 @@ def sponsor_payment(sponsor_id, request_id):
                 doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                 doc.note = form.upload_file.note.data
                 doc.is_payment_slip = True
+                doc.request_id = request_id
                 db.session.add(doc)
             flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
 
