@@ -147,7 +147,7 @@
                                             {% if is_admin %}
                                                 {% if not req.approved_at %}
                                                     <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการต่ออายุสถาบัน')"
-                                                        href="{{ url_for('cmte.approved_renew_sponsor', sponsor_id=sponsor.id) }}"
+                                                        href="{{ url_for('cmte.approved_renew_sponsor', request_id=req.sponsor.id) }}"
                                                         class="button is-success is-outlined">
                                                         <span class="icon">
                                                             <i class="fa-solid fa-check-square"></i>
@@ -160,6 +160,18 @@
                                         </td>
                                         <td>
                                             {{ req.paid_at|localdatetime or '' }}
+                                            {% if is_admin %}
+                                                {% if req.paid_at and not req.verified_at %}
+                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยืนยันการชำระเงินค่าธรรมเนียม $$')"
+                                                    href="{{ url_for('cmte.verified_payment_sponsor', request_id=req.id) }}"
+                                                    class="button is-success is-outlined">
+                                                    <span class="icon">
+                                                        <i class="fa-solid fa-check-double"></i>
+                                                    </span>
+                                                    <span>verify payment</span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
                                             {% if req.paid_at %}
                                                 {% for doc in req.docs %}
                                                     {% if doc.is_payment_slip %}
