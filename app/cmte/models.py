@@ -108,6 +108,7 @@ class CMTESponsorDoc(db.Model):
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
     note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
     is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
+    unverified = db.Column('unverified', db.Boolean(), default=True)
 
 
 
