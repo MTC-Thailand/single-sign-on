@@ -788,7 +788,6 @@ def register_sponsor():
         if current_user.sponsor:
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=current_user.sponsor_id))
     form = CMTEEventSponsorForm()
-    qualifications = CMTESponsorQualification.query.all()
     is_admin = True if cmte_admin_permission else False
     if request.method == 'POST':
         if form.validate_on_submit():
@@ -836,7 +835,7 @@ def register_sponsor():
                 flash(f'{form.name.data} มีการลงทะเบียนแล้ว กรุณาติดต่อเจ้าหน้าที่', 'warning')
         else:
             flash(f'Errors: {form.errors}', 'danger')
-    return render_template('cmte/sponsor/sponsor_form.html', form=form, qualifications=qualifications, is_admin=is_admin)
+    return render_template('cmte/sponsor/sponsor_form.html', form=form, is_admin=is_admin)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>', methods=['GET', 'POST'])
@@ -940,7 +939,7 @@ def sponsor_modal(sponsor_id):
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form = CMTEEventSponsorForm(obj=sponsor)
     is_admin = True if cmte_admin_permission else False
-    return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor_id=sponsor_id, is_admin=is_admin)
+    return render_template('cmte/sponsor/sponsor_modal.html', form=form, sponsor=sponsor, is_admin=is_admin)
 
 
 @cmte.get('/admin/requests')

@@ -6,7 +6,7 @@
             <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
         </header>
         <section class="modal-card-body">
-            <form hx-post="{{ url_for('cmte.manage_sponsor', sponsor_id=sponsor_id) }}">
+            <form hx-post="{{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}">
                 {{ form.hidden_tag() }}
                 <div class="field">
                     <label class="label">ชื่อสถาบัน</label>
@@ -47,6 +47,34 @@
                     <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
                     <div class="control has-icons-left">
                        {{ form.qualifications() }}
+                    </div>
+                    <div class="box">
+                    {% for doc in sponsor.docs %}
+                       {% if not doc.is_payment_slip %}
+                          <a class="button is-small" href="{{url_for('cmte.download_file', key=doc.key,
+                             download_filename=doc.filename)}}">
+                             <span class="icon">
+                                <i class="fas fa-cloud-download-alt"></i>
+                             </span>
+                             <span>{{ doc.filename }}</span>
+                          </a>
+                       {% endif %}
+                    {% endfor %}
+                    </div>
+                    <div class="notification">
+                        {% for upload_form in form.upload_files %}
+                            <div class="file">
+                                <label class="file-label">
+                                    {{ upload_form.upload_file() }}
+                                </label>
+                            </div>
+                            <div class="field">
+                                <label class="label">{{ upload_form.note.label }}</label>
+                                <div class="control">
+                                    {{ upload_form.note(class="textarea", placeholder="Optional") }}
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
                 {% endif %}

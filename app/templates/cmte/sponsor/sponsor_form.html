@@ -52,12 +52,7 @@
                     <div class="field">
                         <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
                         <div class="control has-icons-left">
-                            {% for qualification in qualifications %}
-                                <div class="field">
-                                    <input type="checkbox" name="qualifications" value="{{ qualification.id }}">
-                                    {{ qualification.type }}
-                                </div>
-                            {% endfor %}
+                            {{ form.qualifications() }}
                         </div>
                     </div>
                     <div class="notification">
