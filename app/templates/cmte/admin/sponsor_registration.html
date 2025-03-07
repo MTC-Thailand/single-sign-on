@@ -28,6 +28,12 @@
                                     <span>ชำระเงินแล้ว รอขึ้นทะเบียน</span>
                                 </a>
                             </li>
+                            <li {% if tab == 'edit' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='edit') }}">
+                                    <span class="icon is-small"><i class="fas fa-pen-fancy"></i></span>
+                                    <span>ขอแก้ไขข้อมูล</span>
+                                </a>
+                            </li>
                             <li {% if tab == 'all' %}class="is-active"{% endif %}>
                                 <a href="{{ url_for('cmte.all_requests', tab='all') }}">
                                     <span class="icon is-small"><i class="fas fa-list"></i></span>
@@ -38,6 +44,7 @@
                     </div>
                     <table id="requests" class="table is-fullwidth">
                         <thead>
+                        <th>ประเภท</th>
                         <th>รหัส</th>
                         <th>สถาบัน</th>
                         <th>วันที่ส่งคำขอ</th>
@@ -49,11 +56,19 @@
                         </thead>
                         <tbody>
                             {% for req in requests %}
-                                <tr>
+                                <tr {% if not req.approved_at %}class="has-background-white-ter"{% endif %}>
+                                    <td>
+                                        {% if req.type == 'new' %}ขอขึ้นทะเบียน
+                                        {% elif req.type == 'renew' %}ขอต่ออายุ
+                                        {% elif req.type == 'edit' %}ขอแก้ไขข้อมูล
+                                        {% endif %}
+                                    </td>
                                     <td>{{ req.sponsor.code or '' }}</td>
                                     <td style="width: 20em;">
                                         <a href={{ url_for('cmte.manage_sponsor', sponsor_id=req.sponsor.id) }}
-                                           {% if not req.sponsor.registered_datetime %}class="has-text-danger"{% endif %}>
+                                           {% if not req.sponsor.registered_datetime %}class="has-text-danger"
+                                           {% elif req.approved_at %}class="has-text-black"
+                                           {% endif %}>
                                             <span>{{ req.sponsor.name }}</span>
                                             <span class="icon">
                                                 <i class="fa-solid fa-info-circle"></i>
@@ -64,7 +79,11 @@
                                     <td>{{ req.sponsor.registered_datetime|localdatetime or ''}}</td>
                                     <td>{{ req.sponsor.expire_date|localdate or '' }}</td>
                                     <td>
-                                        {{ req.paid_at|localdate or '' }}
+                                        {% if not req.type == 'edit' %}
+                                            {{ req.paid_at|localdate or '' }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
                                         {% for doc in req.docs %}
                                             {% if doc.is_payment_slip %}
                                             <br>
@@ -86,23 +105,14 @@
                                     </td>
                                     <td>
                                         <div id="sponsor-modal-container"></div>
-                                        {% if tab == 'new' and not req.approved_at %}
-                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการขึ้นทะเบียน')"
-                                            href="{{ url_for('cmte.approved_new_sponsor', request_id=req.id) }}"
-                                            class="button is-success is-outlined">
-                                            <span class="icon">
-                                                <i class="fa-solid fa-check-square"></i>
-                                            </span>
-                                            <span>อนุมัติการขึ้นทะเบียน</span>
-                                        </a>
-                                        {% elif tab == 'renew' and not req.approved_at %}
-                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการต่ออายุสถาบัน')"
+                                        {% if not req.approved_at %}
+                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติคำขอ')"
                                             href="{{ url_for('cmte.approved_renew_sponsor', request_id=req.id) }}"
                                             class="button is-success is-outlined">
                                             <span class="icon">
                                                 <i class="fa-solid fa-check-square"></i>
                                             </span>
-                                            <span>อนุมัติการต่ออายุ</span>
+                                            <span>อนุมัติคำขอ</span>
                                         </a>
                                         {% elif tab == 'paid' and not req.verified_at %}
                                             <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยืนยันการชำระเงินค่าธรรมเนียม $$')"
