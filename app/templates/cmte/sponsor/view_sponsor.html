@@ -8,6 +8,7 @@
         {% include "messages.html" %}
         <h1 class="title has-text-centered">สถาบันฝึกอบรม {{ sponsor.name }}</h1>
         {% if is_admin %}
+        <h1 class="subtitle has-text-centered">(ฝั่ง admin)</h1>
         <div class="column has-text-centered">
             <a onclick="return confirm('แน่ใจหรือไม่ ที่จะลบสถาบันนี้')"
                href="{{ url_for('cmte.delete_sponsor', sponsor_id=sponsor.id) }}"
@@ -20,15 +21,34 @@
         </div>
         {% endif %}
         <div id="sponsor-modal-container"></div>
-        <div class="has-text-centered">
-            <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
-               hx-target="#sponsor-modal-container" hx-swap="innerHTML"
-               class="button is-success">
-                <span class="icon">
-                    <i class="fa-solid fa-pencil"></i>
-                </span>
-                <span>แก้ไขข้อมูลสถาบัน</span>
-            </a>
+        <div class="columns">
+            <div class="column"></div>
+            <div class="column">
+                <div class="has-text-centered">
+                    <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
+                       hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                       class="button is-success">
+                        <span class="icon">
+                            <i class="fa-solid fa-pencil"></i>
+                        </span>
+                        <span>แก้ไขข้อมูลสถาบัน</span>
+                    </a>
+                </div>
+            </div>
+            {% if not is_admin %}
+            <div class="column">
+                <div class="has-text-centered">
+                    <a href="{{ url_for('cmte.request_edit_sponsor', sponsor_id=sponsor.id) }}"
+                       class="button is-success is-light">
+                        <span class="icon">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </span>
+                        <span>ขอแก้ไขข้อมูล</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            <div class="column"></div>
         </div>
         <div class="columns">
             <div class="column">
@@ -63,10 +83,51 @@
                                     <span class="icon">
                                         <i class="fas fa-cloud-download-alt"></i>
                                     </span>
-                                    <span>{{ doc.filename }}</span>
+                                    <span>{{ doc.filename }} {% if doc.request %}รอตรวจสอบ{% endif %}</span>
+                                </a>
+                                {% if is_admin %}
+                                <a onclick="return confirm('แน่ใจหรือไม่ ที่จะ**ลบ**ไฟล์นี้')"
+                                    class="button is-small is-danger" href="{{url_for('cmte.admin_delete_doc',doc_id=doc.id,
+                                    sponsor_id=sponsor.id)}}">
+                                    <span class="icon">
+                                        <i class="fas fa-trash"></i>
+                                    </span>
                                 </a>
                                 {% endif %}
+                                {% endif %}
                             {% endfor %}
+                            {% if edit_request %}
+                            <table class="table is-striped is-bordered">
+                                <thead>
+                                    <th>วันที่ส่งคำขอแก้ไขเอกสาร</th>
+                                    <th>วันที่อนุมัติคำขอ</th>
+                                </thead>
+                                <tbody>
+                                {% for req in sponsor.requests %}
+                                    {% if req.type == 'edit' %}
+                                        <tr>
+                                            <td>{{ req.created_at|localdatetime }}</td>
+                                            <td>
+                                                {{ req.approved_at|localdatetime or '' }}
+                                                {% if is_admin %}
+                                                {% if not req.approved_at %}
+                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข')"
+                                                        href="{{ url_for('cmte.approved_edit_sponsor', request_id=req.id) }}"
+                                                        class="button is-success is-outlined">
+                                                        <span class="icon">
+                                                            <i class="fa-solid fa-check-square"></i>
+                                                        </span>
+                                                        <span>อนุมัติคำขอ</span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -104,18 +165,17 @@
                                 {% if sponsor.expire_status() == "expired" or sponsor.expire_status() == "nearly_expire" %}
                                     {% if pending_request %}
                                         {% if not pending_request.approved_at %}
-                                            <span class="button is-success is-light">ส่งคำขอต่ออายุเรียบร้อยแล้ว
-                                                {{ pending_request.created_at|localdatetime }}
+                                            <span class="button is-success is-light">ส่งคำขอต่ออายุเรียบร้อยแล้ว รอการอนุมัติ
                                             </span>
                                         {% elif not pending_request.paid_at %}
-                                            <span class="button is-warning">อนุมัติคำขอต่ออายุ กรุณาดำเนินการชำระค่าธรรมเนียม
+                                            <span class="button is-danger">อนุมัติคำขอต่ออายุ กรุณาดำเนินการชำระค่าธรรมเนียม
                                             </span>
                                         {% endif %}
                                     {% else %}
                                         <a href="{{ url_for('cmte.request_renew_sponsor', sponsor_id=sponsor.id) }}"
                                            class="button is-warning">
                                             <span class="icon">
-                                                <i class="fa-solid fa-history"></i>
+                                                <i class="fa-solid fa-paper-plane"></i>
                                             </span>
                                             <span>ส่งคำขอต่ออายุสถาบัน</span>
                                         </a>
@@ -123,7 +183,7 @@
                                 {% elif sponsor.expire_status() == "inactive" %}
                                     {% if pending_request %}
                                         {% if pending_request.approved_at and not pending_request.paid_at %}
-                                            <span class="button is-warning">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม
+                                            <span class="button is-danger">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม
                                             </span>
                                         {% endif %}
                                     {% endif %}
@@ -137,23 +197,25 @@
                                     <th>ประเภท</th>
                                     <th>วันที่อนุมัติคำขอ</th>
                                     <th>วันที่ชำระเงิน</th>
+                                    <th>ใบเสร็จ</th>
                                 </thead>
                                 <tbody>
                                 {% for req in sponsor.requests %}
+                                    {% if not req.type == 'edit' %}
                                     <tr>
                                         <td>{{ req.created_at|localdatetime }}</td>
                                         <td>{% if req.type=='new' %}ขอขึ้นทะเบียน{% else %}ขอต่ออายุ{% endif %}</td>
                                         <td>
                                             {% if is_admin %}
                                                 {% if not req.approved_at %}
-                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการต่ออายุสถาบัน')"
-                                                        href="{{ url_for('cmte.approved_renew_sponsor', request_id=req.sponsor.id) }}"
-                                                        class="button is-success is-outlined">
+                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติคำขอ')"
+                                                       href="{{ url_for('cmte.approved_renew_sponsor', request_id=req.id) }}"
+                                                       class="button is-success is-outlined">
                                                         <span class="icon">
                                                             <i class="fa-solid fa-check-square"></i>
                                                         </span>
-                                                        <span>อนุมัติการต่ออายุ</span>
-                                                    </a>
+                                                        <span>อนุมัติขอ</span>
+                                                        </a>
                                                 {% endif %}
                                             {% endif %}
                                             {{ req.approved_at|localdatetime or '' }}
@@ -162,6 +224,7 @@
                                             {{ req.paid_at|localdatetime or '' }}
                                             {% if is_admin %}
                                                 {% if req.paid_at and not req.verified_at %}
+                                                    <br>
                                                     <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยืนยันการชำระเงินค่าธรรมเนียม $$')"
                                                     href="{{ url_for('cmte.verified_payment_sponsor', request_id=req.id) }}"
                                                     class="button is-success is-outlined">
@@ -173,6 +236,7 @@
                                                 {% endif %}
                                             {% endif %}
                                             {% if req.paid_at %}
+                                                <br>
                                                 {% for doc in req.docs %}
                                                     {% if doc.is_payment_slip %}
                                                     <a class="is-small" href="{{url_for('cmte.download_file',
@@ -185,7 +249,7 @@
                                                     {% endif %}
                                                 {% endfor %}
                                             {% endif %}
-                                            {% if not req.verified_at %}
+                                            {% if req.approved_at and not req.verified_at %}
                                             <a class="button is-small" href="{{url_for('cmte.sponsor_payment',
                                                 sponsor_id=sponsor.id, request_id=req.id)}}">
                                                 <span class="icon">
@@ -195,7 +259,9 @@
                                             </a>
                                             {% endif %}
                                         </td>
+                                        <td></td>
                                     </tr>
+                                    {% endif %}
                                 {% endfor %}
                                 </tbody>
                             </table>
