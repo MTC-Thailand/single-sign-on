@@ -98,6 +98,7 @@ class CMTESponsorRequest(db.Model):
 class CMTESponsorDoc(db.Model):
     __tablename__ = 'cmte_sponsor_docs'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     request_id = db.Column('request_id', db.ForeignKey('cmte_sponsor_requests.id'))
     request = db.relationship(CMTESponsorRequest,
@@ -108,7 +109,6 @@ class CMTESponsorDoc(db.Model):
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
     note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
     is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
-
 
 
 class CMTESponsorMember(UserMixin, db.Model):
