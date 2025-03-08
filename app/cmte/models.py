@@ -53,6 +53,7 @@ class CMTEEventSponsor(db.Model):
                  'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน (โปรดระบุ)')]})
     type_detail = db.Column('type_detail', db.String())
     qualifications = db.relationship('CMTESponsorQualification', secondary=sponsor_qualifications)
+    private_sector = db.Column('private_sector', db.Boolean(), default=False)
 
     def __str__(self):
         return self.name
