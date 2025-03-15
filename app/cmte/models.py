@@ -77,6 +77,7 @@ class CMTESponsorQualification(db.Model):
     __tablename__ = 'cmte_sponsor_qualification'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     type = db.Column('type', db.String(255), nullable=False)
+    private_sector = db.Column('private_sector', db.Boolean(), default=False)
 
     def __str__(self):
         return self.type
