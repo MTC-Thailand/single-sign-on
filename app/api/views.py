@@ -231,7 +231,7 @@ class MemberPID(Resource):
                 'license': {
                     'number': member.license.number,
                     'lic_b_date': member.license.issue_date.strftime('%Y-%m-%d'),
-                    'lic_status_name': member.license.status,
+                    'lic_status_name': member.license.status or 'ปกติ',
                     'lic_exp_date': member.license.end_date.strftime('%Y-%m-%d'),
                 },
                 'member': {
@@ -317,7 +317,7 @@ class MemberLicense(Resource):
                 'license': {
                     'number': license.number,
                     'lic_b_date': license.issue_date.strftime('%Y-%m-%d'),
-                    'lic_status_name': license.status,
+                    'lic_status_name': license.status or 'ปกติ',
                     'lic_exp_date': license.end_date.strftime('%Y-%m-%d'),
                 },
                 'member': {
