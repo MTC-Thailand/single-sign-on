@@ -15,7 +15,6 @@ from flasgger import Swagger
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 
@@ -89,12 +88,20 @@ def create_app():
     from app.admin import webadmin as webadmin_blueprint
     app.register_blueprint(webadmin_blueprint)
 
-    from app.api.views import (Login, CMTEScore, MemberInfo, RefreshToken,
-                               CMTEFeePaymentResource, CMTEEventResource)
+    from app.api.views import (Login,
+                               CMTEScore,
+                               MemberInfo,
+                               MemberPID,
+                               MemberLicense,
+                               RefreshToken,
+                               CMTEFeePaymentResource,
+                               CMTEEventResource)
 
     api.add_resource(Login, '/auth/login')
     api.add_resource(CMTEEventResource,'/cmte/upcoming-events')
     api.add_resource(CMTEScore, '/members/<string:lic_id>/cmte/scores')
+    api.add_resource(MemberPID, '/members/pids/<string:pid>')
+    api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
     api.add_resource(RefreshToken, '/auth/refresh')
     api.add_resource(CMTEFeePaymentResource, '/members/<string:lic_no>/cmte-fee-payment-record')
