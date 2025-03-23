@@ -30,7 +30,8 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEEventCodeForm, IndividualScoreAdminForm,
                             CMTESponsorMemberEditForm,
                             CMTESponsorPaymentForm,
-                            CMTESponsorEditForm)
+                            CMTESponsorEditForm,
+                            CMTESponsorRequestForm)
 from app.cmte.models import (CMTEEvent,
                              CMTEEventType,
                              CMTEEventParticipationRecord,
@@ -65,6 +66,8 @@ def download_file(key):
 @login_required
 def cmte_index():
     warning_msg = ''
+    if cmte_admin_permission:
+        return render_template('cmte/index.html', warning_msg=warning_msg)
     if current_user.sponsor:
         is_request = CMTESponsorRequest.query.filter_by(sponsor=current_user.sponsor, paid_at=None).first()
         if current_user.sponsor.expire_status() == 'inactive':
@@ -1059,7 +1062,19 @@ def disable_sponsor(sponsor_id):
     db.session.add(sponsor)
     db.session.commit()
     flash('ยกเลิกบัญชี {} เรียบร้อยแล้ว'.format(sponsor.name), 'warning')
-    return redirect(url_for('cmte.all_sponsors'))
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+
+@cmte.get('/admin/sponsors/<int:sponsor_id>/enable')
+@login_required
+@cmte_admin_permission.require()
+def enable_sponsor(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    sponsor.disable_at = None
+    db.session.add(sponsor)
+    db.session.commit()
+    flash('เปิดบัญชี {} เรียบร้อยแล้ว'.format(sponsor.name), 'success')
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
 @cmte.route('/sponsors/<int:request_id>/approved-renew', methods=['GET', 'POST'])
@@ -1087,6 +1102,42 @@ def approved_edit_sponsor(request_id):
     flash('อนุมัติคำขอแก้ไขข้อมูลแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'warning')
     #send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor_id))
+
+
+@cmte.route('/sponsors/reject-modal/<int:sponsor_id>/<int:request_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def sponsor_reject_modal(sponsor_id, request_id):
+    sponsor_request = CMTESponsorRequest.query.get(request_id)
+    form = CMTESponsorRequestForm(obj=sponsor_request)
+    return render_template('cmte/admin/sponsor_reject_modal.html', form=form,
+                           request_id=request_id, sponsor_id=sponsor_id)
+
+
+@cmte.route('/sponsors/reject-modal/<int:sponsor_id>/<int:request_id>/submit', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def reject_sponsor(sponsor_id, request_id):
+    sponsor_request = CMTESponsorRequest.query.get(request_id)
+    form = CMTESponsorRequestForm(obj=sponsor_request)
+    if form.validate_on_submit():
+        sponsor_request.comment = request.form.get('comment')
+        sponsor_request.rejected_at = arrow.now('Asia/Bangkok').datetime
+        db.session.add(sponsor_request)
+
+        sponsor = CMTEEventSponsor.query.get(sponsor_id)
+        sponsor.disable_at = arrow.now('Asia/Bangkok').datetime
+        db.session.add(sponsor)
+        db.session.commit()
+        #send email to sponsor member
+        return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+    else:
+        for er in form.errors:
+            flash("{}:{}".format(er, form.errors[er]), 'danger')
+    if request.headers.get('HX-Request') == 'true':
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/delete-doc/<int:doc_id>', methods=['GET', 'POST'])

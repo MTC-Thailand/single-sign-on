@@ -9,18 +9,6 @@
         <h1 class="title has-text-centered">สถาบันฝึกอบรม {{ sponsor.name }}</h1>
         {% if is_admin %}
         <h1 class="subtitle has-text-centered">(ฝั่ง admin)</h1>
-        <div class="column has-text-centered">
-            <a onclick="return confirm('แน่ใจหรือไม่ ที่จะลบสถาบันนี้')"
-               href="{{ url_for('cmte.delete_sponsor', sponsor_id=sponsor.id) }}"
-               class="button is-danger">
-                <span class="icon">
-                    <i class="fa-solid fa-trash"></i>
-                </span>
-                <span>ลบสถาบัน</span>
-            </a>
-        </div>
-        {% endif %}
-        <div id="sponsor-modal-container"></div>
         <div class="columns">
             <div class="column"></div>
             <div class="column">
@@ -28,14 +16,43 @@
                     <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
                        hx-target="#sponsor-modal-container" hx-swap="innerHTML"
                        class="button is-success">
-                        <span class="icon">
+                            <span class="icon">
                             <i class="fa-solid fa-pencil"></i>
-                        </span>
-                        <span>แก้ไขข้อมูลสถาบัน</span>
+                            </span>
+                            <span>แก้ไขข้อมูลสถาบัน</span>
                     </a>
                 </div>
             </div>
+            {% if sponsor.disable_at %}
+            <div class="column">
+                <a onclick="return confirm('แน่ใจหรือไม่ ที่จะเปิดสถาบันนี้')"
+                   href="{{ url_for('cmte.enable_sponsor', sponsor_id=sponsor.id) }}"
+                   class="button is-outlined is-link">
+                    <span class="icon">
+                        <i class="fa-solid fa-power-off"></i>
+                    </span>
+                    <span>active บัญชีสถาบัน</span>
+                </a>
+            </div>
+            {% else %}
+            <div class="column">
+                <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยกเลิกสถาบันนี้')"
+                   href="{{ url_for('cmte.disable_sponsor', sponsor_id=sponsor.id) }}"
+                   class="button is-outlined is-danger">
+                    <span class="icon">
+                        <i class="fa-solid fa-trash"></i>
+                    </span>
+                    <span>ยกเลิกบัญชีสถาบัน</span>
+                </a>
+            </div>
+            {% endif %}
+            <div class="column"></div>
+        </div>
+        {% endif %}
+        <div id="sponsor-modal-container"></div>
+        <div class="columns">
             {% if not is_admin %}
+            {% if not sponsor.disable_at %}
             <div class="column">
                 <div class="has-text-centered">
                     <a href="{{ url_for('cmte.request_edit_sponsor', sponsor_id=sponsor.id) }}"
@@ -48,7 +65,7 @@
                 </div>
             </div>
             {% endif %}
-            <div class="column"></div>
+            {% endif %}
         </div>
         <div class="columns">
             <div class="column">
@@ -57,8 +74,16 @@
                     </thead>
                     <tbody>
                     <tr>
-                        <td><strong>รหัส</strong></td>
-                        <td>{{ sponsor.code or 'รอการตรวจสอบและอนุมัติ' }}</td>
+                        <td><strong>ชื่อองค์กร</strong></td>
+                        <td>
+                            {{ sponsor.name }}
+                            {% if sponsor.disable_at %}
+                                <span class="has-text-danger">ถูกยกเลิกเมื่อ {{ sponsor.disable_at|localdatetime }}</span>
+                                {% if not is_admin %}
+                                หากมีข้อสงสัย กรุณาติดต่อสภาเทคนิคการแพทย์
+                                {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
                         <td><strong>สังกัด</strong></td>
@@ -143,10 +168,6 @@
                         <td>{{ sponsor.email or '' }}</td>
                     </tr>
                     <tr>
-                        <td><strong>website</strong></td>
-                        <td>{{ sponsor.website or '' }}</td>
-                    </tr>
-                    <tr>
                         <td><strong>ผู้ประสานงาน</strong></td>
                         <td>
                             {% for member in sponsor.members|sort(attribute="id") %}
@@ -156,11 +177,26 @@
                     </tr>
                     <tr>
                         <td><strong>วันที่ขึ้นทะเบียน</strong></td>
-                        <td>{{ sponsor.registered_datetime|localdatetime or 'รอการตรวจสอบและอนุมัติ' }}</td>
+                        <td>
+                            {% if sponsor.registered_datetime %}
+                                {{ sponsor.registered_datetime|localdatetime }}
+                            {% else %}
+                                {% if not sponsor.disable_at %}
+                                รอการตรวจสอบและอนุมัติ
+                                {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
                         <td><strong>วันที่หมดอายุ</strong></td>
-                        <td>{{ sponsor.expire_date|localdate or 'รอการตรวจสอบและอนุมัติ' }}
+                        <td>{% if sponsor.expire_date %}
+                                {{ sponsor.expire_date|localdatetime }}
+                            {% else %}
+                                {% if not sponsor.disable_at %}
+                                รอการตรวจสอบและอนุมัติ
+                                {% endif %}
+                            {% endif %}
+
                             {% if not is_admin %}
                                 {% if sponsor.expire_status() == "expired" or sponsor.expire_status() == "nearly_expire" %}
                                     {% if pending_request %}
@@ -206,6 +242,9 @@
                                         <td>{{ req.created_at|localdatetime }}</td>
                                         <td>{% if req.type=='new' %}ขอขึ้นทะเบียน{% else %}ขอต่ออายุ{% endif %}</td>
                                         <td>
+                                            {% if req.rejected_at %}
+                                               <span class="has-text-danger">ปฏิเสธคำขอขึ้นทะเบียน {{ req.rejected_at|localdatetime }} เนื่องจาก {{ req.comment }}</span>
+                                            {% else %}
                                             {% if is_admin %}
                                                 {% if not req.approved_at %}
                                                     <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติคำขอ')"
@@ -215,10 +254,20 @@
                                                             <i class="fa-solid fa-check-square"></i>
                                                         </span>
                                                         <span>อนุมัติขอ</span>
-                                                        </a>
+                                                    </a>
+                                                    <a hx-get="{{ url_for('cmte.sponsor_reject_modal',
+                                                        sponsor_id=sponsor.id, request_id=req.id) }}"
+                                                        hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                                                        class="button is-danger is-outlined">
+                                                        <span class="icon">
+                                                            <i class="fa-solid fa-close"></i>
+                                                        </span>
+                                                        <span>ไม่อนุมัติ</span>
+                                                    </a>
                                                 {% endif %}
                                             {% endif %}
                                             {{ req.approved_at|localdatetime or '' }}
+                                            {% endif %}
                                         </td>
                                         <td>
                                             {{ req.paid_at|localdatetime or '' }}
@@ -271,6 +320,7 @@
                 </table>
             </div>
         </div>
+        {% if not sponsor.disable_at or is_admin %}
         <h1 class="title has-text-centered">รายชื่อผู้ประสานงาน</h1>
         <div class="has-text-centered">
             <a href="{{ url_for('cmte.register_sponsor_member', sponsor_id=sponsor.id) }}"
@@ -294,20 +344,29 @@
                     {% for member in sponsor.members|sort(attribute="id") %}
                     <tr>
                         <td>
-                            <a href="{{ url_for('cmte.manage_member', member_id=member.id) }}">{{ member }}</a>
-                            {% if member.is_coordinator %}
-                                <span class="tag is-info is-light">
+                            <a href="{{ url_for('cmte.manage_member', member_id=member.id) }}">
+                                {% if current_user.id == member.id %}
                                     <i class="far fa-tag"></i>
+                                {% endif %}
+                                {{ member }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if member.is_coordinator %}
+                                <span class="has-text-link">
                                     ผู้ประสานงานหลัก
+                                </span>
+                            {% else %}
+                                <span class="has-text-info">
+                                    ผู้ประสานงานรอง
                                 </span>
                             {% endif %}
                         </td>
-                        <td>{{ member.position or '' }}</td>
                         <td>{{ member.email or '' }}</td>
                         <td>{{ member.mobile_phone or '' }} {{ member.telephone or '' }}</td>
+                        <td>
                         {% if is_admin or current_user.is_coordinator %}
                             {% if not member.id == current_user.id %}
-                        <td>
                             <a onclick="return confirm('คุณต้องการลบรายการนี้หรือไม่')"
                                 href="{{ url_for('cmte.del_member',
                                     sponsor_id=sponsor.id, member_id=member.id) }}"
@@ -316,15 +375,16 @@
                                     <i class="fa-solid fa-trash-can has-text-danger"></i>
                                 </span>
                             </a>
-                        </td>
                             {% endif %}
                         {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        {% endif %}
         {% if is_admin %}
         <div class="buttons is-centered">
             <a href="{{ url_for('cmte.all_requests') }}" class="button is-light">
