@@ -17,17 +17,17 @@
                             {{ form.name(class="input is-danger") }}
                         </div>
                     </div>
-                    {% if is_admin %}
-                        <div class="field">
-                            <label class="label">รหัส</label>
-                            <div class="control">
-                                {{ form.code(class="input") }}
-                            </div>
+                    <div class="field">
+                        <label class="label">{{ form.affiliation.label }}</label>
+                        <div class="control">
+                            {{ form.affiliation(class="input is-danger") }}
                         </div>
+                    </div>
+                    {% if is_admin %}
                         <div class="field">
                             <label class="label">วันที่ขึ้นทะเบียน</label>
                             <div class="control">
-                                {{ form.registered_datetime(class="input") }}
+                                {{ form.registered_date(class="input") }}
                             </div>
                         </div>
                         <div class="field">
@@ -37,16 +37,22 @@
                             </div>
                         </div>
                     {% endif %}
+                    <label class="label">ลักษณะองค์กร</label>
                     <div class="field">
-                        <label class="label">ลักษณะองค์กร</label>
                         <div class="select">
-                            {{ form.type(class="select is-danger") }}
+                            {{ form.type(**{'hx-get': url_for("cmte.get_org_type"),
+                            'hx-target': '#related-type', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">รายละเอียดลักษณะองค์กร</label>
+                        <label class="label" style="padding-left: 50px">
+                            <div id="related-type"></div>
+                        </label>
+                    </div>
+                    <div class="field">
+                        <label class="label">ประเภทหน่วยงาน</label>
                         <div class="control">
-                            {{ form.type_detail(class="input") }}
+                            {{ form.private_sector() }}องค์กรเอกชน
                         </div>
                     </div>
                     <div class="field">
@@ -71,13 +77,7 @@
                         {% endfor %}
                     </div>
                     <div class="field">
-                        <label class="label">{{ form.affiliation.label }}</label>
-                        <div class="control">
-                            {{ form.affiliation(class="input is-danger") }}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{ form.address.label }}</label>
+                        <label class="label">{{ form.address.label }}ของหน่วยงาน</label>
                         <div class="control">
                             {{ form.address(class="textarea") }}
                         </div>
@@ -96,15 +96,9 @@
                         <p class="help is-info">กรุณากรอกเฉพาะหมายเลข เช่น 09099045xx</p>
                     </div>
                     <div class="field">
-                        <label class="label">{{ form.email.label }} ของหน่วยงาน</label>
+                        <label class="label">{{ form.email.label }} ของหน่วยงาน/ผู้ประสานงาน</label>
                         <div class="control">
                             {{ form.email(class="input") }}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{ form.website.label }}</label>
-                        <div class="control">
-                            {{ form.website(class="input") }}
                         </div>
                     </div>
                     <div class="field is-grouped">
@@ -124,4 +118,12 @@
         </div>
     </section>
 {% endblock %}
+{% block scripts %}
+    {{ super() }}
+<script>
+    $(document).ready(function () {
+        htmx.trigger(htmx.find('#type'), 'change')
+    })
 
+</script>
+{% endblock %}
