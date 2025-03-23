@@ -702,6 +702,12 @@ def sponsor_member_login():
 @cmte.route('/sponsors/members/register', methods=['GET', 'POST'])
 @cmte.route('/sponsors/members/register/add-member/<int:sponsor_id>', methods=['GET', 'POST'])
 def register_sponsor_member(sponsor_id=None):
+    if sponsor_id:
+        all_members = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id).count()
+        print(all_members)
+        if all_members >= 10:
+            flash(f'ไม่สามารถเพิ่มข้อมูลใหม่ได้ เนื่องจากจำนวนผู้ประสานงานมีมากกว่าที่กำหนด', 'danger')
+            return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
     form = CMTESponsorMemberForm()
     if form.validate_on_submit():
         member = CMTESponsorMember.query.filter_by(email=form.email.data).first()
