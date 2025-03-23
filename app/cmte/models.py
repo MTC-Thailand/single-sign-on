@@ -46,14 +46,15 @@ class CMTEEventSponsor(db.Model):
     expire_date = db.Column('expire_date', db.Date())
     type = db.Column(db.String(), info={'label': 'ลักษณะขององค์กร',
              'choices': [(c, c) for c in (
-                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์) (โปรดระบุจำนวนอาจารย์เทคนิคการแพทย์ในสังกัด(คน))',
+                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)',
                  'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)',
-                 'เป็นสถานพยาบาล (โปรดระบุ 1.ประเภทสถานพยาบาล 2.จํานวนเตียงรับผู้ป่วย(เตียง) 3.จํานวนเทคนิคการแพทย์ในสังกัด(คน))',
-                 'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด (โปรดระบุ)',
-                 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน (โปรดระบุ)')]})
+                 'เป็นสถานพยาบาล',
+                 'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด',
+                 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน')]})
     type_detail = db.Column('type_detail', db.String())
     qualifications = db.relationship('CMTESponsorQualification', secondary=sponsor_qualifications)
     private_sector = db.Column('private_sector', db.Boolean(), default=False)
+    disable_at = db.Column('disable_at', db.DateTime(timezone=True))
 
     def __str__(self):
         return self.name
@@ -98,6 +99,7 @@ class CMTESponsorRequest(db.Model):
     comment = db.Column('comment', db.String())
     rejected_at = db.Column('rejected_at', db.DateTime(timezone=True))
 
+
 class CMTESponsorDoc(db.Model):
     __tablename__ = 'cmte_sponsor_docs'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
@@ -111,6 +113,18 @@ class CMTESponsorDoc(db.Model):
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
     note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
     is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
+
+
+class CMTEReceiptDoc(db.Model):
+    __tablename__ = 'cmte_receipt_docs'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    request_id = db.Column('request_id', db.ForeignKey('cmte_sponsor_requests.id'))
+    request = db.relationship(CMTESponsorRequest,
+                              backref=db.backref('receipt_docs', lazy='dynamic'))
+    key = db.Column('key', db.Text(), nullable=False)
+    filename = db.Column('filename', db.Text(), nullable=False)
+    upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
+    note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
 
 
 class CMTESponsorMember(UserMixin, db.Model):
