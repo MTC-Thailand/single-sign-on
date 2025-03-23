@@ -45,7 +45,6 @@
                     <table id="requests" class="table is-fullwidth">
                         <thead>
                         <th>ประเภท</th>
-                        <th>รหัส</th>
                         <th>สถาบัน</th>
                         <th>วันที่ส่งคำขอ</th>
                         <th>วันที่ขึ้นทะเบียน</th>
@@ -63,7 +62,6 @@
                                         {% elif req.type == 'edit' %}ขอแก้ไขข้อมูล
                                         {% endif %}
                                     </td>
-                                    <td>{{ req.sponsor.code or '' }}</td>
                                     <td style="width: 20em;">
                                         <a href={{ url_for('cmte.manage_sponsor', sponsor_id=req.sponsor.id) }}
                                            {% if not req.sponsor.registered_datetime %}class="has-text-danger"
