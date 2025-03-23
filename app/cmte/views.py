@@ -29,7 +29,8 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTEAdminEventForm,
                             CMTEEventCodeForm, IndividualScoreAdminForm,
                             CMTESponsorMemberEditForm,
-                            CMTESponsorPaymentForm)
+                            CMTESponsorPaymentForm,
+                            CMTESponsorEditForm)
 from app.cmte.models import (CMTEEvent,
                              CMTEEventType,
                              CMTEEventParticipationRecord,
@@ -798,6 +799,13 @@ def register_sponsor():
                 db.session.add(sponsor)
                 db.session.commit()
 
+                if cmte_admin_permission:
+                    dt = '{} {}'.format(form.registered_date.data, "08:30:00")
+                    registered_datetime = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+                    sponsor.registered_datetime = registered_datetime
+                    db.session.add(sponsor)
+                    db.session.commit()
+
                 s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                          aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                          region_name=os.environ.get('BUCKETEER_AWS_REGION'))
@@ -838,6 +846,68 @@ def register_sponsor():
     return render_template('cmte/sponsor/sponsor_form.html', form=form, is_admin=is_admin)
 
 
+@cmte.route('/sponsors/request-org', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def get_org_type():
+    org_type = request.args.get('type', type=str)
+    if org_type == 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)':
+        detail = 'โปรดระบุจำนวนอาจารย์เทคนิคการแพทย์ในสังกัด(คน)'
+    elif org_type == 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)':
+        detail = 'โปรดระบุ คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา'
+    elif org_type == 'เป็นสถานพยาบาล':
+        detail = 'โปรดระบุ 1.ประเภทสถานพยาบาล 2.จํานวนเตียงรับผู้ป่วย(เตียง) 3.จํานวนเทคนิคการแพทย์ในสังกัด(คน)'
+    elif org_type == 'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด':
+        detail = 'โปรดระบุ'
+    elif org_type == 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน':
+        detail = 'โปรดระบุ'
+    type_detail = f'''{detail}<input class="js-example-basic-single" name="type_detail">'''
+    resp = make_response(type_detail)
+    resp.headers['HX-Trigger-After-Swap'] = 'initSelect2'
+    return resp
+
+
+@cmte.route('/sponsors/<int:sponsor_id>/edit-request', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def request_edit_sponsor(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    form = CMTESponsorEditForm(obj=sponsor)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            create_request = CMTESponsorRequest(
+                sponsor=sponsor,
+                type='edit',
+                created_at=arrow.now('Asia/Bangkok').datetime
+            )
+            db.session.add(create_request)
+            db.session.commit()
+
+            form.populate_obj(sponsor)
+            db.session.commit()
+
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            for doc_form in form.upload_files:
+                _file = doc_form.upload_file.data
+                if _file:
+                    filename = _file.filename
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename, request_id=create_request.id)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = doc_form.note.data
+                    db.session.add(doc)
+                    db.session.commit()
+            flash(f'ส่งขอแก้ไขข้อมูลเรียบร้อย', 'success')
+
+            return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+        else:
+            flash(f'Errors: {form.errors}', 'danger')
+    return render_template('cmte/sponsor/sponsor_request_form.html', form=form, sponsor=sponsor)
+
+
 @cmte.route('/sponsors/<int:sponsor_id>', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
@@ -846,9 +916,15 @@ def manage_sponsor(sponsor_id):
     form = CMTEEventSponsorForm(obj=sponsor)
     pending_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id,
                                                               expired_sponsor_date=sponsor.expire_date).first()
+    edit_request = CMTESponsorRequest.query.filter_by(type='edit').first()
     if form.validate_on_submit():
         event_sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form.populate_obj(event_sponsor)
+        if cmte_admin_permission:
+            dt = '{} {}'.format(form.registered_date.data, "08:30:00")
+            registered_datetime = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+            event_sponsor.registered_datetime = registered_datetime
+
         db.session.add(event_sponsor)
         db.session.commit()
 
@@ -867,7 +943,7 @@ def manage_sponsor(sponsor_id):
         return resp
     is_admin = True if cmte_admin_permission else False
     return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor, is_admin=is_admin,
-                           pending_request=pending_request)
+                           pending_request=pending_request, edit_request=edit_request)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/payment', methods=['GET', 'POST'])
@@ -953,6 +1029,8 @@ def all_requests():
         requests = CMTESponsorRequest.query.filter_by(type='renew').all()
     elif tab == 'paid':
         requests = CMTESponsorRequest.query.filter_by(verified_at=None).filter(CMTESponsorRequest.paid_at != None).all()
+    elif tab == 'edit':
+        requests = CMTESponsorRequest.query.filter_by(type='edit', approved_at=None).all()
     else:
         requests = CMTESponsorRequest.query.all()
     return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
@@ -977,19 +1055,6 @@ def delete_sponsor(sponsor_id):
     return redirect(url_for('cmte.all_sponsors'))
 
 
-@cmte.route('/sponsors/<int:request_id>/approved-new', methods=['GET', 'POST'])
-@login_required
-@cmte_admin_permission.require()
-def approved_new_sponsor(request_id):
-    renew_request = CMTESponsorRequest.query.get(request_id)
-    renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
-    db.session.add(renew_request)
-    db.session.commit()
-    flash('อนุมัติคำขอขึ้นสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
-    #send email to sponsor member
-    return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
-
-
 @cmte.route('/sponsors/<int:request_id>/approved-renew', methods=['GET', 'POST'])
 @login_required
 @cmte_admin_permission.require()
@@ -1004,6 +1069,31 @@ def approved_renew_sponsor(request_id):
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
 
 
+@cmte.route('/sponsors/<int:request_id>/approved-edit', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def approved_edit_sponsor(request_id):
+    edit_request = CMTESponsorRequest.query.get(request_id)
+    edit_request.approved_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(edit_request)
+    db.session.commit()
+    flash('อนุมัติคำขอแก้ไขข้อมูลแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'warning')
+    #send email to sponsor member
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor_id))
+
+
+@cmte.route('/sponsors/<int:sponsor_id>/delete-doc/<int:doc_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def admin_delete_doc(sponsor_id, doc_id):
+    doc = CMTESponsorDoc.query.get(doc_id)
+    db.session.delete(doc)
+    db.session.commit()
+    flash('ลบไฟล์เรียบร้อยแล้ว', 'success')
+    #send email to sponsor member
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+
 @cmte.route('/sponsors/<int:request_id>/verified-payment', methods=['GET', 'POST'])
 @login_required
 @cmte_admin_permission.require()
@@ -1012,7 +1102,19 @@ def verified_payment_sponsor(request_id):
     payment_request.verified_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(payment_request)
     db.session.commit()
-    flash('ตรวจสอบการชำระเงินเรียบร้อยแล้ว กรุณา update ช่วงเวลาขึ้นทะเบียนใหม่ สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
+
+    sponsor = CMTEEventSponsor.query.filter_by(id=payment_request.sponsor_id).first()
+    if sponsor.expire_status() == 'expired':
+        today = arrow.now('Asia/Bangkok').datetime
+        sponsor.registered_datetime = today
+        sponsor.expire_date = today.replace(year=today.year+5)
+    else:
+        old_expire_date = sponsor.expire_date + 1
+        sponsor.registered_datetime = old_expire_date
+        sponsor.expire_date = old_expire_date.replace(year=old_expire_date.year + 5)
+    db.session.add(sponsor)
+    db.session.commit()
+    flash('ตรวจสอบการชำระเงินเรียบร้อยแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
     #send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=payment_request.sponsor_id))
 
