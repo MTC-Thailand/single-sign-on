@@ -95,7 +95,8 @@ class CMTESponsorRequest(db.Model):
     approved_at = db.Column('approved_at', db.DateTime(timezone=True))
     paid_at = db.Column('paid_at', db.DateTime(timezone=True))
     verified_at = db.Column('verified_at', db.DateTime(timezone=True))
-
+    comment = db.Column('comment', db.String())
+    rejected_at = db.Column('rejected_at', db.DateTime(timezone=True))
 
 class CMTESponsorDoc(db.Model):
     __tablename__ = 'cmte_sponsor_docs'
