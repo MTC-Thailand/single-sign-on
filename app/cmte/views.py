@@ -854,7 +854,7 @@ def register_sponsor():
 
 @cmte.route('/sponsors/request-org', methods=['GET', 'POST'])
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def get_org_type():
     org_type = request.args.get('type', type=str)
     if org_type == 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)':
@@ -1050,14 +1050,15 @@ def all_sponsors():
     return render_template('cmte/admin/all_sponsors.html', sponsors=sponsors)
 
 
-@cmte.get('/admin/sponsors/<int:sponsor_id>/del')
+@cmte.get('/admin/sponsors/<int:sponsor_id>/disable')
 @login_required
 @cmte_admin_permission.require()
-def delete_sponsor(sponsor_id):
+def disable_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
-    db.session.delete(sponsor)
+    sponsor.disable_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(sponsor)
     db.session.commit()
-    flash('ลบบัญชี {} เรียบร้อยแล้ว'.format(sponsor.name), 'warning')
+    flash('ยกเลิกบัญชี {} เรียบร้อยแล้ว'.format(sponsor.name), 'warning')
     return redirect(url_for('cmte.all_sponsors'))
 
 
