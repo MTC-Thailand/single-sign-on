@@ -18,7 +18,6 @@
                     </div>
                     <table id="sponsors" class="table is-fullwidth">
                         <thead>
-                        <th>รหัส</th>
                         <th>สถาบัน</th>
                         <th>วันที่ขึ้นทะเบียน</th>
                         <th>วันที่หมดอายุ</th>
@@ -28,7 +27,6 @@
                         <tbody>
                             {% for sponsor in sponsors %}
                                 <tr>
-                                    <td>{{ sponsor.code or '' }}</td>
                                     <td style="width: 20em;">
                                         <a href={{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}
                                            {% if not registered_datetime %}class="has-text-danger"{% endif %}>
