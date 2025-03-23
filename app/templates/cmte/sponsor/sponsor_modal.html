@@ -16,15 +16,9 @@
                 </div>
                 {% if is_admin %}
                     <div class="field">
-                        <label class="label">รหัสสถาบัน</label>
-                        <div class="control">
-                            {{ form.code(class="input") }}
-                        </div>
-                    </div>
-                    <div class="field">
                         <label class="label">วันที่ขึ้นทะเบียน</label>
                         <div class="control">
-                            {{ form.registered_datetime(class="input") }}
+                            {{ form.registered_date(class="input") }}
                         </div>
                     </div>
                     <div class="field">
@@ -106,12 +100,6 @@
                     <label class="label">email</label>
                     <div class="control">
                         {{ form.email(class="input") }}
-                    </div>
-                </div>
-                <div class="field">
-                    <label class="label">website</label>
-                    <div class="control">
-                        {{ form.website(class="input") }}
                     </div>
                 </div>
                 <button class="button" id="cancel-btn">Cancel</button>
