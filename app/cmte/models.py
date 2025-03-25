@@ -125,6 +125,14 @@ class CMTEReceiptDoc(db.Model):
     filename = db.Column('filename', db.Text(), nullable=False)
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
     note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
+
+
+class CMTEReceiptDetail(db.Model):
+    __tablename__ = 'cmte_receipt_details'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('receipt_details', lazy='dynamic', cascade="all, delete-orphan"))
     name = db.Column('name', db.String())
     receipt_item = db.Column('receipt_item', db.Text())
     tax_id = db.Column('tax_id', db.String())
