@@ -125,6 +125,11 @@ class CMTEReceiptDoc(db.Model):
     filename = db.Column('filename', db.Text(), nullable=False)
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
     note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
+    name = db.Column('name', db.String())
+    receipt_item = db.Column('receipt_item', db.Text())
+    tax_id = db.Column('tax_id', db.String())
+    address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
+    zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
 
 
 class CMTESponsorMember(UserMixin, db.Model):
