@@ -65,12 +65,13 @@ class CMTEEventSponsor(db.Model):
         if self.expire_date:
             status = "active"
             if self.expire_date:
-                delta = today - self.expire_date
-                if delta.days <= 90:
-                    if self.expire_date < today:
-                        status = "expired"
-                    else:
+                if self.expire_date < today:
+                    status = "expired"
+                else:
+                    delta =  self.expire_date - today
+                    if delta.days <= 90:
                         status = "nearly_expire"
+
         return status
 
 
@@ -120,7 +121,7 @@ class CMTEReceiptDoc(db.Model):
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     request_id = db.Column('request_id', db.ForeignKey('cmte_sponsor_requests.id'))
     request = db.relationship(CMTESponsorRequest,
-                              backref=db.backref('receipt_docs', lazy='dynamic'))
+                              backref=db.backref('receipt_docs'))
     key = db.Column('key', db.Text(), nullable=False)
     filename = db.Column('filename', db.Text(), nullable=False)
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
@@ -132,13 +133,15 @@ class CMTEReceiptDetail(db.Model):
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship(CMTEEventSponsor,
-                              backref=db.backref('receipt_details', lazy='dynamic', cascade="all, delete-orphan"))
+                              backref=db.backref('receipt_details'))
     name = db.Column('name', db.String())
     receipt_item = db.Column('receipt_item', db.Text())
     tax_id = db.Column('tax_id', db.String())
     address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
     zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
 
+    def __str__(self):
+        return f'{self.name } รายการ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode}'
 
 class CMTESponsorMember(UserMixin, db.Model):
     __versioned__ = {}
