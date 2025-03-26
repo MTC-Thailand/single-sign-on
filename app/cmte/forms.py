@@ -109,6 +109,10 @@ class CMTESponsorMemberEditForm(ModelForm):
         model = CMTESponsorMember
 
 
+class CMTESponsorRequestForm(FlaskForm):
+    comment = TextAreaField('เหตุผล')
+
+
 class CMTESponsorMemberChangePasswordForm(FlaskForm):
     password = PasswordField('รหัสผ่าน',
                              validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
@@ -134,6 +138,15 @@ class CMTEEventSponsorForm(ModelForm):
     class Meta:
         model = CMTEEventSponsor
 
+    registered_date = DateField()
+    qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
+                                              query_factory=lambda:CMTESponsorQualification.query.all(),
+                                              widget=ListWidget(prefix_label=False),
+                                              option_widget=CheckboxInput())
+    upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
+
+
+class CMTESponsorEditForm(ModelForm):
     qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
@@ -142,9 +155,30 @@ class CMTEEventSponsorForm(ModelForm):
 
 
 class CMTESponsorPaymentForm(FlaskForm):
+    class Meta:
+        model = CMTEEventSponsor
+
+    name = TextAreaField('name', render_kw={'class': 'textarea'})
+    receipt_item = TextAreaField('receipt_item', render_kw={'class': 'textarea'})
+    tax_id = TextAreaField('tax_id', render_kw={'class': 'textarea'})
+    address = TextAreaField('address', render_kw={'class': 'textarea'})
+    zipcode = TextAreaField('zipcode', render_kw={'class': 'text'})
     paid_date = DateField()
     paid_time = TimeField()
     upload_file = FormField(CMTESponsorDocForm, default=CMTESponsorDoc)
+
+
+class CMTESponsorReceiptDocForm(ModelForm):
+    class Meta:
+        model = CMTEReceiptDoc
+        only = ['note']
+
+    upload_file = FileField('Document Upload')
+    note = TextAreaField('คำอธิบาย', render_kw={'class': 'textarea'})
+
+
+class CMTESponsorReceiptForm(FlaskForm):
+    upload_file = FormField(CMTESponsorReceiptDocForm, default=CMTEReceiptDoc)
 
 
 class CMTEPaymentForm(FlaskForm):
