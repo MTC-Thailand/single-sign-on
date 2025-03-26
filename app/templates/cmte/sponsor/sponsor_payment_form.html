@@ -17,24 +17,48 @@
                     <img src="{{url_for('static', filename='qrcode-payment.png')}}">
                 </figure>
                 <h2 class="subtitle is-size-4 has-text-centered">เลขบัญชี 1420016105 ธนาคารกรุงไทย</h2>
+                <h1 class="title is-size-4 has-text-centered">จำนวนเงิน 3,000 บาท</h1>
                 <form method="post" enctype="multipart/form-data">
                     {{form.hidden_tag()}}
                     <div class="notification">
-                        <p class="help is-danger">หากอัพโหลดซ้ำไฟล์เดิมจะถูกลบทิ้ง</p>
+                        <p class="help is-danger">หากอัพโหลดซ้ำ ไฟล์เดิมจะถูกลบทิ้ง</p>
                         <div class="file">
                             <label class="file-label">
                                 {{form.upload_file(required=True)}}
                             </label>
                         </div>
                         <div class="control">
-                            <label class="file-label">
+                            <label class="label">
                                 ชำระเมื่อ
                             </label>
                             {{ form.paid_date(required=True) }}
-                            <label class="file-label">
+                            <label class="label">
                                 เวลา
                             </label>
                             {{ form.paid_time(required=True) }}
+                        </div>
+                        <h2 class="subtitle is-size-4 has-text-centered">ข้อมูลบนใบเสร็จ</h2>
+                        <div class="control">
+                            <label class="label">
+                                ออกในนาม
+                            </label>
+                            {{ form.name(required=True) }}
+                            <label class="label">
+                                รายการที่ต้องการแสดงในใบเสร็จ
+                            </label>
+                            {{ form.receipt_item(placeholder='เช่น ค่าต่ออายุ ค่าธรรมเนียม') }}
+                            <label class="label">
+                                เลขที่ผู้เสียภาษี
+                            </label>
+                            {{ form.tax_id() }}
+                            <label class="label">
+                                ที่อยู่ที่แสดงในใบเสร็จ
+                            </label>
+                            {{ form.address(required=True) }}
+                            <label class="label">
+                                รหัสไปรษณีย์
+                            </label>
+                            {{ form.zipcode(required=True) }}
                         </div>
                         <div class="field">
                             <div class="is-grouped is-grouped-centered">
