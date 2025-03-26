@@ -190,7 +190,7 @@
                     <tr>
                         <td><strong>วันที่หมดอายุ</strong></td>
                         <td>{% if sponsor.expire_date %}
-                                {{ sponsor.expire_date|localdatetime }}
+                                {{ sponsor.expire_date|localdate }}
                             {% else %}
                                 {% if not sponsor.disable_at %}
                                 รอการตรวจสอบและอนุมัติ
@@ -297,6 +297,12 @@
                                                     </a>
                                                     {% endif %}
                                                 {% endfor %}
+                                                {% if not req.verified_at and not is_admin %}
+                                                    <span class="icon">
+                                                        <i class="fas fa-star has-text-warning fa-pulse"></i>
+                                                    </span>
+                                                    อยู่ระหว่างการตรวจสอบข้อมูล
+                                                {% endif %}
                                             {% endif %}
                                             {% if req.approved_at and not req.verified_at %}
                                             <a class="button is-small" href="{{url_for('cmte.sponsor_payment',
@@ -308,7 +314,30 @@
                                             </a>
                                             {% endif %}
                                         </td>
-                                        <td></td>
+                                        <td>
+                                            {% if not req.receipt_docs %}
+                                                {% for s in sponsor.receipt_details %}{{ s }}{% endfor %}
+                                                {% if is_admin %}
+                                                    <a class="button is-small" href="{{url_for('cmte.sponsor_upload_receipt',
+                                                        sponsor_id=sponsor.id, request_id=req.id)}}">
+                                                        <span class="icon">
+                                                            <i class="fas fa-star has-text-warning fa-pulse"></i>
+                                                        </span>
+                                                        <span class="has-text-danger">แนบใบเสร็จ</span>
+                                                    </a>
+                                                {% endif %}
+                                            {% else %}
+                                                {% for doc in req.receipt_docs %}
+                                                <a class="is-small" href="{{url_for('cmte.download_file',
+                                                       key=doc.key, download_filename=doc.filename)}}">
+                                                    <span class="icon">
+                                                        <i class="fas fa-cloud-download-alt"></i>
+                                                    </span>
+                                                    <span>receipt</span>
+                                                </a>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endif %}
                                 {% endfor %}
