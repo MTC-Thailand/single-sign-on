@@ -31,17 +31,9 @@ from app.cmte.forms import (CMTEEventForm,
                             CMTESponsorMemberEditForm,
                             CMTESponsorPaymentForm,
                             CMTESponsorEditForm,
-                            CMTESponsorRequestForm)
-from app.cmte.models import (CMTEEvent,
-                             CMTEEventType,
-                             CMTEEventParticipationRecord,
-                             CMTEEventDoc,
-                             CMTEFeePaymentRecord,
-                             CMTESponsorMember,
-                             CMTEEventSponsor,
-                             CMTESponsorQualification,
-                             CMTESponsorRequest,
-                             CMTESponsorDoc)
+                            CMTESponsorRequestForm,
+                            CMTESponsorReceiptForm)
+from app.cmte.models import *
 from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
@@ -957,10 +949,10 @@ def manage_sponsor(sponsor_id):
 
 @cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/payment', methods=['GET', 'POST'])
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def sponsor_payment(sponsor_id, request_id):
-    form = CMTESponsorPaymentForm()
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    form = CMTESponsorPaymentForm(obj=sponsor)
     if request.method == 'POST':
         if form.validate_on_submit():
             doc = CMTESponsorDoc.query.filter_by(sponsor_id=sponsor_id, is_payment_slip=True, request_id=request_id).first()
@@ -981,13 +973,27 @@ def sponsor_payment(sponsor_id, request_id):
                 doc.is_payment_slip = True
                 doc.request_id = request_id
                 db.session.add(doc)
-            flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
+                flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
+            else:
+                flash('ไม่พบ slip ที่อัพโหลด กรุณาดำเนินการใหม่อีกครั้ง', 'danger')
+                return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
 
             req = CMTESponsorRequest.query.get(request_id)
             dt = '{} {}'.format(form.paid_date.data, form.paid_time.data)
             paid_datetime = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
             req.paid_at = paid_datetime
             db.session.add(req)
+
+            create_receipt = CMTEReceiptDetail(
+                sponsor_id=sponsor_id,
+                name=form.name.data,
+                receipt_item=form.receipt_item.data if form.receipt_item.data else '',
+                tax_id=form.tax_id.data if form.tax_id.data else '',
+                address=form.address.data,
+                zipcode=form.zipcode.data
+            )
+            db.session.add(create_receipt)
             db.session.commit()
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
@@ -1162,19 +1168,55 @@ def verified_payment_sponsor(request_id):
     db.session.commit()
 
     sponsor = CMTEEventSponsor.query.filter_by(id=payment_request.sponsor_id).first()
-    if sponsor.expire_status() == 'expired':
-        today = arrow.now('Asia/Bangkok').datetime
-        sponsor.registered_datetime = today
-        sponsor.expire_date = today.replace(year=today.year+5)
-    else:
-        old_expire_date = sponsor.expire_date + 1
+    if sponsor.expire_date:
+        old_expire_date = sponsor.expire_date + timedelta(days=1)
         sponsor.registered_datetime = old_expire_date
         sponsor.expire_date = old_expire_date.replace(year=old_expire_date.year + 5)
+    else:
+        today = arrow.now('Asia/Bangkok').datetime
+        sponsor.registered_datetime = today
+        sponsor.expire_date = today.replace(year=today.year + 5)
     db.session.add(sponsor)
     db.session.commit()
     flash('ตรวจสอบการชำระเงินเรียบร้อยแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
     #send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=payment_request.sponsor_id))
+
+
+@cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/upload-receipt', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def sponsor_upload_receipt(sponsor_id, request_id):
+    form = CMTESponsorReceiptForm()
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            doc = CMTEReceiptDoc.query.filter_by(request_id=request_id).first()
+            if doc:
+                db.session.delete(doc)
+                db.session.commit()
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            _file = form.upload_file.upload_file.data
+            if _file:
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTEReceiptDoc(key=key, filename=filename, request_id=request_id)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = form.upload_file.note.data
+                db.session.add(doc)
+                db.session.commit()
+                flash('upload ใบเสร็จเรียบร้อยแล้ว', 'success')
+            else:
+                flash('ไม่พบใบเสร็จที่อัพโหลด กรุณาดำเนินการใหม่อีกครั้ง', 'danger')
+                return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+            return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+        else:
+            flash(f'Error {form.errors}', 'danger')
+    return render_template('cmte/admin/upload_slip.html', sponsor=sponsor, form=form)
 
 
 @cmte.route('/admin/events', methods=['GET', 'POST'])
