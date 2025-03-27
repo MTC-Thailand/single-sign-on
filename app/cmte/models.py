@@ -26,6 +26,12 @@ sponsor_qualifications = db.Table('sponsor_qualification_assoc',
                                                      db.ForeignKey('cmte_sponsor_qualification.id')),
                                            )
 
+temp_sponsor_qualifications = db.Table('temp_sponsor_qualification_assoc',
+                                           db.Column('event_sponsor_id', db.ForeignKey('cmte_temp_sponsors.id')),
+                                           db.Column('qualification_id',
+                                                     db.ForeignKey('cmte_sponsor_qualification.id')),
+                                           )
+
 BANGKOK = timezone('Asia/Bangkok')
 
 
@@ -68,11 +74,37 @@ class CMTEEventSponsor(db.Model):
                 if self.expire_date < today:
                     status = "expired"
                 else:
-                    delta =  self.expire_date - today
+                    delta = self.expire_date - today
                     if delta.days <= 90:
                         status = "nearly_expire"
 
         return status
+
+
+class CMTETempSponsor(db.Model):
+    __tablename__ = 'cmte_temp_sponsors'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('temp'))
+    name = db.Column('name', db.String())
+    affiliation = db.Column('affiliation', db.String())
+    address = db.Column('address', db.Text())
+    zipcode = db.Column('zipcode', db.String())
+    telephone = db.Column('telephone', db.String())
+    email = db.Column('email', EmailType())
+    registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
+    expire_date = db.Column('expire_date', db.Date())
+    type = db.Column(db.String(), info={'label': 'ลักษณะขององค์กร',
+             'choices': [(c, c) for c in (
+                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)',
+                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)',
+                 'เป็นสถานพยาบาล',
+                 'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด',
+                 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน')]})
+    type_detail = db.Column('type_detail', db.String())
+    qualifications = db.relationship('CMTESponsorQualification', secondary=temp_sponsor_qualifications)
+    private_sector = db.Column('private_sector', db.Boolean(), default=False)
 
 
 class CMTESponsorQualification(db.Model):
