@@ -156,7 +156,7 @@
                                                         {{ t.address }}
                                                     {% endfor %}
                                                 {% if not req.approved_at %}
-                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข')"
+                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข หากอนุมัติ ข้อมูลจะถูกแก้ไขทันที')"
                                                         href="{{ url_for('cmte.approved_edit_sponsor', request_id=req.id) }}"
                                                         class="button is-success is-outlined">
                                                         <span class="icon">
