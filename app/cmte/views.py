@@ -698,7 +698,8 @@ def sponsor_member_login():
 @cmte.route('/sponsors/members/register/add-member/<int:sponsor_id>', methods=['GET', 'POST'])
 def register_sponsor_member(sponsor_id=None):
     if sponsor_id:
-        all_members = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id).count()
+        all_members = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id)\
+                        .filter(CMTESponsorMember.is_active != False).count()
         print(all_members)
         if all_members >= 10:
             flash(f'ไม่สามารถเพิ่มข้อมูลใหม่ได้ เนื่องจากจำนวนผู้ประสานงานมีมากกว่าที่กำหนด', 'danger')
@@ -776,9 +777,43 @@ def del_member(sponsor_id, member_id):
     if member.is_coordinator:
         flash('{}เป็นผู้ประสานงานหลัก หากต้องการลบบัญชีนี้ กรุณาแก้ไขสถานะผู้ประสานงานหลักก่อน'.format(member), 'warning')
     else:
-        db.session.delete(member)
+        member.is_active = False
+        db.session.add(member)
         db.session.commit()
-        flash('ลบบัญชี {} เรียบร้อยแล้ว'.format(member), 'warning')
+        flash('ยกเลิกบัญชี {} เรียบร้อยแล้ว'.format(member), 'warning')
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+
+@cmte.route('/sponsors/request/change-coordinator/<int:sponsor_id>/<int:member_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def request_change_coordinator_member(sponsor_id, member_id):
+    member = CMTESponsorMember.query.get(member_id)
+    create_request = CMTESponsorRequest(
+        sponsor_id=sponsor_id,
+        created_at=arrow.now('Asia/Bangkok').datetime,
+        type='edit',
+        comment='Lead coordinator '+ member.email,
+        member=member
+    )
+    db.session.add(create_request)
+    db.session.commit()
+    flash('ส่งคำขอเป็นผู้ประสานงานหลัก เรียบร้อยแล้ว', 'success')
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+
+@cmte.route('/sponsors/change-coordinator/<int:sponsor_id>/<int:member_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def change_coordinator_member(sponsor_id, member_id):
+    all_member = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id).all()
+    for member in all_member:
+        member.is_coordinator = False
+    member = CMTESponsorMember.query.get(member_id)
+    member.is_coordinator = True
+    db.session.add(member)
+    db.session.commit()
+    flash('{}เป็นผู้ประสานงานหลัก เรียบร้อยแล้ว'.format(member), 'success')
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
@@ -886,7 +921,10 @@ def request_edit_sponsor(sponsor_id):
             temp_sponsor.type = form.type.data if form.type.data != sponsor.type else ''
             temp_sponsor.type_detail = form.type_detail.data if form.type_detail.data != sponsor.type_detail else ''
             temp_sponsor.private_sector = form.private_sector.data if form.private_sector.data else False
-            temp_sponsor.qualifications = form.qualifications.data if form.qualifications.data != sponsor.qualifications else ''
+            if form.qualifications.data != sponsor.qualifications:
+                temp_sponsor.qualifications = form.qualifications.data
+            else:
+                temp_sponsor.qualifications = []
             temp_sponsor.sponsor = sponsor
             db.session.add(temp_sponsor)
 
@@ -904,10 +942,27 @@ def request_edit_sponsor(sponsor_id):
                     doc.note = doc_form.note.data
                     db.session.add(doc)
 
+            columns_with_data = []
+            fields = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
+                       'qualifications', 'private_sector']
+
+            for field in fields:
+                temp_value = getattr(temp_sponsor, field, None)
+                sponsor_value = getattr(sponsor, field, None)
+
+                if temp_value and temp_value != sponsor_value and field != 'qualifications':
+                    columns_with_data.append(f"{field}: {temp_value}")
+            if temp_sponsor.qualifications:
+                qualifications_types = [qual.type for qual in temp_sponsor.qualifications]
+                columns_with_data.append(f"Qualifications: {', '.join(qualifications_types)}")
+            comment = ", ".join(columns_with_data) if columns_with_data else ''
+
             create_request = CMTESponsorRequest(
                 sponsor=sponsor,
                 created_at=arrow.now('Asia/Bangkok').datetime,
-                type='edit'
+                type='edit',
+                comment=comment,
+                member=current_user
             )
             db.session.add(create_request)
             db.session.commit()
@@ -1037,7 +1092,8 @@ def request_renew_sponsor(sponsor_id):
             sponsor_id=sponsor_id,
             created_at=arrow.now('Asia/Bangkok').datetime,
             expired_sponsor_date=sponsor.expire_date,
-            type='renew'
+            type='renew',
+            member=current_user
         )
         db.session.add(create_request)
         db.session.commit()

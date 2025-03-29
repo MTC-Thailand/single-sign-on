@@ -60,7 +60,7 @@
                         <span class="icon">
                             <i class="fa-solid fa-paper-plane"></i>
                         </span>
-                        <span>ขอแก้ไขข้อมูล</span>
+                        <span>ขอแก้ไขข้อมูลสถาบัน</span>
                     </a>
                 </div>
             </div>
@@ -124,7 +124,8 @@
                             {% if edit_request %}
                             <table class="table is-striped is-bordered">
                                 <thead>
-                                    <th>วันที่ส่งคำขอแก้ไขเอกสาร</th>
+                                    <th>วันที่ส่งคำขอแก้ไขเอกสาร/ผู้ประสานงาน</th>
+                                    {% if is_admin %}<th>ประเภทคำขอแก้ไข</th>{% endif %}
                                     <th>วันที่อนุมัติคำขอ</th>
                                 </thead>
                                 <tbody>
@@ -148,23 +149,31 @@
                                                 </ul>
                                                 {% endfor %}
                                             </td>
+                                            {% if is_admin %}<td>{{ req.comment }}</td>{% endif %}
                                             <td>
                                                 {{ req.approved_at|localdatetime or '' }}
                                                 {% if is_admin %}
-                                                    {% for t in sponsor.temp %}
-                                                        {{ t.name }}
-                                                        {{ t.address }}
-                                                    {% endfor %}
-                                                {% if not req.approved_at %}
-                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข หากอนุมัติ ข้อมูลจะถูกแก้ไขทันที')"
-                                                        href="{{ url_for('cmte.approved_edit_sponsor', request_id=req.id) }}"
-                                                        class="button is-success is-outlined">
-                                                        <span class="icon">
-                                                            <i class="fa-solid fa-check-square"></i>
-                                                        </span>
-                                                        <span>อนุมัติคำขอแก้ไขข้อมูล</span>
-                                                    </a>
-                                                {% endif %}
+                                                    {% if not req.approved_at %}
+                                                        {% if 'Lead coordinator' in req.comment %}
+                                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข หากอนุมัติ ข้อมูลจะถูกแก้ไขทันที')"
+                                                            href="{{ url_for('cmte.change_coordinator_member', sponsor_id=sponsor.id, member_id=req.member_id) }}"
+                                                            class="button is-success is-outlined">
+                                                            <span class="icon">
+                                                                <i class="fa-solid fa-check-square"></i>
+                                                            </span>
+                                                            <span>อนุมัติคำขอแก้ไขผู้ประสานงานหลัก</span>
+                                                        </a>
+                                                        {% else %}
+                                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข หากอนุมัติ ข้อมูลจะถูกแก้ไขทันที')"
+                                                            href="{{ url_for('cmte.approved_edit_sponsor', request_id=req.id) }}"
+                                                            class="button is-success is-outlined">
+                                                            <span class="icon">
+                                                                <i class="fa-solid fa-check-square"></i>
+                                                            </span>
+                                                            <span>อนุมัติคำขอแก้ไขข้อมูล</span>
+                                                        </a>
+                                                        {% endif %}
+                                                    {% endif %}
                                             {% endif %}
                                             </td>
                                         </tr>
@@ -191,7 +200,7 @@
                         <td><strong>ผู้ประสานงาน</strong></td>
                         <td>
                             {% for member in sponsor.members|sort(attribute="id") %}
-                                <li>{{ member }}</li>
+                                <li>{{ member }} {% if member.is_coordinator %} <i class="far fa-tag"></i>ผู้ประสานงานหลัก{% endif %}</li>
                             {% endfor %}
                         </td>
                     </tr>
@@ -379,6 +388,16 @@
                 </span>
                 <span>เพิ่มผู้ประสานงาน</span>
             </a>
+            {% if not is_admin and not current_user.is_coordinator %}
+            <a onclick="return confirm('แน่ใจหรือไม่ ที่จะส่งคำขอปรับเป็นผู้ประสานงานหลัก')"
+                href="{{ url_for('cmte.request_change_coordinator_member', sponsor_id=sponsor.id, member_id=current_user.id) }}"
+                class="button is-success is-outlined">
+                <span class="icon">
+                    <i class="fa-solid fa-people-carry"></i>
+                </span>
+                <span>ขอเป็นผู้ประสานงานหลัก</span>
+            </a>
+            {% endif %}
         </div>
         <div class="columns">
             <div class="column">
@@ -391,12 +410,10 @@
                     </thead>
                     <tbody>
                     {% for member in sponsor.members|sort(attribute="id") %}
+                        {% if member.is_active != False %}
                     <tr>
                         <td>
                             <a href="{{ url_for('cmte.manage_member', member_id=member.id) }}">
-                                {% if current_user.id == member.id %}
-                                    <i class="far fa-tag"></i>
-                                {% endif %}
                                 {{ member }}
                             </a>
                         </td>
@@ -406,9 +423,7 @@
                                     ผู้ประสานงานหลัก
                                 </span>
                             {% else %}
-                                <span class="has-text-info">
-                                    ผู้ประสานงานรอง
-                                </span>
+                                ผู้ประสานงานรอง
                             {% endif %}
                         </td>
                         <td>{{ member.email or '' }}</td>
@@ -428,6 +443,7 @@
                         {% endif %}
                         </td>
                     </tr>
+                        {% endif %}
                     {% endfor %}
                     </tbody>
                 </table>
@@ -435,6 +451,33 @@
         </div>
         {% endif %}
         {% if is_admin %}
+        <h1 class="subtitle has-text-centered">ผู้ประสานงานที่ถูกยกเลิกบัญชีแล้ว</h1>
+        <div class="columns">
+            <div class="column">
+                <table class="table is-fullwidth is-striped is-bordered">
+                    <thead>
+                        <th>ชื่อ - นามสกุล</th>
+                        <th>email</th>
+                        <th colspan="2">โทรศัพท์</th>
+                    </thead>
+                    <tbody>
+                    {% for member in sponsor.members|sort(attribute="id") %}
+                        {% if member.is_active == False %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('cmte.manage_member', member_id=member.id) }}">
+                                {{ member }}
+                            </a>
+                        </td>
+                        <td>{{ member.email or '' }}</td>
+                        <td>{{ member.mobile_phone or '' }} {{ member.telephone or '' }}</td>
+                    </tr>
+                        {% endif %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <div class="buttons is-centered">
             <a href="{{ url_for('cmte.all_requests') }}" class="button is-light">
                 <span class="icon">
