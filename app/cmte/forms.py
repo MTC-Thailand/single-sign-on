@@ -147,6 +147,9 @@ class CMTEEventSponsorForm(ModelForm):
 
 
 class CMTESponsorEditForm(ModelForm):
+    class Meta:
+        model = CMTETempSponsor
+
     qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),

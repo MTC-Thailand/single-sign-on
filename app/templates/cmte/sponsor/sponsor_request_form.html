@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Sponsor Form{% endblock %}
+{% block title %}Sponsor Request Form{% endblock %}
 
 {% block content %}
     {% include "cmte/nav.html" %}
     <section class="section">
-        <h1 class="title has-text-centered">ลงทะเบียนสถาบันการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
+        <h1 class="title has-text-centered">ขอแก้ไขข้อมูลสถาบัน {{ sponsor.name }}</h1>
         <div class="columns">
             <div class="column box">
                 {% include "messages.html" %}
@@ -23,20 +23,6 @@
                             {{ form.affiliation(class="input is-danger") }}
                         </div>
                     </div>
-                    {% if is_admin %}
-                        <div class="field">
-                            <label class="label">วันที่ขึ้นทะเบียน</label>
-                            <div class="control">
-                                {{ form.registered_date(class="input") }}
-                            </div>
-                        </div>
-                        <div class="field">
-                            <label class="label">วันที่หมดอายุ</label>
-                            <div class="control">
-                                {{ form.expire_date(class="input") }}
-                            </div>
-                        </div>
-                    {% endif %}
                     <label class="label">ลักษณะองค์กร</label>
                     <div class="field">
                         <div class="select">
@@ -57,6 +43,17 @@
                     </div>
                     <div class="field">
                         <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
+                        {% for doc in sponsor.docs %}
+                            {% if not doc.is_payment_slip %}
+                                <a class="button is-small" href="{{url_for('cmte.download_file', key=doc.key,
+                                    download_filename=doc.filename)}}">
+                                    <span class="icon">
+                                        <i class="fas fa-cloud-download-alt"></i>
+                                    </span>
+                                    <span>{{ doc.filename }}</span>
+                                </a>
+                            {% endif %}
+                        {% endfor %}
                         <div class="control has-icons-left">
                             {{ form.qualifications() }}
                         </div>
@@ -83,7 +80,7 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">{{ form.zipcode.label }}</label>
+                        <label class="label">รหัสไปรษณีย์</label>
                         <div class="control">
                             {{ form.zipcode(class="input") }}
                         </div>
@@ -102,15 +99,9 @@
                         </div>
                     </div>
                     <div class="field is-grouped">
+                        <a type="button" href="{{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}" class="button is-light">Cancel</a>
                         <div class="control">
-                            {% if is_admin %}
-                                <a type="button" href="{{ url_for('users.cmte_admin_index') }}" class="button is-light">Cancel</a>
-                            {% else %}
-                                <a type="button" href="{{ url_for('cmte.cmte_index') }}" class="button is-light">Cancel</a>
-                            {% endif %}
-                        </div>
-                        <div class="control">
-                            <input type="submit" value="Register" class="button is-danger">
+                            <input type="submit" value="submit" class="button is-danger">
                         </div>
                     </div>
                 </form>
@@ -118,12 +109,4 @@
         </div>
     </section>
 {% endblock %}
-{% block scripts %}
-    {{ super() }}
-<script>
-    $(document).ready(function () {
-        htmx.trigger(htmx.find('#type'), 'change')
-    })
 
-</script>
-{% endblock %}

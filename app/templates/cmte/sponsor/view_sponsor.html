@@ -131,10 +131,30 @@
                                 {% for req in sponsor.requests %}
                                     {% if req.type == 'edit' %}
                                         <tr>
-                                            <td>{{ req.created_at|localdatetime }}</td>
+                                            <td>{{ req.created_at|localdatetime }}
+                                                {% for temp in temp_data %}
+                                                <ul>
+                                                    {% for col, value in temp.items() %}
+                                                        {% if col == 'qualifications' %}
+                                                            <li><strong>{{ col.capitalize() }}:</strong>
+                                                                {% for qual in value %}
+                                                                    <span>{{ qual }}</span>{% if not loop.last %}, {% endif %}
+                                                                {% endfor %}
+                                                            </li>
+                                                        {% else %}
+                                                            <li><strong>{{ col.capitalize() }}:</strong> {{ value }}</li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </ul>
+                                                {% endfor %}
+                                            </td>
                                             <td>
                                                 {{ req.approved_at|localdatetime or '' }}
                                                 {% if is_admin %}
+                                                    {% for t in sponsor.temp %}
+                                                        {{ t.name }}
+                                                        {{ t.address }}
+                                                    {% endfor %}
                                                 {% if not req.approved_at %}
                                                     <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข')"
                                                         href="{{ url_for('cmte.approved_edit_sponsor', request_id=req.id) }}"

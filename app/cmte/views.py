@@ -876,16 +876,19 @@ def request_edit_sponsor(sponsor_id):
     form = CMTESponsorEditForm(obj=sponsor)
     if request.method == 'POST':
         if form.validate_on_submit():
-            create_request = CMTESponsorRequest(
-                sponsor=sponsor,
-                type='edit',
-                created_at=arrow.now('Asia/Bangkok').datetime
-            )
-            db.session.add(create_request)
-            db.session.commit()
-
-            form.populate_obj(sponsor)
-            db.session.commit()
+            temp_sponsor = CMTETempSponsor()
+            temp_sponsor.name = form.name.data if form.name.data != sponsor.name else ''
+            temp_sponsor.affiliation = form.affiliation.data if form.affiliation.data != sponsor.affiliation else ''
+            temp_sponsor.address = form.address.data if form.address.data != sponsor.address else ''
+            temp_sponsor.zipcode = form.zipcode.data if form.zipcode.data != sponsor.zipcode else ''
+            temp_sponsor.telephone = form.telephone.data if form.telephone.data != sponsor.telephone else ''
+            temp_sponsor.email = form.email.data if form.email.data != sponsor.email else ''
+            temp_sponsor.type = form.type.data if form.type.data != sponsor.type else ''
+            temp_sponsor.type_detail = form.type_detail.data if form.type_detail.data != sponsor.type_detail else ''
+            temp_sponsor.private_sector = form.private_sector.data if form.private_sector.data else False
+            temp_sponsor.qualifications = form.qualifications.data if form.qualifications.data != sponsor.qualifications else ''
+            temp_sponsor.sponsor = sponsor
+            db.session.add(temp_sponsor)
 
             s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
@@ -896,13 +899,20 @@ def request_edit_sponsor(sponsor_id):
                     filename = _file.filename
                     key = uuid.uuid4()
                     s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename, request_id=create_request.id)
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
                     doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                     doc.note = doc_form.note.data
                     db.session.add(doc)
-                    db.session.commit()
-            flash(f'ส่งขอแก้ไขข้อมูลเรียบร้อย', 'success')
 
+            create_request = CMTESponsorRequest(
+                sponsor=sponsor,
+                created_at=arrow.now('Asia/Bangkok').datetime,
+                type='edit'
+            )
+            db.session.add(create_request)
+            db.session.commit()
+            flash(f'ส่งขอแก้ไขข้อมูลเรียบร้อย', 'success')
+            #send email to admin
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
             flash(f'Errors: {form.errors}', 'danger')
@@ -918,6 +928,21 @@ def manage_sponsor(sponsor_id):
     pending_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id,
                                                               expired_sponsor_date=sponsor.expire_date).first()
     edit_request = CMTESponsorRequest.query.filter_by(type='edit').first()
+    temp_sponsors = CMTETempSponsor.query.filter_by(sponsor_id=sponsor.id)
+    columns = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email','type','type_detail','qualifications']
+
+    temp_data = []
+    for temp in temp_sponsors:
+        temp_info = {}
+        for col in columns:
+            value = getattr(temp, col)
+            if value:
+                temp_info[col] = value
+
+        if temp.qualifications:
+            temp_info['qualifications'] = [qual.type for qual in temp.qualifications]
+
+        temp_data.append(temp_info)
     if form.validate_on_submit():
         event_sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form.populate_obj(event_sponsor)
@@ -944,7 +969,7 @@ def manage_sponsor(sponsor_id):
         return resp
     is_admin = True if cmte_admin_permission else False
     return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor, is_admin=is_admin,
-                           pending_request=pending_request, edit_request=edit_request)
+                           pending_request=pending_request, edit_request=edit_request, temp_data=temp_data)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/payment', methods=['GET', 'POST'])
@@ -1104,6 +1129,16 @@ def approved_edit_sponsor(request_id):
     edit_request = CMTESponsorRequest.query.get(request_id)
     edit_request.approved_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(edit_request)
+    sponsor = CMTEEventSponsor.query.filter_by(id=edit_request.sponsor_id).first()
+    temp_sponsor = CMTETempSponsor.query.filter_by(sponsor_id=edit_request.sponsor_id).first()
+    fields = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
+               'qualifications', 'private_sector']
+    for field in fields:
+        temp_value = getattr(temp_sponsor, field)
+        if temp_value and getattr(sponsor, field) != temp_value:
+            setattr(sponsor, field, temp_value)
+    db.session.add(sponsor)
+    db.session.delete(temp_sponsor)
     db.session.commit()
     flash('อนุมัติคำขอแก้ไขข้อมูลแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'warning')
     #send email to sponsor member
