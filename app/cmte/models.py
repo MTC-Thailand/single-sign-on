@@ -81,6 +81,44 @@ class CMTEEventSponsor(db.Model):
         return status
 
 
+class CMTESponsorMember(UserMixin, db.Model):
+    __versioned__ = {}
+    __tablename__ = 'cmte_sponsor_members'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    old_user_id = db.Column('old_user_id', db.Integer())
+    title = db.Column('title', db.String(), info={'label': 'คำนำหน้า'})
+    firstname = db.Column('firstname', db.String(), info={'label': 'ชื่อ', 'validators': [DataRequired()]})
+    lastname = db.Column('lastname', db.String(), info={'label': 'นามสกุล', 'validators': [DataRequired()]})
+    email = db.Column('email', EmailType(), info={'label': 'E-mail', 'validators': [DataRequired()]})
+    _password_hash = db.Column(db.String(255))
+    mobile_phone = db.Column('mobile_phone', db.String(), info={'label': 'โทรศัพท์มือถือ'})
+    telephone = db.Column('telephone', db.String(), info={'label': 'โทรศัพท์'})
+    position = db.Column('position', db.String(), info={'label': 'ตำแหน่ง'})
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
+    is_coordinator = db.Column('is_coordinator', db.Boolean(), default=False)
+
+    def verify_password(self, password):
+        return check_password_hash(self._password_hash, password)
+
+    @property
+    def password(self):
+        #raise ValueError
+        return 'Password is not accessible'
+
+    @password.setter
+    def password(self, pw):
+        self._password_hash = generate_password_hash(pw)
+
+    def __str__(self):
+        return f'{self.title or ""} {self.firstname} {self.lastname}'
+
+    @property
+    def unique_id(self):
+        return f'sponsor-member-{self.id}'
+
+
 class CMTETempSponsor(db.Model):
     __tablename__ = 'cmte_temp_sponsors'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
@@ -123,6 +161,9 @@ class CMTESponsorRequest(db.Model):
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship(CMTEEventSponsor,
                               backref=db.backref('requests', lazy='dynamic'))
+    member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
+    member = db.relationship(CMTESponsorMember,
+                              backref=db.backref('member_requests', lazy='dynamic'))
     type = db.Column('type', db.String())
     created_at = db.Column('created_at', db.DateTime(timezone=True))
     expired_sponsor_date = db.Column('expired_sponsor_date', db.Date())
@@ -175,42 +216,7 @@ class CMTEReceiptDetail(db.Model):
     def __str__(self):
         return f'{self.name } รายการ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode}'
 
-class CMTESponsorMember(UserMixin, db.Model):
-    __versioned__ = {}
-    __tablename__ = 'cmte_sponsor_members'
-    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    old_user_id = db.Column('old_user_id', db.Integer())
-    title = db.Column('title', db.String(), info={'label': 'คำนำหน้า'})
-    firstname = db.Column('firstname', db.String(), info={'label': 'ชื่อ', 'validators': [DataRequired()]})
-    lastname = db.Column('lastname', db.String(), info={'label': 'นามสกุล', 'validators': [DataRequired()]})
-    email = db.Column('email', EmailType(), info={'label': 'E-mail', 'validators': [DataRequired()]})
-    _password_hash = db.Column(db.String(255))
-    mobile_phone = db.Column('mobile_phone', db.String(), info={'label': 'โทรศัพท์มือถือ'})
-    telephone = db.Column('telephone', db.String(), info={'label': 'โทรศัพท์'})
-    position = db.Column('position', db.String(), info={'label': 'ตำแหน่ง'})
-    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
-    sponsor = db.relationship(CMTEEventSponsor,
-                              backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
-    is_coordinator = db.Column('is_coordinator', db.Boolean(), default=False)
 
-    def verify_password(self, password):
-        return check_password_hash(self._password_hash, password)
-
-    @property
-    def password(self):
-        #raise ValueError
-        return 'Password is not accessible'
-
-    @password.setter
-    def password(self, pw):
-        self._password_hash = generate_password_hash(pw)
-
-    def __str__(self):
-        return f'{self.title or ""} {self.firstname} {self.lastname}'
-
-    @property
-    def unique_id(self):
-        return f'sponsor-member-{self.id}'
 
 
 class CMTEEventCategory(db.Model):
