@@ -183,6 +183,9 @@ class CMTESponsorDoc(db.Model):
     request = db.relationship(CMTESponsorRequest,
                               backref=db.backref('docs', lazy='dynamic'))
     sponsor = db.relationship(CMTEEventSponsor, backref=db.backref('docs', cascade='all, delete-orphan', lazy='dynamic'))
+    qualification_id = db.Column('qualification_id', db.ForeignKey('cmte_sponsor_qualification.id'))
+    qualification = db.relationship(CMTESponsorQualification,
+                              backref=db.backref('docs'))
     key = db.Column('key', db.Text(), nullable=False)
     filename = db.Column('filename', db.Text(), nullable=False)
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
