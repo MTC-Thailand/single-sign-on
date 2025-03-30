@@ -156,7 +156,7 @@ class CMTESponsorEditForm(ModelForm):
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
     #upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
-    private_sector = SelectField(choices=['','องค์กรรัฐ','องค์กรเอกชน'])
+    private_sector = SelectField(choices=['องค์กรรัฐ','องค์กรเอกชน'])
 
 
 class CMTESponsorPaymentForm(FlaskForm):

@@ -932,6 +932,10 @@ def get_qualifications():
 def request_edit_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
     form = CMTESponsorEditForm(obj=sponsor)
+    if sponsor.private_sector:
+        form.private_sector.data = 'องค์กรเอกชน'
+    else:
+        form.private_sector.data = 'องค์กรรัฐ'
     if request.method == 'POST':
         if form.validate_on_submit():
             temp_sponsor = CMTETempSponsor()
@@ -962,6 +966,7 @@ def request_edit_sponsor(sponsor_id):
                     s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
                     doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
                     doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    #doc.qualification_id = qualifications_id
                     doc.note = doc_form.note.data
                     db.session.add(doc)
 
