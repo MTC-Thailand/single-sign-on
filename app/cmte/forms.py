@@ -3,7 +3,7 @@ from flask_wtf.file import FileField
 from wtforms.validators import NumberRange, EqualTo, Email, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
-from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField
+from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField
 from wtforms_components import DateField, DateTimeField, TimeField
 
 from app.cmte.models import *
@@ -143,7 +143,8 @@ class CMTEEventSponsorForm(ModelForm):
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
-    upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
+    #upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
+    private_sector = SelectField(choices=['','องค์กรรัฐ', 'องค์กรเอกชน'])
 
 
 class CMTESponsorEditForm(ModelForm):
@@ -154,7 +155,8 @@ class CMTESponsorEditForm(ModelForm):
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
-    upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
+    #upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
+    private_sector = SelectField(choices=['','องค์กรรัฐ','องค์กรเอกชน'])
 
 
 class CMTESponsorPaymentForm(FlaskForm):

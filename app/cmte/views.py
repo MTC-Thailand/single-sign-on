@@ -903,6 +903,29 @@ def get_org_type():
     return resp
 
 
+@cmte.route('/sponsors/get_qualifications', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
+def get_qualifications():
+    org_type = request.args.get('private_sector', type=str)
+    if org_type == 'องค์กรรัฐ':
+        qualifications = CMTESponsorQualification.query.filter_by(private_sector=False).all()
+    else:
+        qualifications = CMTESponsorQualification.query.all()
+    qualification_html = ""
+    for i, qualification in enumerate(qualifications, start=1):
+        qualification_html += f'''
+                <div class="field">
+                    <label class="label">{qualification}</label>
+                    <button class="button is-info">อัพโหลดเอกสาร</button>
+                    <textarea name="note_qualification_{i}" rows="2" class="textarea" placeholder='คำอธิบายเพิ่มเติม (ถ้ามี)'></textarea>
+                </div>
+            '''
+    resp = make_response(qualification_html)
+    resp.headers['HX-Trigger-After-Swap'] = 'initSelect2'
+    return resp
+
+
 @cmte.route('/sponsors/<int:sponsor_id>/edit-request', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.require()

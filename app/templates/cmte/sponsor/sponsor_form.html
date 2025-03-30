@@ -51,30 +51,16 @@
                     </div>
                     <div class="field">
                         <label class="label">ประเภทหน่วยงาน</label>
-                        <div class="control">
-                            {{ form.private_sector() }}องค์กรเอกชน
+                        <div class="select">
+                            {{ form.private_sector(**{'hx-get': url_for("cmte.get_qualifications"),
+                            'hx-target': '#related-doc', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
                         </div>
                     </div>
                     <div class="field">
                         <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
-                        <div class="control has-icons-left">
-                            {{ form.qualifications() }}
-                        </div>
-                    </div>
-                    <div class="notification">
-                        {% for upload_form in form.upload_files %}
-                            <div class="file">
-                                <label class="file-label">
-                                    {{ upload_form.upload_file() }}
-                                </label>
-                            </div>
-                            <div class="field">
-                                <label class="label">{{ upload_form.note.label }}</label>
-                                <div class="control">
-                                    {{ upload_form.note(class="textarea", placeholder="Optional") }}
-                                </div>
-                            </div>
-                        {% endfor %}
+                        <label class="label" style="padding-left: 50px">
+                            <div id="related-doc"></div>
+                        </label>
                     </div>
                     <div class="field">
                         <label class="label">{{ form.address.label }}ของหน่วยงาน</label>
