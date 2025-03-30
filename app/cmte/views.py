@@ -15,6 +15,7 @@ from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from pytz import timezone
+from werkzeug.utils import secure_filename
 
 from app import db, sponsor_event_management_permission
 from app.cmte import cmte_bp as cmte
@@ -897,7 +898,7 @@ def get_org_type():
         detail = 'โปรดระบุ'
     elif org_type == 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน':
         detail = 'โปรดระบุ'
-    type_detail = f'''{detail}<input class="js-example-basic-single" name="type_detail">'''
+    type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
     resp = make_response(type_detail)
     resp.headers['HX-Trigger-After-Swap'] = 'initSelect2'
     return resp
@@ -918,6 +919,7 @@ def get_qualifications():
                 <div class="field">
                     <label class="label">{qualification}</label>
                     <button class="button is-info">อัพโหลดเอกสาร</button>
+                    <input type="file" name="file_qualification_{i}" class="file-input">
                     <textarea name="note_qualification_{i}" rows="2" class="textarea" placeholder='คำอธิบายเพิ่มเติม (ถ้ามี)'></textarea>
                 </div>
             '''
@@ -950,25 +952,30 @@ def request_edit_sponsor(sponsor_id):
             temp_sponsor.private_sector = form.private_sector.data if form.private_sector.data else False
             if form.qualifications.data != sponsor.qualifications:
                 temp_sponsor.qualifications = form.qualifications.data
+                s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                         aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                         region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+                for qualification_id in form.qualifications.data:
+                    qualification = CMTESponsorQualification.query.get(qualification_id)
+
+                    file_field_name = f'file_qualification_{qualification.id}'
+                    if file_field_name in request.files:
+                        _file = request.files[file_field_name]
+                        if _file:
+                            original_filename = secure_filename(_file.filename)
+                            filename = f"new_{original_filename}"
+                            key = uuid.uuid4()
+                            s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                            doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                            doc.qualification_id = qualification.id
+                            doc.upload_datetime = datetime.now()
+                            doc.note = request.form.get(f"note_qualification_{qualification.id}")
+                            db.session.add(doc)
             else:
                 temp_sponsor.qualifications = []
             temp_sponsor.sponsor = sponsor
             db.session.add(temp_sponsor)
 
-            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
-                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
-                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
-            for doc_form in form.upload_files:
-                _file = doc_form.upload_file.data
-                if _file:
-                    filename = _file.filename
-                    key = uuid.uuid4()
-                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
-                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
-                    #doc.qualification_id = qualifications_id
-                    doc.note = doc_form.note.data
-                    db.session.add(doc)
 
             columns_with_data = []
             fields = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
