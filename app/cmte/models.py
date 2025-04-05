@@ -98,7 +98,6 @@ class CMTESponsorMember(UserMixin, db.Model):
     sponsor = db.relationship(CMTEEventSponsor,
                               backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
     is_coordinator = db.Column('is_coordinator', db.Boolean(), default=False)
-    is_active = db.Column('is_active', db.Boolean(), default=True)
 
     def verify_password(self, password):
         return check_password_hash(self._password_hash, password)
