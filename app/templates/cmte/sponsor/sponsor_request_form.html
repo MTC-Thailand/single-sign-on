@@ -45,9 +45,9 @@
                     <div class="field">
                         <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
                         <label class="label" style="padding-left: 50px">
-                            <div id="related-doc"></div>
                         </label>
                     </div>
+                    <div id="related-doc"></div>
                     <div class="field">
                         {% for doc in sponsor.docs %}
                             {% if not doc.is_payment_slip %}
@@ -96,5 +96,14 @@
             </div>
         </div>
     </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $(document).ready(()=>{
+        htmx.trigger('#private_sector', 'change')
+        htmx.trigger('#type', 'change')
+    })
+    </script>
 {% endblock %}
 

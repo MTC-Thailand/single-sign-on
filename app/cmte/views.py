@@ -57,6 +57,7 @@ def download_file(key):
 
 @cmte.get('/')
 @login_required
+@cmte_sponsor_admin_permission.require()
 def cmte_index():
     warning_msg = ''
     if cmte_admin_permission:
@@ -700,7 +701,7 @@ def sponsor_member_login():
 def register_sponsor_member(sponsor_id=None):
     if sponsor_id:
         all_members = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id)\
-                        .filter(CMTESponsorMember.is_active != False).count()
+                        .filter(CMTESponsorMember.is_valid != False).count()
         print(all_members)
         if all_members >= 10:
             flash(f'ไม่สามารถเพิ่มข้อมูลใหม่ได้ เนื่องจากจำนวนผู้ประสานงานมีมากกว่าที่กำหนด', 'danger')
@@ -724,9 +725,6 @@ def register_sponsor_member(sponsor_id=None):
                 #     print('send notification to admin of CMTE')
                 return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
             else:
-                member.is_coordinator = True
-                db.session.add(member)
-                db.session.commit()
                 flash(f'ลงทะเบียนเรียบร้อยแล้ว กรุณาลงชื่อเข้าใช้งาน', 'success')
                 return redirect(url_for('cmte.sponsor_member_login'))
         else:
@@ -778,7 +776,7 @@ def del_member(sponsor_id, member_id):
     if member.is_coordinator:
         flash('{}เป็นผู้ประสานงานหลัก หากต้องการลบบัญชีนี้ กรุณาแก้ไขสถานะผู้ประสานงานหลักก่อน'.format(member), 'warning')
     else:
-        member.is_active = False
+        member.is_valid = False
         db.session.add(member)
         db.session.commit()
         flash('ยกเลิกบัญชี {} เรียบร้อยแล้ว'.format(member), 'warning')
@@ -918,8 +916,9 @@ def get_qualifications():
         qualification_html += f'''
                 <div class="field">
                     <label class="label">{qualification}</label>
-                    <button class="button is-info">อัพโหลดเอกสาร</button>
-                    <input type="file" name="file_qualification_{i}" class="file-input">
+                    <input type="file" name="file_qualification_{i}">
+                </div>
+                <div class="field">
                     <textarea name="note_qualification_{i}" rows="2" class="textarea" placeholder='คำอธิบายเพิ่มเติม (ถ้ามี)'></textarea>
                 </div>
             '''
