@@ -108,6 +108,7 @@
     {{ super() }}
 <script>
     $(document).ready(function () {
+        htmx.trigger('#private_sector', 'change')
         htmx.trigger(htmx.find('#type'), 'change')
     })
 
