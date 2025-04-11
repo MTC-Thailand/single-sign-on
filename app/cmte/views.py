@@ -67,7 +67,7 @@ def cmte_index():
         if current_user.sponsor.expire_status() == 'inactive':
             if is_request:
                 warning_msg = 'กรุณาดำเนินการชำระค่าธรรมเนียม ขออภัยหากท่านชำระแล้ว' if is_request.approved_at else ''
-        elif current_user.sponsor.expire_status() == 'expired' or current_user.sponsor.expire_status() == 'nearly_expire' :
+        elif current_user.sponsor.expire_status() == 'expired' or current_user.sponsor.expire_status() == 'nearly_expire':
             if is_request:
                 if is_request.approved_at:
                     warning_msg = 'กรุณาดำเนินการชำระค่าธรรมเนียม'
@@ -700,8 +700,8 @@ def sponsor_member_login():
 @cmte.route('/sponsors/members/register/add-member/<int:sponsor_id>', methods=['GET', 'POST'])
 def register_sponsor_member(sponsor_id=None):
     if sponsor_id:
-        all_members = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id)\
-                        .filter(CMTESponsorMember.is_valid != False).count()
+        all_members = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id) \
+            .filter(CMTESponsorMember.is_valid != False).count()
         print(all_members)
         if all_members >= 10:
             flash(f'ไม่สามารถเพิ่มข้อมูลใหม่ได้ เนื่องจากจำนวนผู้ประสานงานมีมากกว่าที่กำหนด', 'danger')
@@ -713,6 +713,7 @@ def register_sponsor_member(sponsor_id=None):
             member = CMTESponsorMember()
             form.populate_obj(member)
             member.password = form.password.data
+            member.is_valid = True
             db.session.add(member)
             db.session.commit()
             if sponsor_id:
@@ -774,7 +775,8 @@ def member_modal(member_id):
 def del_member(sponsor_id, member_id):
     member = CMTESponsorMember.query.get(member_id)
     if member.is_coordinator:
-        flash('{}เป็นผู้ประสานงานหลัก หากต้องการลบบัญชีนี้ กรุณาแก้ไขสถานะผู้ประสานงานหลักก่อน'.format(member), 'warning')
+        flash('{}เป็นผู้ประสานงานหลัก หากต้องการลบบัญชีนี้ กรุณาแก้ไขสถานะผู้ประสานงานหลักก่อน'.format(member),
+              'warning')
     else:
         member.is_valid = False
         db.session.add(member)
@@ -792,7 +794,7 @@ def request_change_coordinator_member(sponsor_id, member_id):
         sponsor_id=sponsor_id,
         created_at=arrow.now('Asia/Bangkok').datetime,
         type='edit',
-        comment='Lead coordinator '+ member.email,
+        comment='Lead coordinator ' + member.email,
         member=member
     )
     db.session.add(create_request)
@@ -906,11 +908,11 @@ def get_org_type():
 @login_required
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def get_qualifications():
-    org_type = request.args.get('private_sector', type=str)
-    if org_type == 'องค์กรรัฐ':
-        qualifications = CMTESponsorQualification.query.filter_by(private_sector=False).all()
-    else:
+    private_sector = request.args.get('private_sector')
+    if private_sector == 'True':
         qualifications = CMTESponsorQualification.query.all()
+    else:
+        qualifications = CMTESponsorQualification.query.filter_by(private_sector=False).all()
     qualification_html = ""
     for i, qualification in enumerate(qualifications, start=1):
         qualification_html += f'''
@@ -975,10 +977,9 @@ def request_edit_sponsor(sponsor_id):
             temp_sponsor.sponsor = sponsor
             db.session.add(temp_sponsor)
 
-
             columns_with_data = []
             fields = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
-                       'qualifications', 'private_sector']
+                      'qualifications', 'private_sector']
 
             for field in fields:
                 temp_value = getattr(temp_sponsor, field, None)
@@ -1001,7 +1002,7 @@ def request_edit_sponsor(sponsor_id):
             db.session.add(create_request)
             db.session.commit()
             flash(f'ส่งขอแก้ไขข้อมูลเรียบร้อย', 'success')
-            #send email to admin
+            # send email to admin
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
             flash(f'Errors: {form.errors}', 'danger')
@@ -1015,10 +1016,11 @@ def manage_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
     form = CMTEEventSponsorForm(obj=sponsor)
     pending_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id,
-                                                              expired_sponsor_date=sponsor.expire_date).first()
+                                                         expired_sponsor_date=sponsor.expire_date).first()
     edit_request = CMTESponsorRequest.query.filter_by(type='edit').first()
     temp_sponsors = CMTETempSponsor.query.filter_by(sponsor_id=sponsor.id)
-    columns = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email','type','type_detail','qualifications']
+    columns = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
+               'qualifications']
 
     temp_data = []
     for temp in temp_sponsors:
@@ -1069,7 +1071,8 @@ def sponsor_payment(sponsor_id, request_id):
     form = CMTESponsorPaymentForm(obj=sponsor)
     if request.method == 'POST':
         if form.validate_on_submit():
-            doc = CMTESponsorDoc.query.filter_by(sponsor_id=sponsor_id, is_payment_slip=True, request_id=request_id).first()
+            doc = CMTESponsorDoc.query.filter_by(sponsor_id=sponsor_id, is_payment_slip=True,
+                                                 request_id=request_id).first()
             if doc:
                 db.session.delete(doc)
                 db.session.commit()
@@ -1091,7 +1094,6 @@ def sponsor_payment(sponsor_id, request_id):
             else:
                 flash('ไม่พบ slip ที่อัพโหลด กรุณาดำเนินการใหม่อีกครั้ง', 'danger')
                 return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
-
 
             req = CMTESponsorRequest.query.get(request_id)
             dt = '{} {}'.format(form.paid_date.data, form.paid_time.data)
@@ -1202,13 +1204,13 @@ def enable_sponsor(sponsor_id):
 @login_required
 @cmte_admin_permission.require()
 def approved_renew_sponsor(request_id):
-    #need to keep old expired_date?
+    # need to keep old expired_date?
     renew_request = CMTESponsorRequest.query.get(request_id)
     renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(renew_request)
     db.session.commit()
     flash('อนุมัติคำขอต่ออายุสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
-    #send email to sponsor member
+    # send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
 
 
@@ -1222,7 +1224,7 @@ def approved_edit_sponsor(request_id):
     sponsor = CMTEEventSponsor.query.filter_by(id=edit_request.sponsor_id).first()
     temp_sponsor = CMTETempSponsor.query.filter_by(sponsor_id=edit_request.sponsor_id).first()
     fields = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
-               'qualifications', 'private_sector']
+              'qualifications', 'private_sector']
     for field in fields:
         temp_value = getattr(temp_sponsor, field)
         if temp_value and getattr(sponsor, field) != temp_value:
@@ -1230,8 +1232,9 @@ def approved_edit_sponsor(request_id):
     db.session.add(sponsor)
     db.session.delete(temp_sponsor)
     db.session.commit()
-    flash('อนุมัติคำขอแก้ไขข้อมูลแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'warning')
-    #send email to sponsor member
+    flash('อนุมัติคำขอแก้ไขข้อมูลแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว',
+          'warning')
+    # send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor_id))
 
 
@@ -1260,7 +1263,7 @@ def reject_sponsor(sponsor_id, request_id):
         sponsor.disable_at = arrow.now('Asia/Bangkok').datetime
         db.session.add(sponsor)
         db.session.commit()
-        #send email to sponsor member
+        # send email to sponsor member
         return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
     else:
         for er in form.errors:
@@ -1279,7 +1282,7 @@ def admin_delete_doc(sponsor_id, doc_id):
     db.session.delete(doc)
     db.session.commit()
     flash('ลบไฟล์เรียบร้อยแล้ว', 'success')
-    #send email to sponsor member
+    # send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
@@ -1304,7 +1307,7 @@ def verified_payment_sponsor(request_id):
     db.session.add(sponsor)
     db.session.commit()
     flash('ตรวจสอบการชำระเงินเรียบร้อยแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
-    #send email to sponsor member
+    # send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=payment_request.sponsor_id))
 
 
