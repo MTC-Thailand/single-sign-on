@@ -245,7 +245,7 @@ class MemberPID(Resource):
                 }
             }
             return jsonify(data=data)
-        return jsonify(data=None), 404
+        return jsonify(data={}), 404
 
 
 class MemberLicense(Resource):
@@ -517,7 +517,7 @@ class MemberInfo(Resource):
         # '''
         #
         # mem_status_data = pd.read_sql_query(query, con=engine)
-        data['mem_status'] = member.status
+        data['mem_status'] = member.status if member else None
 
         if data['emp_function_id']:
             query = f"""
