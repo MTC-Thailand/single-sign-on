@@ -7,47 +7,47 @@
 <section class="section">
     {% include "messages.html" %}
     <div class="columns">
-        <div class="column is-one-third is-offset-2">
-            <h1 class="title is-size-6">Log In ด้วยระบบ One Platform</h1>
-            <form method="post" class="notification is-light">
-                {{form.hidden_tag()}}
-                <div class="field">
-                    <label class="label">{{form.pid.label}}</label>
-                    <div class="control">
-                        {{form.pid(class="input")}}
-                    </div>
-                </div>
-                <div class="field">
-                    <label class="label">{{form.telephone.label}}</label>
-                    <div class="control">
-                        {{form.telephone(class="input")}}
-                    </div>
-                    <p class="help is-info">กรุณากรอกเฉพาะหมายเลข เช่น 09099045xx</p>
-                </div>
-                <div class="field">
-                    <button type="button" class="button is-link"
-                            hx-get="{{url_for('member.get_login_otp')}}"
-                            hx-sync="closest form:drop"
-                            hx-include="#telephone, #pid"
-                            hx-target="#otp-message">
-                        ขอรหัส OTP
-                    </button>
-                </div>
-                <div class="field">
-                    <label class="label">{{form.otp.label}}</label>
-                    <div class="control">
-                        {{form.otp(class="input")}}
-                    </div>
-                    <p class="help is-info" id="otp-message">กรุณาคลิกขอรหัส OTP เพื่อใช้ในการยืนยันตัวตน</p>
-                </div>
-                <div class="field">
-                    <div class="control">
-                        <input type="submit" value="Log In" class="button is-primary">
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="column is-one-third">
+<!--        <div class="column is-one-third is-offset-2">-->
+<!--            <h1 class="title is-size-6">Log In ด้วยระบบ One Platform</h1>-->
+<!--            <form method="post" class="notification is-light">-->
+<!--                {{form.hidden_tag()}}-->
+<!--                <div class="field">-->
+<!--                    <label class="label">{{form.pid.label}}</label>-->
+<!--                    <div class="control">-->
+<!--                        {{form.pid(class="input")}}-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--                <div class="field">-->
+<!--                    <label class="label">{{form.telephone.label}}</label>-->
+<!--                    <div class="control">-->
+<!--                        {{form.telephone(class="input")}}-->
+<!--                    </div>-->
+<!--                    <p class="help is-info">กรุณากรอกเฉพาะหมายเลข เช่น 09099045xx</p>-->
+<!--                </div>-->
+<!--                <div class="field">-->
+<!--                    <button type="button" class="button is-link"-->
+<!--                            hx-get="{{url_for('member.get_login_otp')}}"-->
+<!--                            hx-sync="closest form:drop"-->
+<!--                            hx-include="#telephone, #pid"-->
+<!--                            hx-target="#otp-message">-->
+<!--                        ขอรหัส OTP-->
+<!--                    </button>-->
+<!--                </div>-->
+<!--                <div class="field">-->
+<!--                    <label class="label">{{form.otp.label}}</label>-->
+<!--                    <div class="control">-->
+<!--                        {{form.otp(class="input")}}-->
+<!--                    </div>-->
+<!--                    <p class="help is-info" id="otp-message">กรุณาคลิกขอรหัส OTP เพื่อใช้ในการยืนยันตัวตน</p>-->
+<!--                </div>-->
+<!--                <div class="field">-->
+<!--                    <div class="control">-->
+<!--                        <input type="submit" value="Log In" class="button is-primary">-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </form>-->
+<!--        </div>-->
+        <div class="column is-one-third is-offset-3">
             <h1 class="title is-size-6">Log In ด้วย username และ password</h1>
             <form class="notification is-warning is-light" method="post" action="{{url_for('member.old_form_login')}}">
                 {{old_form.hidden_tag()}}
@@ -71,9 +71,16 @@
             </form>
             <p class="has-text-danger notification is-light is-danger">
                 <strong>
-                    ระบบลงชื่อด้วย username และ password จะยุติการใช้งานในปี 2568
+                    หากไม่ทราบ username หรือ password กรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
                 </strong>
             </p>
+        </div>
+        <div class="column">
+            <label class="label">สอบถามเกี่ยวกับ CMTE หรือบัญชีสมาชิก</label>
+            <figure class="image is-128x128">
+                <img src="https://qr-official.line.me/gs/M_150mpurb_BW.png?oat_content=qr">
+            </figure>
+            <a class="button is-success" href="https://lin.ee/oiYkxp7">คลิกเพื่อเพิ่มเพื่อน</a>
         </div>
     </div>
 </section>
