@@ -48,6 +48,12 @@ class MemberLoginOldForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
 
 
+class MemberUsernamePasswordForm(ModelForm):
+    class Meta:
+        model = Member
+        only = ['username', 'password']
+
+
 class MemberInfoForm(ModelForm):
     class Meta:
         model = Member

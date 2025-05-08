@@ -9,7 +9,7 @@ from app import db, admin_permission
 from app.admin import webadmin
 from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
-from app.members.forms import MemberInfoForm
+from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm
 from app.members.models import License, Member
 
 
@@ -152,15 +152,46 @@ def view_member_password():
             <p>วันเดือนปีเกิด {license.member.dob}</p>
             <p>username: {license.member.username}</p>
             <p>password: {license.member.password}</p>
+            <a class="button" hx-swap="innerHTML"
+                hx-target="#password-text"
+                hx-get="{url_for('webadmin.edit_member_password', member_id=license.member.id)}">
+                <span class="icon">
+                    <i class="fas fa-pencil-alt"></i>
+                </span>
+                <span>Edit</span>
+            </a>
             '''
     return render_template('webadmin/password_view.html')
 
 
-
-
-    member = Member.query.get()
-    form = MemberInfoAdminForm(obj=member)
-    return render_template('webadmin/member_info_form.html', form=form)
+@webadmin.route('/members/<int:member_id>/password-view/edit', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def edit_member_password(member_id):
+    member = Member.query.get(member_id)
+    form = MemberUsernamePasswordForm(obj=member)
+    if request.method == 'GET':
+        return render_template('webadmin/partials/edit_password_form.html', form=form, member=member)
+    if form.validate_on_submit():
+        form.populate_obj(member)
+        db.session.add(member)
+        db.session.commit()
+        return f'''
+        <p>หมายเลขโทรศัพท์ {member.tel}</p>
+        <p>วันเดือนปีเกิด {member.dob}</p>
+        <p>username: {member.username}</p>
+        <p>password: {member.password}</p>
+        <a class="button" hx-swap="innerHTML"
+            hx-target="#password-text"
+            hx-get="{url_for('webadmin.edit_member_password', member_id=member_id)}">
+            <span class="icon">
+                <i class="fas fa-pencil-alt"></i>
+            </span>
+            <span>Edit</span>
+        </a>
+        '''
+    else:
+        print(form.errors)
 
 
 @webadmin.route('/api/members/search', methods=['GET', 'POST'])
