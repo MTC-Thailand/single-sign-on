@@ -179,6 +179,21 @@ class CMTESponsorRequest(db.Model):
     rejected_at = db.Column('rejected_at', db.DateTime(timezone=True))
 
 
+class CMTESponsorEditRequest(db.Model):
+    __tablename__ = 'cmte_sponsor_edit_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('edit_requests', lazy='dynamic'))
+    member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
+    member = db.relationship(CMTESponsorMember,
+                              backref=db.backref('edit_requests', lazy='dynamic'))
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    status = db.Column('status', db.String())
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
+    version_index = db.Column('version_index', db.Integer())
+
+
 class CMTESponsorDoc(db.Model):
     __tablename__ = 'cmte_sponsor_docs'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
