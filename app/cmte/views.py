@@ -953,7 +953,8 @@ def request_edit_sponsor(sponsor_id):
                 doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
                 doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                 doc.note = request.form.get(field + '_note')
-                db.session.add(doc)
+                if filename:
+                    db.session.add(doc)
             db.session.commit()
             version_index = sponsor.versions.count() - 1
             create_request = CMTESponsorEditRequest(
