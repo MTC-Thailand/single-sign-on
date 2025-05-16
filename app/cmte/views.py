@@ -1064,6 +1064,11 @@ def sponsor_payment(sponsor_id, request_id):
             req.paid_at = paid_datetime
             db.session.add(req)
 
+            is_receive = CMTEReceiptDetail.query.filter_by(sponsor_id=sponsor_id).first()
+            if is_receive:
+                db.session.delete(is_receive)
+                db.session.commit()
+
             create_receipt = CMTEReceiptDetail(
                 sponsor_id=sponsor_id,
                 name=form.name.data,

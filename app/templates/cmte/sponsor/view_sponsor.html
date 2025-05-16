@@ -178,14 +178,15 @@
                                             <span class="button is-success is-light">ส่งคำขอต่ออายุเรียบร้อยแล้ว รอการอนุมัติ
                                             </span>
                                         {% elif not pending_request.paid_at %}
-                                            <span class="button is-danger">อนุมัติคำขอต่ออายุ กรุณาดำเนินการชำระค่าธรรมเนียม
+                                            <span class="button is-danger">
+                                                อนุมัติคำขอต่ออายุ กรุณาดำเนินการชำระค่าธรรมเนียม และแนบ slip ด้านล่าง
                                             </span>
                                         {% endif %}
                                     {% else %}
                                         <a href="{{ url_for('cmte.request_renew_sponsor', sponsor_id=sponsor.id) }}"
                                            class="button is-warning">
                                             <span class="icon">
-                                                <i class="fa-solid fa-paper-plane"></i>
+                                                <i class="fa-solid fa-paper-plane fa-fade"></i>
                                             </span>
                                             <span>ส่งคำขอต่ออายุสถาบัน</span>
                                         </a>
@@ -193,7 +194,7 @@
                                 {% elif sponsor.expire_status() == "inactive" %}
                                     {% if pending_request %}
                                         {% if pending_request.approved_at and not pending_request.paid_at %}
-                                            <span class="button is-danger">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม
+                                            <span class="button is-danger">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม และแนบ slip ด้านล่าง
                                             </span>
                                         {% endif %}
                                     {% endif %}
@@ -245,19 +246,6 @@
                                         </td>
                                         <td>
                                             {{ req.paid_at|localdatetime or '' }}
-                                            {% if is_admin %}
-                                                {% if req.paid_at and not req.verified_at %}
-                                                    <br>
-                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยืนยันการชำระเงินค่าธรรมเนียม $$')"
-                                                    href="{{ url_for('cmte.verified_payment_sponsor', request_id=req.id) }}"
-                                                    class="button is-success is-outlined">
-                                                    <span class="icon">
-                                                        <i class="fa-solid fa-check-double"></i>
-                                                    </span>
-                                                    <span>verify payment</span>
-                                                    </a>
-                                                {% endif %}
-                                            {% endif %}
                                             {% if req.paid_at %}
                                                 <br>
                                                 {% for doc in req.docs %}
@@ -278,11 +266,24 @@
                                                     อยู่ระหว่างการตรวจสอบข้อมูล
                                                 {% endif %}
                                             {% endif %}
+                                            {% if is_admin %}
+                                                {% if req.paid_at and not req.verified_at %}
+                                                    <br>
+                                                    <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยืนยันการชำระเงินค่าธรรมเนียม $$')"
+                                                    href="{{ url_for('cmte.verified_payment_sponsor', request_id=req.id) }}"
+                                                    class="button is-success is-outlined fa-fade">
+                                                    <span class="icon">
+                                                        <i class="fa-solid fa-check-double fa-fade"></i>
+                                                    </span>
+                                                    <span>verify payment</span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
                                             {% if req.approved_at and not req.verified_at %}
-                                            <a class="button is-small" href="{{url_for('cmte.sponsor_payment',
+                                            <a class="button is-medium" href="{{url_for('cmte.sponsor_payment',
                                                 sponsor_id=sponsor.id, request_id=req.id)}}">
                                                 <span class="icon">
-                                                    <i class="fas fa-cloud-upload-alt"></i>
+                                                    <i class="fas fa-cloud-upload-alt fa-fade"></i>
                                                 </span>
                                                 <span>แนบ slip การชำระเงิน</span>
                                             </a>

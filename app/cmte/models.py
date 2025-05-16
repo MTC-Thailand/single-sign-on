@@ -206,7 +206,7 @@ class CMTEReceiptDetail(db.Model):
     zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
 
     def __str__(self):
-        return f'{self.name } รายการ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode}'
+        return f'รายละเอียดบนใบเสร็จ ออกใบนาม: {self.name } รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode}'
 
 
 
