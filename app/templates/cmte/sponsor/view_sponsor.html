@@ -349,6 +349,27 @@
                                 {% endfor %}
                                 </tbody>
                             </table>
+                            {% if edit_requests %}
+                            <span>ประวัติการขอแก้ไขข้อมูลสถาบัน</span>
+                            <table class="table is-striped is-bordered">
+                                <thead>
+                                    <th>วันที่ส่งคำขอแก้ไข</th>
+                                    <th>สถานะ</th>
+                                    <th>วันที่ตรวจสอบ</th>
+                                </thead>
+                                <tbody>
+                                {% for req in edit_requests %}
+                                    <tr>
+                                        <td>{{ req.created_at|localdatetime }}</td>
+                                        <td>{{ req.status }}</td>
+                                        <td>
+                                            {{ req.updated_at|localdatetime or '' }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                            {% endif %}
                         </td>
                     </tr>
                     </tbody>
