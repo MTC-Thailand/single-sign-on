@@ -981,6 +981,7 @@ def manage_sponsor(sponsor_id):
     form = CMTEEventSponsorForm(obj=sponsor)
     pending_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id,
                                                          expired_sponsor_date=sponsor.expire_date).first()
+    edit_requests = CMTESponsorEditRequest.query.filter_by(sponsor_id=sponsor_id).all()
     if form.validate_on_submit():
         event_sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form.populate_obj(event_sponsor)
@@ -1007,7 +1008,7 @@ def manage_sponsor(sponsor_id):
         return resp
     is_admin = True if cmte_admin_permission else False
     return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor, is_admin=is_admin,
-                           pending_request=pending_request)
+                           edit_requests=edit_requests, pending_request=pending_request)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/payment', methods=['GET', 'POST'])
