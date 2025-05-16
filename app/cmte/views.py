@@ -846,16 +846,14 @@ def register_sponsor():
                 s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                          aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                          region_name=os.environ.get('BUCKETEER_AWS_REGION'))
-                for doc_form in form.upload_files:
-                    _file = doc_form.upload_file.data
-                    if _file:
-                        filename = _file.filename
-                        key = uuid.uuid4()
-                        s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                        doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
-                        doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
-                        doc.note = doc_form.note.data
-                        db.session.add(doc)
+                for field, _file in request.files.items():
+                    filename = _file.filename
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = request.form.get(field+'_note')
+                    db.session.add(doc)
                 if not cmte_admin_permission:
                     sponsor.members.append(current_user)
                     db.session.add(sponsor)
@@ -884,9 +882,10 @@ def register_sponsor():
 
 
 @cmte.route('/sponsors/request-org', methods=['GET', 'POST'])
+@cmte.route('/sponsors/request-org/<int:sponsor_id>', methods=['GET', 'POST'])
 @login_required
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
-def get_org_type():
+def get_org_type(sponsor_id=None):
     org_type = request.args.get('type', type=str)
     if org_type == 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)':
         detail = 'โปรดระบุจำนวนอาจารย์เทคนิคการแพทย์ในสังกัด(คน)'
@@ -898,7 +897,11 @@ def get_org_type():
         detail = 'โปรดระบุ'
     elif org_type == 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน':
         detail = 'โปรดระบุ'
-    type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
+    if sponsor_id:
+        sponsor = CMTEEventSponsor.query.get(sponsor_id)
+        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{ sponsor.type_detail }</textarea>'''
+    else:
+        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
     resp = make_response(type_detail)
     resp.headers['HX-Trigger-After-Swap'] = 'initSelect2'
     return resp
@@ -909,7 +912,7 @@ def get_org_type():
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def get_qualifications():
     private_sector = request.args.get('private_sector')
-    if private_sector == 'True':
+    if private_sector == 'private':
         qualifications = CMTESponsorQualification.query.all()
     else:
         qualifications = CMTESponsorQualification.query.filter_by(private_sector=False).all()
@@ -921,7 +924,7 @@ def get_qualifications():
                     <input type="file" name="file_qualification_{i}">
                 </div>
                 <div class="field">
-                    <textarea name="note_qualification_{i}" rows="2" class="textarea" placeholder='คำอธิบายเพิ่มเติม (ถ้ามี)'></textarea>
+                    <textarea name="file_qualification_{i}_note" rows="2" class="textarea" placeholder='คำอธิบายเพิ่มเติม (ถ้ามี)'></textarea>
                 </div>
             '''
     resp = make_response(qualification_html)
@@ -934,70 +937,31 @@ def get_qualifications():
 @cmte_sponsor_admin_permission.require()
 def request_edit_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
-    form = CMTESponsorEditForm(obj=sponsor)
-    if sponsor.private_sector:
-        form.private_sector.data = 'องค์กรเอกชน'
-    else:
-        form.private_sector.data = 'องค์กรรัฐ'
+    form = CMTEEventSponsorForm(obj=sponsor)
     if request.method == 'POST':
         if form.validate_on_submit():
-            temp_sponsor = CMTETempSponsor()
-            temp_sponsor.name = form.name.data if form.name.data != sponsor.name else ''
-            temp_sponsor.affiliation = form.affiliation.data if form.affiliation.data != sponsor.affiliation else ''
-            temp_sponsor.address = form.address.data if form.address.data != sponsor.address else ''
-            temp_sponsor.zipcode = form.zipcode.data if form.zipcode.data != sponsor.zipcode else ''
-            temp_sponsor.telephone = form.telephone.data if form.telephone.data != sponsor.telephone else ''
-            temp_sponsor.email = form.email.data if form.email.data != sponsor.email else ''
-            temp_sponsor.type = form.type.data if form.type.data != sponsor.type else ''
-            temp_sponsor.type_detail = form.type_detail.data if form.type_detail.data != sponsor.type_detail else ''
-            temp_sponsor.private_sector = form.private_sector.data if form.private_sector.data else False
-            if form.qualifications.data != sponsor.qualifications:
-                temp_sponsor.qualifications = form.qualifications.data
-                s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+            form.populate_obj(sponsor)
+            db.session.add(sponsor)
+
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                          aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                          region_name=os.environ.get('BUCKETEER_AWS_REGION'))
-                for qualification_id in form.qualifications.data:
-                    qualification = CMTESponsorQualification.query.get(qualification_id)
-
-                    file_field_name = f'file_qualification_{qualification.id}'
-                    if file_field_name in request.files:
-                        _file = request.files[file_field_name]
-                        if _file:
-                            original_filename = secure_filename(_file.filename)
-                            filename = f"new_{original_filename}"
-                            key = uuid.uuid4()
-                            s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                            doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
-                            doc.qualification_id = qualification.id
-                            doc.upload_datetime = datetime.now()
-                            doc.note = request.form.get(f"note_qualification_{qualification.id}")
-                            db.session.add(doc)
-            else:
-                temp_sponsor.qualifications = []
-            temp_sponsor.sponsor = sponsor
-            db.session.add(temp_sponsor)
-
-            columns_with_data = []
-            fields = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
-                      'qualifications', 'private_sector']
-
-            for field in fields:
-                temp_value = getattr(temp_sponsor, field, None)
-                sponsor_value = getattr(sponsor, field, None)
-
-                if temp_value and temp_value != sponsor_value and field != 'qualifications':
-                    columns_with_data.append(f"{field}: {temp_value}")
-            if temp_sponsor.qualifications:
-                qualifications_types = [qual.type for qual in temp_sponsor.qualifications]
-                columns_with_data.append(f"Qualifications: {', '.join(qualifications_types)}")
-            comment = ", ".join(columns_with_data) if columns_with_data else ''
-
-            create_request = CMTESponsorRequest(
+            for field, _file in request.files.items():
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = request.form.get(field + '_note')
+                db.session.add(doc)
+            db.session.commit()
+            version_index = sponsor.versions.count() - 1
+            create_request = CMTESponsorEditRequest(
                 sponsor=sponsor,
                 created_at=arrow.now('Asia/Bangkok').datetime,
-                type='edit',
-                comment=comment,
-                member=current_user
+                member=current_user,
+                version_index=version_index,
+                status='pending'
             )
             db.session.add(create_request)
             db.session.commit()
@@ -1017,23 +981,6 @@ def manage_sponsor(sponsor_id):
     form = CMTEEventSponsorForm(obj=sponsor)
     pending_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id,
                                                          expired_sponsor_date=sponsor.expire_date).first()
-    edit_request = CMTESponsorRequest.query.filter_by(type='edit').first()
-    temp_sponsors = CMTETempSponsor.query.filter_by(sponsor_id=sponsor.id)
-    columns = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
-               'qualifications']
-
-    temp_data = []
-    for temp in temp_sponsors:
-        temp_info = {}
-        for col in columns:
-            value = getattr(temp, col)
-            if value:
-                temp_info[col] = value
-
-        if temp.qualifications:
-            temp_info['qualifications'] = [qual.type for qual in temp.qualifications]
-
-        temp_data.append(temp_info)
     if form.validate_on_submit():
         event_sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form.populate_obj(event_sponsor)
@@ -1060,7 +1007,7 @@ def manage_sponsor(sponsor_id):
         return resp
     is_admin = True if cmte_admin_permission else False
     return render_template('cmte/sponsor/view_sponsor.html', sponsor=sponsor, is_admin=is_admin,
-                           pending_request=pending_request, edit_request=edit_request, temp_data=temp_data)
+                           pending_request=pending_request)
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/payment', methods=['GET', 'POST'])
@@ -1162,7 +1109,7 @@ def all_requests():
     elif tab == 'paid':
         requests = CMTESponsorRequest.query.filter_by(verified_at=None).filter(CMTESponsorRequest.paid_at != None).all()
     elif tab == 'edit':
-        requests = CMTESponsorRequest.query.filter_by(type='edit', approved_at=None).all()
+        requests = CMTESponsorEditRequest.query.filter_by(status='pending').all()
     else:
         requests = CMTESponsorRequest.query.all()
     return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
@@ -1214,28 +1161,41 @@ def approved_renew_sponsor(request_id):
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
 
 
+@cmte.route('/sponsors-edit/<int:request_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def manage_edit_sponsor(request_id):
+    edit_request = CMTESponsorEditRequest.query.get(request_id)
+    current_version = edit_request.sponsor.versions[edit_request.version_index]
+    previous_version = current_version.previous
+    return render_template('cmte/admin/edit_sponsor.html', current_version=current_version, previous_version=previous_version,
+                           edit_request=edit_request)
+
+
 @cmte.route('/sponsors/<int:request_id>/approved-edit', methods=['GET', 'POST'])
 @login_required
 @cmte_admin_permission.require()
 def approved_edit_sponsor(request_id):
-    edit_request = CMTESponsorRequest.query.get(request_id)
-    edit_request.approved_at = arrow.now('Asia/Bangkok').datetime
+    edit_request = CMTESponsorEditRequest.query.get(request_id)
+    status = request.args.get("status")
+    edit_request.status = status
+    edit_request.updated_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(edit_request)
-    sponsor = CMTEEventSponsor.query.filter_by(id=edit_request.sponsor_id).first()
-    temp_sponsor = CMTETempSponsor.query.filter_by(sponsor_id=edit_request.sponsor_id).first()
-    fields = ['name', 'affiliation', 'address', 'zipcode', 'telephone', 'email', 'type', 'type_detail',
-              'qualifications', 'private_sector']
-    for field in fields:
-        temp_value = getattr(temp_sponsor, field)
-        if temp_value and getattr(sponsor, field) != temp_value:
-            setattr(sponsor, field, temp_value)
-    db.session.add(sponsor)
-    db.session.delete(temp_sponsor)
+
+    if status == 'reject':
+        current_version_index = edit_request.version_index
+        previous_version = edit_request.sponsor.versions[current_version_index - 1]
+        if previous_version:
+            for column in edit_request.sponsor.__table__.columns:
+                field_name = column.name
+                if hasattr(previous_version, field_name):
+                    setattr(edit_request.sponsor, field_name, getattr(previous_version, field_name))
+
     db.session.commit()
-    flash('อนุมัติคำขอแก้ไขข้อมูลแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว',
+    flash('บันทึกข้อมูลเรียบร้อยแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนแล้ว',
           'warning')
     # send email to sponsor member
-    return redirect(url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor_id))
+    return redirect(url_for('cmte.manage_edit_sponsor', request_id=request_id))
 
 
 @cmte.route('/sponsors/reject-modal/<int:sponsor_id>/<int:request_id>', methods=['GET', 'POST'])
@@ -1299,11 +1259,13 @@ def verified_payment_sponsor(request_id):
     if sponsor.expire_date:
         old_expire_date = sponsor.expire_date + timedelta(days=1)
         sponsor.registered_datetime = old_expire_date
-        sponsor.expire_date = old_expire_date.replace(year=old_expire_date.year + 5)
+        expire_date = old_expire_date.replace(year=old_expire_date.year + 5)
+        sponsor.expire_date = expire_date - timedelta(days=1)
     else:
         today = arrow.now('Asia/Bangkok').datetime
         sponsor.registered_datetime = today
-        sponsor.expire_date = today.replace(year=today.year + 5)
+        expire_date = today.replace(year=today.year + 5)
+        sponsor.expire_date = expire_date - timedelta(days=1)
     db.session.add(sponsor)
     db.session.commit()
     flash('ตรวจสอบการชำระเงินเรียบร้อยแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')

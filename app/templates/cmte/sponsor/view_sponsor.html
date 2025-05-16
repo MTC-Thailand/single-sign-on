@@ -121,7 +121,6 @@
                                 {% endif %}
                                 {% endif %}
                             {% endfor %}
-                            {% if edit_request %}
                             <table class="table is-striped is-bordered">
                                 <thead>
                                     <th>วันที่ส่งคำขอแก้ไขเอกสาร/ผู้ประสานงาน</th>
@@ -133,21 +132,7 @@
                                     {% if req.type == 'edit' %}
                                         <tr>
                                             <td>{{ req.created_at|localdatetime }}
-                                                {% for temp in temp_data %}
-                                                <ul>
-                                                    {% for col, value in temp.items() %}
-                                                        {% if col == 'qualifications' %}
-                                                            <li><strong>{{ col.capitalize() }}:</strong>
-                                                                {% for qual in value %}
-                                                                    <span>{{ qual }}</span>{% if not loop.last %}, {% endif %}
-                                                                {% endfor %}
-                                                            </li>
-                                                        {% else %}
-                                                            <li><strong>{{ col.capitalize() }}:</strong> {{ value }}</li>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </ul>
-                                                {% endfor %}
+
                                             </td>
                                             {% if is_admin %}<td>{{ req.comment }}</td>{% endif %}
                                             <td>
@@ -163,15 +148,6 @@
                                                             </span>
                                                             <span>อนุมัติคำขอแก้ไขผู้ประสานงานหลัก</span>
                                                         </a>
-                                                        {% else %}
-                                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข หากอนุมัติ ข้อมูลจะถูกแก้ไขทันที')"
-                                                            href="{{ url_for('cmte.approved_edit_sponsor', request_id=req.id) }}"
-                                                            class="button is-success is-outlined">
-                                                            <span class="icon">
-                                                                <i class="fa-solid fa-check-square"></i>
-                                                            </span>
-                                                            <span>อนุมัติคำขอแก้ไขข้อมูล</span>
-                                                        </a>
                                                         {% endif %}
                                                     {% endif %}
                                             {% endif %}
@@ -181,7 +157,6 @@
                                 {% endfor %}
                                 </tbody>
                             </table>
-                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -198,10 +173,12 @@
                     </tr>
                     <tr>
                         <td><strong>ผู้ประสานงาน</strong></td>
-                        <td>
+                        <td class="content">
+                            <ul>
                             {% for member in sponsor.members|sort(attribute="id") %}
                                 <li>{{ member }} {% if member.is_coordinator %} <i class="far fa-tag"></i>ผู้ประสานงานหลัก{% endif %}</li>
                             {% endfor %}
+                            </ul>
                         </td>
                     </tr>
                     <tr>

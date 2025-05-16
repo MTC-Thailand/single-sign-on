@@ -143,8 +143,7 @@ class CMTEEventSponsorForm(ModelForm):
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
-    #upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
-    private_sector = SelectField(choices=[('False','องค์กรรัฐ'), ('True', 'องค์กรเอกชน')])
+    private_sector = SelectField(choices=[('','องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
 
 
 class CMTESponsorEditForm(ModelForm):
@@ -155,8 +154,7 @@ class CMTESponsorEditForm(ModelForm):
                                               query_factory=lambda:CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
-    upload_files = FieldList(FormField(CMTESponsorDocForm, default=CMTESponsorDoc), min_entries=3)
-    private_sector = SelectField(choices=['องค์กรรัฐ','องค์กรเอกชน'])
+    private_sector = SelectField(choices=[('','องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
 
 
 class CMTESponsorPaymentForm(FlaskForm):

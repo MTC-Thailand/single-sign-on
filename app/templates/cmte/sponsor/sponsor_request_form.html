@@ -9,7 +9,7 @@
         <div class="columns">
             <div class="column box">
                 {% include "messages.html" %}
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
                     <div class="field">
                         <label class="label">ชื่อหน่วยงาน</label>
@@ -26,7 +26,7 @@
                     <label class="label">ลักษณะองค์กร</label>
                     <div class="field">
                         <div class="select">
-                            {{ form.type(**{'hx-get': url_for("cmte.get_org_type"),
+                            {{ form.type(**{'hx-get': url_for("cmte.get_org_type", sponsor_id=sponsor.id),
                             'hx-target': '#related-type', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
                         </div>
                     </div>

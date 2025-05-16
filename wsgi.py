@@ -51,6 +51,7 @@ admin.add_view(ModelView(CMTESponsorDoc, db.session, category='Sponsor'))
 admin.add_view(ModelView(CMTEReceiptDoc, db.session, category='Sponsor'))
 admin.add_view(ModelView(CMTEReceiptDetail, db.session, category='Sponsor'))
 admin.add_view(ModelView(CMTESponsorRequest, db.session, category='Sponsor'))
+admin.add_view(ModelView(CMTESponsorEditRequest, db.session, category='Sponsor'))
 admin.add_view(ModelView(CMTESponsorQualification, db.session, category='Sponsor'))
 
 admin.add_view(ModelView(CMTEFeePaymentRecord, db.session, category='Members'))
