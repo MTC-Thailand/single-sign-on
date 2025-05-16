@@ -1118,6 +1118,12 @@ def sponsor_modal(sponsor_id):
 @cmte_admin_permission.require()
 def all_requests():
     tab = request.args.get('tab')
+    pending_new = CMTESponsorRequest.query.filter_by(type='new', approved_at=None).count()
+    pending_renew = CMTESponsorRequest.query.filter_by(type='renew').count()
+    pending_paid = CMTESponsorRequest.query.filter_by(verified_at=None).filter(
+        CMTESponsorRequest.paid_at != None).count()
+    pending_edit = CMTESponsorEditRequest.query.filter_by(status='pending').count()
+    pending_change = CMTESponsorRequest.query.filter_by(type='change', cancelled_at=None, approved_at=None).count()
     if tab == 'new':
         requests = CMTESponsorRequest.query.filter_by(type='new', approved_at=None).all()
     elif tab == 'renew':
@@ -1132,7 +1138,9 @@ def all_requests():
         all_request = CMTESponsorRequest.query.all()
         edit_request = CMTESponsorEditRequest.query.all()
         requests = all_request + edit_request
-    return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
+    return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab,
+                           pending_new=pending_new, pending_renew=pending_renew, pending_paid=pending_paid,
+                           pending_edit=pending_edit, pending_change=pending_change)
 
 
 @cmte.get('/admin/sponsors')
