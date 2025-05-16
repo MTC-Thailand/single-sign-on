@@ -1,10 +1,10 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms.validators import NumberRange, EqualTo, Email, Optional
-from wtforms.widgets.core import CheckboxInput, ListWidget
+from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
-from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField
-from wtforms_components import DateField, DateTimeField
+from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField
+from wtforms_components import DateField, DateTimeField, TimeField
 
 from app.cmte.models import *
 
@@ -104,14 +104,82 @@ class CMTESponsorMemberForm(ModelForm):
     confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
 
 
+class CMTESponsorMemberEditForm(ModelForm):
+    class Meta:
+        model = CMTESponsorMember
+
+
+class CMTESponsorRequestForm(FlaskForm):
+    comment = TextAreaField('เหตุผล')
+
+
+class CMTESponsorMemberChangePasswordForm(FlaskForm):
+    password = PasswordField('รหัสผ่าน',
+                             validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
+    confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
+
+
+
 class CMTESponsorMemberLoginForm(ModelForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('รหัสผ่าน', validators=[DataRequired()])
 
 
+class CMTESponsorDocForm(ModelForm):
+    class Meta:
+        model = CMTESponsorDoc
+        only = ['note']
+
+    upload_file = FileField('Document Upload')
+    note = TextAreaField('คำอธิบาย', render_kw={'class': 'textarea'})
+
+
 class CMTEEventSponsorForm(ModelForm):
     class Meta:
         model = CMTEEventSponsor
+
+    registered_date = DateField()
+    qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
+                                              query_factory=lambda:CMTESponsorQualification.query.all(),
+                                              widget=ListWidget(prefix_label=False),
+                                              option_widget=CheckboxInput())
+    private_sector = SelectField(choices=[('','องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
+
+
+class CMTESponsorEditForm(ModelForm):
+
+    qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
+                                              query_factory=lambda:CMTESponsorQualification.query.all(),
+                                              widget=ListWidget(prefix_label=False),
+                                              option_widget=CheckboxInput())
+    private_sector = SelectField(choices=[('','องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
+
+
+class CMTESponsorPaymentForm(FlaskForm):
+    class Meta:
+        model = CMTEEventSponsor
+
+    name = TextAreaField('name', render_kw={'class': 'textarea'})
+    receipt_item = TextAreaField('receipt_item', render_kw={'class': 'textarea'})
+    tax_id = TextAreaField('tax_id', render_kw={'class': 'textarea'})
+    address = TextAreaField('address', render_kw={'class': 'textarea'})
+    zipcode = TextAreaField('zipcode', render_kw={'class': 'text'})
+    paid_date = DateField()
+    paid_time = TimeField()
+    upload_file = FormField(CMTESponsorDocForm, default=CMTESponsorDoc)
+
+
+class CMTESponsorReceiptDocForm(ModelForm):
+    class Meta:
+        model = CMTEReceiptDoc
+        only = ['note']
+
+    upload_file = FileField('Document Upload')
+    note = TextAreaField('คำอธิบาย', render_kw={'class': 'textarea'})
+
+
+class CMTESponsorReceiptForm(FlaskForm):
+    upload_file = FormField(CMTESponsorReceiptDocForm, default=CMTEReceiptDoc)
 
 
 class CMTEPaymentForm(FlaskForm):

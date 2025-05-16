@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="container">
+            <h1 class="title">ข้อมูลคำขอขึ้นทะเบียน/ต่ออายุสถาบัน</h1>
+            {% include 'messages.html' %}
+            <div class="columns">
+                <div class="column">
+                    <div class="tabs is-boxed">
+                        <ul>
+                            <li {% if tab == 'new' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='new') }}">
+                                    <span class="icon is-small"><i class="fas fa-hourglass-half"></i></span>
+                                    <span>ขอขึ้นทะเบียน</span>
+                                    <span class="tag is-danger is-rounded">{{pending_new or 0}}</span>
+                                </a>
+                            </li>
+                            <li {% if tab == 'renew' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='renew') }}">
+                                    <span class="icon is-small"><i class="fas fa-history"></i></span>
+                                    <span>ต่ออายุ</span>
+                                    <span class="tag is-danger is-rounded">{{pending_renew or 0}}</span>
+                                </a>
+                            </li>
+                            <li {% if tab == 'paid' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='paid') }}">
+                                    <span class="icon is-small"><i class="fas fa-paperclip"></i></span>
+                                    <span>ชำระเงินแล้ว รอขึ้นทะเบียน</span>
+                                    <span class="tag is-danger is-rounded">{{pending_paid or 0}}</span>
+                                </a>
+                            </li>
+                            <li {% if tab == 'edit' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='edit') }}">
+                                    <span class="icon is-small"><i class="fas fa-pen-fancy"></i></span>
+                                    <span>ขอแก้ไขข้อมูลสถาบัน</span>
+                                    <span class="tag is-danger is-rounded">{{pending_edit or 0}}</span>
+                                </a>
+                            </li>
+                            <li {% if tab == 'change' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='change') }}">
+                                    <span class="icon is-small"><i class="fas fa-people-carry"></i></span>
+                                    <span>ขอเปลี่ยนผู้ประสานงาน</span>
+                                    <span class="tag is-danger is-rounded">{{pending_change or 0}}</span>
+                                </a>
+                            </li>
+                            <li {% if tab == 'all' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='all') }}">
+                                    <span class="icon is-small"><i class="fas fa-list"></i></span>
+                                    <span>ทั้งหมด</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <table id="requests" class="table is-fullwidth">
+                        <thead>
+                        <th>ประเภท</th>
+                        <th>สถาบัน</th>
+                        <th>วันที่ส่งคำขอ</th>
+                        <th>วันที่ขึ้นทะเบียน</th>
+                        <th>วันที่หมดอายุ</th>
+                        <th>วันที่แจ้งชำระเงิน</th>
+                        <th>สถานะบัญชี</th>
+                        <th></th>
+                        </thead>
+                        <tbody>
+                            {% for req in requests %}
+                                <tr {% if not req.approved_at %}class="has-background-white-ter"{% endif %}>
+                                    <td>
+                                        {% if req.type == 'new' %}ขอขึ้นทะเบียน
+                                        {% elif req.type == 'renew' %}ขอต่ออายุ
+                                        {% elif req.type == 'change' %}ขอเปลี่ยนผู้ประสานงาน
+                                        {% else %}ขอแก้ไขข้อมูล
+                                        {% endif %}
+                                    </td>
+                                    <td style="width: 20em;">
+                                        {% if tab == 'edit' %}
+                                            <a href={{ url_for('cmte.manage_edit_sponsor', request_id=req.id) }}>
+                                            <span>{{ req.sponsor.name }}</span>
+                                            <span class="icon">
+                                                <i class="fa-solid fa-info-circle"></i>
+                                            </span>
+                                            </a>
+                                        {% else %}
+                                            <a href={{ url_for('cmte.manage_sponsor', sponsor_id=req.sponsor.id) }}
+                                               {% if not req.sponsor.registered_datetime %}class="has-text-danger"
+                                               {% elif req.approved_at %}class="has-text-black"
+                                               {% endif %}>
+                                                <span>{{ req.sponsor.name }}</span>
+                                                <span class="icon">
+                                                    <i class="fa-solid fa-info-circle"></i>
+                                                </span>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ req.created_at|localdatetime }}</td>
+                                    <td>{{ req.sponsor.registered_datetime|localdatetime or ''}}</td>
+                                    <td>{{ req.sponsor.expire_date|localdate or '' }}</td>
+                                    <td>
+                                        {% if not req.type == 'edit' %}
+                                            {{ req.paid_at|localdate or '' }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                        {% for doc in req.docs %}
+                                            {% if doc.is_payment_slip %}
+                                            <br>
+                                            <a class="is-small" href="{{url_for('cmte.download_file',
+                                                key=doc.key, download_filename=doc.filename)}}">
+                                                <span class="icon">
+                                                    <i class="fas fa-cloud-download-alt"></i>
+                                                </span>
+                                                <span>slip</span>
+                                            </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td {% if req.sponsor.expire_status() == 'expired'%}
+                                            class="has-text-danger"
+                                        {% elif req.sponsor.expire_status() == 'nearly_expire'%}
+                                            class="has-text-warning" {% endif %}>
+                                        {{ req.sponsor.expire_status() }}
+                                    </td>
+                                    <td>
+                                        {% if tab == 'edit' %}
+                                            <a href={{ url_for('cmte.manage_edit_sponsor', request_id=req.id) }} class="button is-info">
+                                            <span>ดำเนินการ</span>
+                                            </a>
+                                        {% else %}
+                                            <a href={{ url_for('cmte.manage_sponsor', sponsor_id=req.sponsor.id) }} class="button is-info">
+                                                <span>ดำเนินการ</span>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="buttons is-centered">
+                <a href="{{url_for('users.cmte_admin_index')}}" class="button is-light">
+                    <span class="icon">
+                      <i class="far fa-arrow-left"></i>
+                    </span>
+                    <span>กลับ</span>
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(document).ready(function () {
+            $('#requests').DataTable({
+            })
+        });
+    </script>
+{% endblock %}

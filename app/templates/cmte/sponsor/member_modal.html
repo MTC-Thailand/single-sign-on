@@ -1,0 +1,72 @@
+<div class="modal is-active animate__animated" id="member-modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">ข้อมูลผู้ประสานงาน</p>
+            <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+            <form hx-post="{{ url_for('cmte.manage_member', member_id=member.id) }}">
+                {{ form.hidden_tag() }}
+                {% if is_admin %}
+                <div class="field">
+                    <label class="label">ผู้ประสานงานหลัก</label>
+                    <div class="control">
+                        {{ form.is_coordinator() }}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="field">
+                    <label class="label">{{form.title.label}}</label>
+                    <div class="control">
+                        {{ form.title(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.firstname.label}}</label>
+                    <div class="control">
+                        {{ form.firstname(class="input", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.lastname.label}}</label>
+                    <div class="control">
+                        {{ form.lastname(class="input", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.position.label}}</label>
+                    <div class="control">
+                        {{ form.position(class="input", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.email.label}}</label>
+                    <div class="control">
+                        {{ form.email(class="input", required=True) }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{form.mobile_phone.label}}</label>
+                    <div class="control">
+                        {{ form.mobile_phone(class="input", required=True) }}
+                    </div>
+                </div>
+                <button class="button" id="cancel-btn">Cancel</button>
+                <button class="button is-success" id="save-btn" type="submit">Save</button>
+            </form>
+        </section>
+    </div>
+</div>
+<script>
+    window.document.getElementById("cancel-btn").addEventListener("click", function (event) {
+        event.preventDefault()
+        htmx.removeClass(htmx.find('#member-modal'), 'is-active')
+    })
+    window.document.getElementById("cancelButton").addEventListener("click", function () {
+        htmx.removeClass(htmx.find('#member-modal'), 'is-active')
+    })
+    window.addEventListener('closeModal', (evt) => {
+        htmx.removeClass(htmx.find('#member-modal'), 'is-active')
+    })
+</script>

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Member Detail{% endblock %}
+
+{% block content %}
+    {% include "cmte/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column is-half is-offset-one-quarter">
+                <div class="has-text-centered">
+                    {% include "messages.html" %}
+                    <h2 class="title">ข้อมูลบัญชีของคุณ</h2>
+                    <div id="member-modal-container"></div>
+                    <div class="has-text-centered">
+                        <a hx-get="{{ url_for('cmte.member_modal', member_id=member.id) }}"
+                           hx-target="#member-modal-container" hx-swap="innerHTML"
+                           class="button is-success">
+                            <span class="icon">
+                                <i class="fa-solid fa-pencil"></i>
+                            </span>
+                            <span>แก้ไขข้อมูล</span>
+                        </a>
+                    </div>
+                    <table class="table is-fullwidth">
+                        <tr>
+                            <td>ชื่อ-นามสกุล</td>
+                            <td>
+                                {{ member }}
+                                {% if member.is_coordinator %}
+                                <span class="tag is-info is-light">
+                                    <i class="far fa-tag"></i>
+                                    ผู้ประสานงานหลัก
+                                </span>
+                            {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>ตำแหน่ง</td>
+                            <td>{{ member.position or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td>email</td>
+                            <td>{{ member.email or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td>โทรศัพท์</td>
+                            <td>{{ member.mobile_phone or '' }} {{ member.telephone or '' }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

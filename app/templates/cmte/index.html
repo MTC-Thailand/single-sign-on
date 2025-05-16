@@ -7,10 +7,18 @@
         {% include "messages.html" %}
         <div class="columns">
             <div class="column is-one-third is-offset-4">
+                {% if warning_msg %}
+                    <div class="notification is-warning">
+                        <span class="icon">
+                            <i class="fa-solid fa-warning"></i>
+                        </span>
+                        {{ warning_msg }}
+                    </div>
+                {% endif %}
                 <article class="panel is-info">
                     <p class="panel-heading">สถาบันฝึกอบรม</p>
                     <a class="panel-block" href="{{url_for('cmte.register_sponsor')}}">
-                        ลงทะเบียน / จัดการข้อมูลสถาบัน
+                        ลงทะเบียน / จัดการข้อมูลสถาบัน-ผู้ประสานงาน
                     </a>
                     <a class="panel-block" href="{{url_for('cmte.register_event')}}">
                         ขออนุมัติจัดกิจกรรมใหม่
