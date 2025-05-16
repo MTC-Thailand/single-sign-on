@@ -14,6 +14,7 @@ from flask import render_template, flash, redirect, url_for, make_response, requ
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
+from sqlalchemy import or_
 from pytz import timezone
 from werkzeug.utils import secure_filename
 
@@ -1127,7 +1128,7 @@ def all_requests():
     elif tab == 'edit':
         requests = CMTESponsorEditRequest.query.filter_by(status='pending').all()
     elif tab == 'change':
-        requests = CMTESponsorRequest.query.filter_by(type='change', approved_at=None).all()
+        requests = CMTESponsorRequest.query.filter_by(type='change', cancelled_at=None, approved_at=None).all()
     else:
         all_request = CMTESponsorRequest.query.all()
         edit_request = CMTESponsorEditRequest.query.all()
