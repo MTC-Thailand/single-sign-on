@@ -14,7 +14,6 @@ from flask import render_template, flash, redirect, url_for, make_response, requ
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
-from sqlalchemy import or_
 from pytz import timezone
 from werkzeug.utils import secure_filename
 
