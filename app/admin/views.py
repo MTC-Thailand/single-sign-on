@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pandas as pd
 from flask import render_template, request, url_for, make_response, flash, redirect
 from flask_login import login_required
@@ -7,7 +9,7 @@ from app import db, admin_permission
 from app.admin import webadmin
 from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
-from app.members.forms import MemberInfoForm
+from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm
 from app.members.models import License, Member
 
 
@@ -150,15 +152,46 @@ def view_member_password():
             <p>วันเดือนปีเกิด {license.member.dob}</p>
             <p>username: {license.member.username}</p>
             <p>password: {license.member.password}</p>
+            <a class="button" hx-swap="innerHTML"
+                hx-target="#password-text"
+                hx-get="{url_for('webadmin.edit_member_password', member_id=license.member.id)}">
+                <span class="icon">
+                    <i class="fas fa-pencil-alt"></i>
+                </span>
+                <span>Edit</span>
+            </a>
             '''
     return render_template('webadmin/password_view.html')
 
 
-
-
-    member = Member.query.get()
-    form = MemberInfoAdminForm(obj=member)
-    return render_template('webadmin/member_info_form.html', form=form)
+@webadmin.route('/members/<int:member_id>/password-view/edit', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def edit_member_password(member_id):
+    member = Member.query.get(member_id)
+    form = MemberUsernamePasswordForm(obj=member)
+    if request.method == 'GET':
+        return render_template('webadmin/partials/edit_password_form.html', form=form, member=member)
+    if form.validate_on_submit():
+        form.populate_obj(member)
+        db.session.add(member)
+        db.session.commit()
+        return f'''
+        <p>หมายเลขโทรศัพท์ {member.tel}</p>
+        <p>วันเดือนปีเกิด {member.dob}</p>
+        <p>username: {member.username}</p>
+        <p>password: {member.password}</p>
+        <a class="button" hx-swap="innerHTML"
+            hx-target="#password-text"
+            hx-get="{url_for('webadmin.edit_member_password', member_id=member_id)}">
+            <span class="icon">
+                <i class="fas fa-pencil-alt"></i>
+            </span>
+            <span>Edit</span>
+        </a>
+        '''
+    else:
+        print(form.errors)
 
 
 @webadmin.route('/api/members/search', methods=['GET', 'POST'])
@@ -169,21 +202,31 @@ def search_member():
     if query:
         template = '''<table class="table is-fullwidth is-striped">'''
         template += '''
-        <thead><th>Name</th><th>License No.</th><th>License Date</th><th colspan="2">Valid CMTE</th></thead>
+        <thead><th>Name</th><th>License No.</th><th>License Date</th><th>License Status</th><th colspan="2">Valid CMTE</th></thead>
         <tbody>
         '''
-        licenses = [(license, license.member) for license in License.query.filter_by(number=query)]
+        licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
         if not licenses:
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
                                               Member.th_lastname.like(f'%{query}%')))
             licenses = [(member.license, member) for member in members]
         for lic, member in licenses:
             url = url_for('webadmin.edit_member_info', member_id=member.id)
+            status_tag = '<span class="tag {}">{}</span>'
+            if lic.end_date <= datetime.today().date():
+                lic_status = status_tag.format('is-danger', 'หมดอายุ')
+            elif lic.status:
+                if lic.status == 'ปกติ':
+                    lic_status = status_tag.format('is-success', lic.status)
+                else:
+                    lic_status = status_tag.format('is-warning', lic.status)
+            else:
+                lic_status = status_tag.format('is-success', 'ปกติ')
             if lic:
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
         template += '</tbody></table>'
         return make_response(template)
     return 'Waiting for a search query...'

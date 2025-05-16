@@ -221,35 +221,53 @@ class CMTEEventCategory(db.Model):
 
 
 class CMTEEventType(db.Model):
+    """ประเภทกิจกรรม
+    """
     __tablename__ = 'cmte_event_types'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    number = db.Column('number', db.Integer(), info={'label': 'ลำดับ'})
     old_id = db.Column('old_id', db.Integer)
-    name = db.Column('name', db.String(255), unique=True, nullable=False)
-    for_group = db.Column('for_group', db.Boolean(), default=False)
-    is_sponsored = db.Column('is_sponsored', db.Boolean(), default=False)
+    name = db.Column('name', db.String(255), unique=True, nullable=False, info={'label': 'ประเภท'})
+    for_group = db.Column('for_group', db.Boolean(), default=False, info={'label': 'ขอคะแนนแบบกลุ่มได้'})
+    is_sponsored = db.Column('is_sponsored', db.Boolean(), default=False, info={'label': 'จัดโดยสถาบัน'})
     category_id = db.Column('category_id', db.Integer, db.ForeignKey('cmte_event_categories.id'))
     category = db.relationship('CMTEEventCategory', backref=db.backref('types'))
-    submission_due = db.Column('submission_due', db.Integer(), default=30)
-    max_score = db.Column('max_score', db.Integer(), default=25)
-    score_criteria = db.Column('score_criteria', db.String())
-    fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'))
+    submission_due = db.Column('submission_due', db.Integer(), default=30, info={'label': 'กำหนดส่งรายชื่อผู้เข้าร่วม'})
+    max_score = db.Column('max_score', db.Integer(), default=25, info={'label': 'คะแนนสูงสุดที่อนุมัติได้'})
+    score_criteria = db.Column('score_criteria', db.String(), info={'label': 'เกณฑ์การพิจารณาอนุมัติคะแนน'})
+    fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'), info={'label': 'อัตราค่าธรรมเนียม'})
     desc = db.Column('desc', db.Text(), info={'label': 'รายละเอียด'})
+    deprecated = db.Column('deprecated', db.Boolean(), default=False, info={'label': 'ยกเลิก'})
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
 
     def __str__(self):
-        return self.name
+        return f'{self.number}. {self.name}'
 
 
 class CMTEEventActivity(db.Model):
+    """ชนิดกิจกรรม"""
     __tablename__ = 'cmte_event_activities'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_id = db.Column('old_id', db.Integer)
-    name = db.Column('name', db.String(255), unique=True, nullable=False)
+    number = db.Column('number', db.Integer(), info={'label': 'ลำดับ'})
+    name = db.Column('name', db.String(255), unique=True, nullable=False, info={'label': 'ชื่อชนิดกิจกรรม'})
     type_id = db.Column('type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
     en_name = db.Column('en_name', db.String(255))
-    detail = db.Column('detail', db.Text())
+    detail = db.Column('detail', db.Text(), info={'label': 'รายละเอียด'})
+    group_submission_only = db.Column('group_submission_only', db.Boolean(),
+                                      default=False,
+                                      info={'label': 'ยื่นขอคะแนนแบบกลุ่มเท่านั้น'})
+    group_submission_allowed = db.Column('group_submission_allowed', db.Boolean(),
+                                         default=False,
+                                         info={'label': 'ยื่นขออนุมัติคะแนนแบบกลุ่มและส่วนตัว'})
     event_type = db.relationship('CMTEEventType', backref=db.backref('activities',
                                                                      lazy='dynamic',
+                                                                     order_by='CMTEEventActivity.number',
                                                                      cascade='all, delete-orphan'))
+    deprecated = db.Column('deprecated', db.Boolean(), default=False, info={'label': 'ยกเลิก'})
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
 
     def __str__(self):
         return self.name
@@ -275,9 +293,9 @@ class CMTEEventFeeRate(db.Model):
     def __str__(self):
         format = 'รูปแบบ Online' if self.is_online else 'รูปแบบ Onsite'
         if self.fee_rate and self.max_participants:
-            return f'{format} ไม่เกิน {self.max_participants} คน: {self.fee_rate} บาท'
+            return f'{format} ไม่เกิน {self.max_participants} คน: {self.fee_rate} บาท {self.desc or ""}'
         elif self.fee_rate:
-            return f'{format}: {self.fee_rate} บาท'
+            return f'{format}: {self.fee_rate} บาท {self.desc or ""}'
         elif self.max_participants:
             return f'{format} ไม่เกิน {self.max_participants} คน: ไม่มีค่าธรรมเนียม'
         else:
@@ -329,7 +347,6 @@ class CMTEEvent(db.Model):
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
     cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
     event_code = db.Column('event_code', db.String(), info={'label': 'Code'})
-
     # TODO: add a field for an approver
 
     def to_dict(self):
@@ -398,6 +415,16 @@ class CMTEEventParticipationRecord(db.Model):
         else:
             self.score_valid_until = self.license.end_date
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.license.member.th_fullname,
+            'license_number': self.license_number,
+            'score': self.score,
+            'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
+            'approved_at': self.approved_date.isoformat() if self.approved_date else None,
+        }
+
 
 class CMTEEventDoc(db.Model):
     __tablename__ = 'cmte_event_docs'
@@ -431,9 +458,9 @@ class CMTEFeePaymentRecord(db.Model):
     note = db.Column('note', db.Text, info={'label': 'หมายเหตุ'})
 
     def to_dict(self):
-        return {'end_date': self.end_date.strftime('%Y-%m-%d'),
-                'start_date': self.start_date.strftime('%Y-%m-%d'),
-                'payment_datetime': self.payment_datetime.isoformat(),
+        return {'end_date': self.end_date.strftime('%Y-%m-%d') if self.end_date else None,
+                'start_date': self.start_date.strftime('%Y-%m-%d') if self.start_date else None,
+                'payment_datetime': self.payment_datetime.isoformat() if self.payment_datetime else None,
                 'license_number': self.license_number}
 
 sa.orm.configure_mappers()

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+<section class="section">
+    <div class="container">
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column">
+                <table class="table is-fullwidth is-striped">
+                    <thead>
+                    <th>ลำดับ</th>
+                    <th>ประเภท</th>
+                    <th>เพิ่มเมื่อ</th>
+                    <th>แก้ไขเมื่อ</th>
+                    <th>ชนิดกิจกรรม</th>
+                    <th>การใช้งาน</th>
+                    <th></th>
+                    </thead>
+                    <tbody>
+                    {% for type_ in event_types %}
+                    <tr>
+                        <td>{{type_.number}}</td>
+                        <td>{{type_.name}}</td>
+                        <td>{{type_.created_at|localdatetime or ""}}</td>
+                        <td>{{type_.updated_at|localdatetime or ""}}</td>
+                        <td>
+                            <a href="{{url_for('cmte.admin_manage_event_activity', event_type_id=type_.id)}}">
+                                {{type_.activities.count()}}
+                            </a>
+                        </td>
+                        <td>
+                            {% if type_.deprecated %}
+                            <span class="tag is-danger">
+                                ยกเลิก
+                            </span>
+                            {% else %}
+                            <span class="tag is-success">
+                                ใช้งาน
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{url_for('cmte.admin_manage_event_type', event_type_id=type_.id)}}">
+                                <span class="icon">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <div class="buttons">
+                    <a href="{{url_for('cmte.admin_manage_event_type')}}" class="button is-link">
+                        <span class="icon">
+                            <i class="fas fa-plus"></i>
+                        </span>
+                        <span>เพิ่มรายการ</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

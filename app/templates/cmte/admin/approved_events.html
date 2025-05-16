@@ -50,6 +50,7 @@
     $('#events-table').DataTable({
       ajax: {{url_for('cmte.get_events', _type=_type)|tojson|safe}},
       order: [[1, 'desc']],
+      processing: true,
       serverSide: true,
       columns: [
         {

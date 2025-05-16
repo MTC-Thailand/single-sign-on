@@ -14,28 +14,16 @@ from flask import render_template, flash, redirect, url_for, make_response, requ
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
+from numpy.core import records
 from pytz import timezone
 from werkzeug.utils import secure_filename
+from sqlalchemy import or_
 
 from app import db, sponsor_event_management_permission
 from app.cmte import cmte_bp as cmte
-from app.cmte.forms import (CMTEEventForm,
-                            ParticipantForm,
-                            CMTESponsorMemberForm,
-                            CMTESponsorMemberLoginForm,
-                            CMTEEventSponsorForm,
-                            CMTEPaymentForm,
-                            CMTEParticipantFileUploadForm,
-                            CMTEFeePaymentForm,
-                            CMTEAdminEventForm,
-                            CMTEEventCodeForm, IndividualScoreAdminForm,
-                            CMTESponsorMemberEditForm,
-                            CMTESponsorPaymentForm,
-                            CMTESponsorEditForm,
-                            CMTESponsorRequestForm,
-                            CMTESponsorReceiptForm)
+from app.cmte.forms import *
+from app.members.models import License, Member
 from app.cmte.models import *
-from app.members.models import License
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
 bangkok = timezone('Asia/Bangkok')
@@ -229,7 +217,68 @@ def admin_preview_event(event_id):
     form = CMTEEventCodeForm()
     participant_form = CMTEParticipantFileUploadForm()
     return render_template('cmte/admin/event_preview.html',
-                           event=event, next_url=next_url, form=form, participant_form=participant_form)
+                           event=event,
+                           next_url=next_url,
+                           form=form,
+                           participant_form=participant_form)
+
+
+@cmte.route('/api/events/<int:event_id>/participants', methods=('GET', 'POST'))
+@login_required
+@cmte_admin_permission.require()
+def admin_preview_event_participants(event_id):
+    query = CMTEEventParticipationRecord.query.filter_by(event_id=event_id)
+    records_total = query.count()
+    search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    if col_name:
+        try:
+            column = getattr(CMTEEventParticipationRecord, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
+    query = (query.join(License).join(Member, aliased=True)
+             .filter(or_(Member.th_firstname.contains(search),
+                         Member.th_lastname.contains(search),
+                         Member.en_firstname.contains(search),
+                         Member.en_lastname.contains(search),
+                         License.number.contains(search))))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    participants = []
+    for record in query:
+        rec_dict = record.to_dict()
+        csrf_token = f'{{"X-CSRF-Token": "{generate_csrf()}" }}'
+        rec_dict['actions'] = f'''
+         <a class="icon"
+           hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
+           hx-headers='{csrf_token}'
+           hx-target="closest tr"
+           hx-delete="{url_for('cmte.edit_participants', rec_id=record.id, event_id=event_id, _method='DELETE')}">
+            <span class="icon">
+                <i class="fa-solid fa-trash-can has-text-danger"></i>
+            </span>
+        </a>
+        <a class="icon" hx-get="{url_for('cmte.edit_participants', rec_id=record.id, event_id=event_id, _method='GET')}"
+           hx-target="#participant-form" hx-swap="innerHTML">
+            <span class="icon">
+                <i class="fa-solid fa-pencil has-text-dark"></i>
+            </span>
+        </a>
+        '''
+        participants.append(rec_dict)
+    return jsonify({'data': participants,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
 
 
 @cmte.route('/admin/events/<int:event_id>/code', methods=('GET', 'POST'))
@@ -365,6 +414,7 @@ def edit_participants(event_id: int = None, rec_id: int = None):
                                rec_id=rec_id)
 
     if request.method == 'DELETE':
+        print(request.headers.get('X-CSRF-Token'))
         rec = CMTEEventParticipationRecord.query.get(rec_id)
         db.session.delete(rec)
         db.session.commit()
@@ -1481,3 +1531,79 @@ def admin_individual_score_edit(record_id):
 @cmte_admin_permission.require()
 def admin_approve_individual_score_payment(record_id):
     pass
+
+
+@cmte.route('/admin/events/management', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_manage_events():
+    event_types = CMTEEventType.query.order_by(CMTEEventType.number)
+    return render_template('cmte/admin/event_management_index.html', event_types=event_types)
+
+
+@cmte.route('/admin/event-types/add', methods=['GET', 'POST'])
+@cmte.route('/admin/event-types/<int:event_type_id>/management', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def admin_manage_event_type(event_type_id=None):
+    if event_type_id:
+        event_type = CMTEEventType.query.get(event_type_id)
+        form = CMTEAdminEventTypeForm(obj=event_type)
+    else:
+        form = CMTEAdminEventTypeForm()
+    if form.validate_on_submit():
+        if not event_type_id:
+            existing_event_type = CMTEEventType.query.filter_by(name=form.name.data) \
+                .filter(CMTEEventType.deprecated != True).first()
+            if not existing_event_type:
+                event_type = CMTEEventType()
+                event_type.created_at = arrow.now('Asia/Bangkok').datetime
+        else:
+            event_type.updated_at = arrow.now('Asia/Bangkok').datetime
+        form.populate_obj(event_type)
+        db.session.add(event_type)
+        db.session.commit()
+        flash('บันทึกข้อมูลแล้ว', 'success')
+        return redirect(url_for('cmte.admin_manage_events'))
+    else:
+        if form.errors:
+            flash(form.errors, 'danger')
+    return render_template('cmte/admin/event_type_form.html', form=form)
+
+
+@cmte.route('/admin/event-types/<int:event_type_id>/event-activities/management')
+@login_required
+@cmte_admin_permission.require()
+def admin_manage_event_activity(event_type_id):
+    event_type = CMTEEventType.query.get(event_type_id)
+    return render_template('cmte/admin/event_activity_management_index.html',
+                           event_type=event_type)
+
+
+@cmte.route('/admin/event-types/<int:event_type_id>/event-activities/edit',
+            methods=['GET', 'POST'])
+@cmte.route('/admin/event-types/<int:event_type_id>/event-activities/<int:event_activity_id>/edit',
+            methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def admin_edit_event_activity(event_type_id, event_activity_id=None):
+    event_type = CMTEEventType.query.get(event_type_id)
+    if event_activity_id:
+        event_activity = CMTEEventActivity.query.get(event_activity_id)
+        form = CMTEAdminEventActivityForm(obj=event_activity)
+    else:
+        form = CMTEAdminEventActivityForm(data={'event_type': event_type})
+    if form.validate_on_submit():
+        if not event_activity_id:
+            event_activity = CMTEEventActivity(type_id=event_type_id)
+            event_activity.created_at = arrow.now('Asia/Bangkok').datetime
+        else:
+            event_activity.updated_at = arrow.now('Asia/Bangkok').datetime
+
+        form.populate_obj(event_activity)
+        db.session.add(event_activity)
+        db.session.commit()
+        flash('บันทึกชนิดกิจกรรมแล้ว', 'success')
+        return redirect(url_for('cmte.admin_manage_event_activity', event_type_id=event_type_id))
+    return render_template('cmte/admin/event_activity_form.html',
+                           form=form, event_type_id=event_type_id)

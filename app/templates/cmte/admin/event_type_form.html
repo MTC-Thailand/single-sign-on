@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        <li><a href="{{url_for('cmte.admin_manage_events')}}">ประเภทกิจกรรม</a></li>
+                        <li class="is-active"><a href="#">แก้ไขข้อมูล</a></li>
+                    </ul>
+                </nav>
+                {% include "messages.html" %}
+                <h1 class="title has-text-centered is-size-4">เพิ่ม/แก้ไขข้อมูลประเภทกิจกรรม</h1>
+                <form method="post">
+                    {{form.hidden_tag()}}
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.number.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.number(class="input")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.name.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.name(class="input is-danger")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label">
+                            <label class="label">ผู้จัด</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.is_sponsored()}}
+                                    {{form.is_sponsored.label}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.fee_rates.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.fee_rates()}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.max_score.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.max_score(class="input")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.score_criteria.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.score_criteria(class="input")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.desc.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.desc(class="textarea")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label"></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.deprecated()}}
+                                    {{form.deprecated.label}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    <a class="button is-light" href="{{url_for('cmte.admin_manage_events')}}">Cancel</a>
+                                    <button type="submit" class="button is-success">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

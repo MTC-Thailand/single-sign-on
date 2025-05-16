@@ -17,7 +17,7 @@ from werkzeug.security import check_password_hash
 
 from app import db
 from app.members.models import Member, License
-from app.cmte.models import CMTEFeePaymentRecord
+from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
 
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
@@ -205,6 +205,135 @@ def check_exp_date_from_inet(license_id):
                 return rec.get('end_date')
 
 
+class MemberPID(Resource):
+    @jwt_required()
+    def get(self, pid):
+        """
+        This end point returns a member and a license information with a matching personal identification number.
+        ---
+        parameters:
+            -   pid: Personal Identification Number
+                in: path
+                type: string
+                required: true
+        responses:
+            200:
+                description: License information
+                schema:
+                    id: MemberLicense
+        """
+        member = Member.query.filter_by(pid=pid).first()
+        if member:
+            cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
+            valid_score = member.license.valid_cmte_scores
+
+            data = {
+                'license': {
+                    'number': member.license.number,
+                    'lic_b_date': member.license.issue_date.strftime('%Y-%m-%d'),
+                    'lic_status_name': member.license.status or 'ปกติ',
+                    'lic_exp_date': member.license.end_date.strftime('%Y-%m-%d'),
+                },
+                'member': {
+                    'th_title': member.th_title,
+                    'th_firstname': member.th_firstname,
+                    'th_lastname': member.th_lastname,
+                },
+                'cmte': {
+                    'active_cmte_payment': cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {},
+                    'valid_score': valid_score,
+                }
+            }
+            return jsonify(data=data)
+        return jsonify(data={}), 404
+
+
+class MemberLicense(Resource):
+    @jwt_required()
+    def get(self, license_number):
+        """
+        This end point returns a member and a license information with a matching license number.
+        ---
+        parameters:
+            -   pin: License number
+                in: path
+                type: string
+                required: true
+        responses:
+            200:
+                description: License information
+                schema:
+                    id: MemberLicense
+                    properties:
+                        license:
+                            type: object
+                            properties:
+                                number:
+                                    type: string
+                                    description: หมายเลขใบอนุญาต (ท.น.)
+                                lic_b_date:
+                                    type: string
+                                    description: วันออกใบอนุญาต
+                                lic_exp_date:
+                                    type: string
+                                    description: วันหมดอายุใบอนุญาต
+                                lic_status_name:
+                                    type: string
+                                    description: สถานะใบอนุญาต
+                        member:
+                            type: object
+                            properties:
+                                th_title:
+                                    type: string
+                                    description: คำนำหน้า
+                                th_firstname:
+                                    type: string
+                                    description: ชื่อภาษาไทย
+                                th_lastname:
+                                    type: string
+                                    description: นามสกุลภาษาไทย
+                        cmte_score:
+                            type: object
+                            properties:
+                                valid:
+                                    type: number
+                                    description: คะแนนสำหรับต่ออายุใบอนุญาตในรอบปัจจุบัน
+                                active_cmte_payment:
+                                    type: object
+                                    properties:
+                                        end_date:
+                                            type: string
+                                            description: วันที่หมดอายุ mock up
+                                        start_date:
+                                            type: string
+                                            description: วันที่เริ่มต้น mock up
+        """
+        license = License.query.filter_by(number=license_number).first()
+        member = Member.query.get(license.member_id)
+        if member:
+            cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
+            valid_score = member.license.valid_cmte_scores
+            data = {
+                'license': {
+                    'number': license.number,
+                    'lic_b_date': license.issue_date.strftime('%Y-%m-%d'),
+                    'lic_status_name': license.status or 'ปกติ',
+                    'lic_exp_date': license.end_date.strftime('%Y-%m-%d'),
+                },
+                'member': {
+                    'th_title': license.member.th_title,
+                    'th_firstname': license.member.th_firstname,
+                    'th_lastname': license.member.th_lastname,
+                },
+                'cmte': {
+                    'active_cmte_payment': cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {},
+                    'valid_score': valid_score,
+                }
+            }
+            return jsonify(data=data)
+        return jsonify(data=None), 404
+
+
 class MemberInfo(Resource):
     @jwt_required()
     def get(self, pin):
@@ -367,8 +496,12 @@ class MemberInfo(Resource):
         member.mem_status_id,member.emp_function_id,member.emp_owner_id,member.emp_contract_id
         FROM member WHERE member.persion_id='{pin}';
         '''
-        data = pd.read_sql_query(query, con=engine)
-        data = data.squeeze().to_dict()
+        try:
+            data = pd.read_sql_query(query, con=engine)
+        except:
+            data = {}
+        else:
+            data = data.squeeze().to_dict()
 
         # query = f'''
         # SELECT lic_mem.lic_exp_date,lic_mem.lic_b_date FROM lic_mem
@@ -384,7 +517,7 @@ class MemberInfo(Resource):
         # '''
         #
         # mem_status_data = pd.read_sql_query(query, con=engine)
-        data['mem_status'] = member.status
+        data['mem_status'] = member.status if member else None
 
         if data['emp_function_id']:
             query = f"""
@@ -494,8 +627,8 @@ class CMTEEventResource(Resource):
                             type: string
                             description: Payment date
         """
-        query = CMTEEvent.query.filter(CMTEEvent.start_date >= datetime.today())
+        query = CMTEEvent.query.filter(CMTEEvent.start_date >= datetime.datetime.today())
         upcoming_events = []
         for event in query:
             upcoming_events.append(event.to_dict())
-        return jsonify(data=upcoming_events)
+        return jsonify({'data': upcoming_events})

@@ -31,7 +31,7 @@ class CMTEEventForm(ModelForm):
         model = CMTEEvent
         datetime_format = '%d/%m/%Y %H:%M'
 
-    event_type = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
+    event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
 
 
@@ -41,7 +41,7 @@ class CMTEAdminEventForm(ModelForm):
         datetime_format = '%d/%m/%Y %H:%M'
         date_format = '%d/%m/%Y'
 
-    event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
+    event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
     sponsor = QuerySelectField('สถาบันฝึกอบรม', query_factory=lambda: CMTEEventSponsor.query.all())
     activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query.all())
@@ -188,3 +188,20 @@ class CMTEPaymentForm(FlaskForm):
 
 class CMTEParticipantFileUploadForm(FlaskForm):
     upload_file = FileField('Participants')
+
+
+class CMTEAdminEventTypeForm(ModelForm):
+    class Meta:
+        model = CMTEEventType
+        exclude = ['created_at', 'updated_at']
+
+    fee_rates = QuerySelectMultipleField(query_factory=lambda: CMTEEventFeeRate.query.all(),
+                                         widget=ListWidget(prefix_label=False),
+                                         option_widget=CheckboxInput())
+
+
+class CMTEAdminEventActivityForm(ModelForm):
+    class Meta:
+        model = CMTEEventActivity
+        exclude = ['created_at', 'updated_at']
+    event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.all())

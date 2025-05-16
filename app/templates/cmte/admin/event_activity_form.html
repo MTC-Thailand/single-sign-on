@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        <li><a href="{{url_for('cmte.admin_manage_events')}}">ประเภทกิจกรรม</a></li>
+                        <li><a href="{{url_for('cmte.admin_manage_event_activity', event_type_id=event_type_id)}}">ชนิดกิจกรรม</a></li>
+                        <li class="is-active"><a href="#">แก้ไขข้อมูล</a></li>
+                    </ul>
+                </nav>
+                {% include "messages.html" %}
+                <h1 class="title has-text-centered is-size-4">เพิ่ม/แก้ไขข้อมูลชนิดกิจกรรม</h1>
+                <form method="post">
+                    {{form.hidden_tag()}}
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.event_type.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="select is-fullwidth">
+                                    {{form.event_type()}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.number.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.number(class="input")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.name.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.name(class="input is-danger")}}
+                                </div>
+                            </div>
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.en_name(class="input", placeholder="English Name")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.detail.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.detail(class="textarea")}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label"></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.group_submission_allowed()}}
+                                    {{form.group_submission_allowed.label}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label"></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.group_submission_only()}}
+                                    {{form.group_submission_only.label}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label"></div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.deprecated()}}
+                                    {{form.deprecated.label}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    <a class="button is-light" href="{{url_for('cmte.admin_manage_event_activity', event_type_id=event_type_id)}}">Cancel</a>
+                                    <button type="submit" class="button is-success">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

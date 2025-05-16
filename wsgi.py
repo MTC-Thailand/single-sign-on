@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from pprint import pprint
 
 import click
 import pandas as pd
@@ -332,7 +333,7 @@ def load_cpd_event_records_2(year, month, event_id):
         record = CMTEEventParticipationRecord(license=license,
                                               event=event,
                                               score=row['cpd_score'],
-                                              approved_date=row['approved_datetime'] or datetime.datetime(2022,1,8),
+                                              approved_date=row['approved_datetime'] or datetime.datetime(2022, 1, 8),
                                               score_valid_until=score_valid_until)
         db.session.add(record)
         db.session.commit()
@@ -423,7 +424,7 @@ def update_record_enddate(dry_run, year=None, license=None):
     n_startdate = 0
     query = CMTEEventParticipationRecord.query.filter_by(individual=False)
     if year:
-        query = query.join(CMTEEventParticipationRecord.event)\
+        query = query.join(CMTEEventParticipationRecord.event) \
             .filter(extract('year', CMTEEvent.end_date) == int(year))
     if license:
         query = query.filter_by(license_number=license)
@@ -431,7 +432,7 @@ def update_record_enddate(dry_run, year=None, license=None):
         if record.score_valid_until:
             if record.event:
                 if record.event.end_date:
-                    if record.event.end_date.date() >= record.license.start_date\
+                    if record.event.end_date.date() >= record.license.start_date \
                             and record.score_valid_until != record.license.end_date:
                         # print(f'{record.event.start_date.date()} - {record.event.end_date.date()}: {record.license.number}({record.license.start_date} - {record.license.end_date})')
                         record.score_valid_until = record.license.end_date
@@ -439,7 +440,7 @@ def update_record_enddate(dry_run, year=None, license=None):
                             db.session.add(record)
                         n_enddate += 1
                 else:
-                    if record.event.start_date.date() and record.event.start_date >= record.license.start_date\
+                    if record.event.start_date.date() and record.event.start_date >= record.license.start_date \
                             and record.score_valid_until != record.license.end_date:
                         # print(f'{record.event.start_date.date()} - None: {record.license.start_date} - {record.license.end_date}')
                         record.score_valid_until = record.license.end_date
@@ -458,14 +459,14 @@ def update_individual_record_enddate(dry_run):
     for record in CMTEEventParticipationRecord.query.filter_by(individual=True):
         if record.score_valid_until:
             if record.end_date:
-                if record.end_date >= record.license.start_date\
+                if record.end_date >= record.license.start_date \
                         and record.score_valid_until != record.license.end_date:
                     record.score_valid_until = record.license.end_date
                     n += 1
                     if not dry_run:
                         db.session.add(record)
             else:
-                if record.start_date and record.start_date >= record.license.start_date\
+                if record.start_date and record.start_date >= record.license.start_date \
                         and record.score_valid_until != record.license.end_date:
                     record.score_valid_until = record.license.end_date
                     n += 1
@@ -474,3 +475,122 @@ def update_individual_record_enddate(dry_run):
     if not dry_run:
         db.session.commit()
     print(n)
+
+
+@app.cli.command('test-cmte-score-endpoint')
+@click.argument('base_url')
+@click.argument('license_no')
+def test_cmte_score_endpoint(base_url, license_no):
+    import requests
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id,
+                               'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print(token, resp.json())
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/{license_no}/cmte/scores',
+                        headers={'Authorization': f'Bearer {token}'})
+    print(resp.json())
+
+
+@app.cli.command('test-member-pid-local-endpoint')
+@click.argument('pid')
+def test_member_pid_local_endpoint(pid):
+    import requests
+    client_id = os.environ.get('CLIENT_ID')
+    client_secret = os.environ.get('CLIENT_SECRET')
+    base_url = 'http://127.0.0.1:5000'
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id, 'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/pids/{pid}',
+                        headers={'Authorization': f'Bearer {token}'})
+    if resp.status_code != 200:
+        print(f'Error! {resp.status_code}')
+    else:
+        pprint(resp.json())
+
+
+@app.cli.command('test-member-license-local-endpoint')
+@click.argument('license_number')
+def test_member_license_local_endpoint(license_number):
+    import requests
+    client_id = os.environ.get('CLIENT_ID')
+    client_secret = os.environ.get('CLIENT_SECRET')
+    base_url = 'http://127.0.0.1:5000'
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id, 'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/licenses/{license_number}',
+                        headers={'Authorization': f'Bearer {token}'})
+    if resp.status_code != 200:
+        print(f'Error! {resp.status_code}')
+    else:
+        pprint(resp.json())
+
+
+@app.cli.command('test-member-info-endpoint')
+@click.argument('pid')
+def test_member_info_endpoint(pid):
+    import requests
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
+    base_url = 'https://mtc-webservices.herokuapp.com'
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id, 'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/{pid}/info',
+                        headers={'Authorization': f'Bearer {token}'})
+    if resp.status_code == 200:
+        pprint(resp.json())
+    else:
+        print(f'Error! {resp.status_code}')
+
+
+@app.cli.command('test-member-info-endpoint-local')
+@click.argument('pid')
+def test_member_info_endpoint_local(pid):
+    import requests
+    base_url = 'http://127.0.0.1:5000'
+    client_id = os.environ.get('CLIENT_ID')
+    client_secret = os.environ.get('CLIENT_SECRET')
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id,
+                               'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/{pid}/info',
+                        headers={'Authorization': f'Bearer {token}'})
+    pprint(resp.json())
+
+
+@app.cli.command('test-cmte-upcoming-events')
+@click.argument('base_url')
+def test_cmte_upcoming_events(base_url):
+    import requests
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id,
+                               'client_secret': client_secret})
+    print(resp.status_code)
+    token = resp.json().get('access_token')
+    print(token)
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/cmte/upcoming-events',
+                        headers={'Authorization': f'Bearer {token}'})
+    if resp.status_code == 200:
+        pprint(resp.json())
+    else:
+        print(resp.status_code, resp.text)

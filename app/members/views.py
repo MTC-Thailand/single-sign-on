@@ -1,4 +1,6 @@
 import json
+from datetime import datetime
+
 import arrow
 
 import os
@@ -24,6 +26,9 @@ from app.members.models import *
 from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm
 from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord
 from app import admin_permission
+
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
@@ -352,8 +357,17 @@ def login():
             data['mobile_ref_id'] = mobile_ref_id
             data['action'] = 'confirm_otp_register'
 
-        response = requests.post(f'{url}', json=data,
-                                 headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+        print('Confirming OTP..')
+        retry = Retry(
+            total=5,
+            backoff_factor=2,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        s = requests.Session()
+        s.mount('https://', adapter)
+        response = s.post(f'{url}', json=data,
+                          headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+        print(response.status_code)
         if response.status_code == 200:
             session['login_as'] = 'member'
             login_user(user, remember=True)
@@ -653,3 +667,47 @@ def cmte_fee_payment_form():
         else:
             flash(f'{form.errors}', 'danger')
     return render_template('members/cmte/individual_score_payment_form.html', form=form)
+
+
+@member.route('/api/members/search', methods=['GET', 'POST'])
+def search_member_api():
+    query = request.args.get('query')
+    if query:
+        template = '''<table class="table is-fullwidth is-striped">'''
+        template += '''
+        <thead><th>Name</th><th>License No.</th><th>License Date</th><th>Status</th></thead>
+        <tbody>
+        '''
+        licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
+        if not licenses:
+            try:
+                firstname, lastname = query.split(" ")
+            except ValueError:
+                pass
+            else:
+                members = Member.query.filter(and_(Member.th_firstname.like(f'%{firstname}%'),
+                                                  Member.th_lastname.like(f'%{lastname}%')))
+                licenses = [(member.license, member) for member in members]
+        if not licenses:
+            members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
+                                              Member.th_lastname.like(f'%{query}%')))
+            licenses = [(member.license, member) for member in members]
+        for lic, member in licenses:
+            status_tag = '<span class="tag {}">{}</span>'
+            if lic.end_date <= datetime.today().date():
+                lic_status = status_tag.format('is-danger', 'หมดอายุ')
+            elif lic.status:
+                if lic.status == 'ปกติ':
+                    lic_status = status_tag.format('is-success', lic.status)
+                else:
+                    lic_status = status_tag.format('is-warning', lic.status)
+            else:
+                lic_status = status_tag.format('is-success', 'ปกติ')
+            if lic:
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
+            else:
+                lic = License.query.filter_by(member_id=member.id).first()
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
+        template += '</tbody></table>'
+        return make_response(template)
+    return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
