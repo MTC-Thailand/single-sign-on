@@ -31,7 +31,13 @@
                             <li {% if tab == 'edit' %}class="is-active"{% endif %}>
                                 <a href="{{ url_for('cmte.all_requests', tab='edit') }}">
                                     <span class="icon is-small"><i class="fas fa-pen-fancy"></i></span>
-                                    <span>ขอแก้ไขข้อมูล</span>
+                                    <span>ขอแก้ไขข้อมูลสถาบัน</span>
+                                </a>
+                            </li>
+                            <li {% if tab == 'change' %}class="is-active"{% endif %}>
+                                <a href="{{ url_for('cmte.all_requests', tab='change') }}">
+                                    <span class="icon is-small"><i class="fas fa-people-carry"></i></span>
+                                    <span>ขอเปลี่ยนผู้ประสานงาน</span>
                                 </a>
                             </li>
                             <li {% if tab == 'all' %}class="is-active"{% endif %}>
@@ -59,7 +65,8 @@
                                     <td>
                                         {% if req.type == 'new' %}ขอขึ้นทะเบียน
                                         {% elif req.type == 'renew' %}ขอต่ออายุ
-                                        {% elif tab == 'edit' %}ขอแก้ไขข้อมูล
+                                        {% elif req.type == 'change' %}ขอเปลี่ยนผู้ประสานงาน
+                                        {% else %}ขอแก้ไขข้อมูล
                                         {% endif %}
                                     </td>
                                     <td style="width: 20em;">
@@ -111,35 +118,15 @@
                                         {{ req.sponsor.expire_status() }}
                                     </td>
                                     <td>
-                                        <div id="sponsor-modal-container"></div>
-                                        {% if not tab == 'edit' %}
-                                        {% if not req.approved_at %}
-                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติคำขอ')"
-                                            href="{{ url_for('cmte.approved_renew_sponsor', request_id=req.id) }}"
-                                            class="button is-success is-outlined">
-                                            <span class="icon">
-                                                <i class="fa-solid fa-check-square"></i>
-                                            </span>
-                                            <span>อนุมัติคำขอ</span>
-                                        </a>
-                                        {% elif tab == 'paid' and not req.verified_at %}
-                                            <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยืนยันการชำระเงินค่าธรรมเนียม $$')"
-                                                href="{{ url_for('cmte.verified_payment_sponsor', request_id=req.id) }}"
-                                                class="button is-success is-outlined">
-                                                <span class="icon">
-                                                    <i class="fa-solid fa-check-double"></i>
-                                                </span>
-                                                <span>verify payment</span>
+                                        {% if tab == 'edit' %}
+                                            <a href={{ url_for('cmte.manage_edit_sponsor', request_id=req.id) }} class="button is-info">
+                                            <span>ดำเนินการ</span>
+                                            </a>
+                                        {% else %}
+                                            <a href={{ url_for('cmte.manage_sponsor', sponsor_id=req.sponsor.id) }} class="button is-info">
+                                                <span>ดำเนินการ</span>
                                             </a>
                                         {% endif %}
-                                        {% endif %}
-                                        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=req.sponsor.id) }}" hx-target="#sponsor-modal-container" hx-swap="innerHTML"
-                                            class="button is-info is-light">
-                                            <span class="icon">
-                                                <i class="fa-solid fa-pencil"></i>
-                                            </span>
-                                            <span>อัพเดทข้อมูล</span>
-                                        </a>
                                     </td>
                                 </tr>
                             {% endfor %}

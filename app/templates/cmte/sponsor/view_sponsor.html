@@ -10,7 +10,6 @@
         {% if is_admin %}
         <h1 class="subtitle has-text-centered">(ฝั่ง admin)</h1>
         <div class="columns">
-            <div class="column"></div>
             <div class="column">
                 <div class="has-text-centered">
                     <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
@@ -46,13 +45,12 @@
                 </a>
             </div>
             {% endif %}
-            <div class="column"></div>
         </div>
         {% endif %}
         <div id="sponsor-modal-container"></div>
         <div class="columns">
             {% if not is_admin %}
-            {% if not sponsor.disable_at %}
+            {% if not sponsor.disable_at and sponsor.registered_datetime %}
             <div class="column">
                 <div class="has-text-centered">
                     <a href="{{ url_for('cmte.request_edit_sponsor', sponsor_id=sponsor.id) }}"
@@ -121,42 +119,6 @@
                                 {% endif %}
                                 {% endif %}
                             {% endfor %}
-                            <table class="table is-striped is-bordered">
-                                <thead>
-                                    <th>วันที่ส่งคำขอแก้ไขเอกสาร/ผู้ประสานงาน</th>
-                                    {% if is_admin %}<th>ประเภทคำขอแก้ไข</th>{% endif %}
-                                    <th>วันที่อนุมัติคำขอ</th>
-                                </thead>
-                                <tbody>
-                                {% for req in sponsor.requests %}
-                                    {% if req.type == 'edit' %}
-                                        <tr>
-                                            <td>{{ req.created_at|localdatetime }}
-
-                                            </td>
-                                            {% if is_admin %}<td>{{ req.comment }}</td>{% endif %}
-                                            <td>
-                                                {{ req.approved_at|localdatetime or '' }}
-                                                {% if is_admin %}
-                                                    {% if not req.approved_at %}
-                                                        {% if 'Lead coordinator' in req.comment %}
-                                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข หากอนุมัติ ข้อมูลจะถูกแก้ไขทันที')"
-                                                            href="{{ url_for('cmte.change_coordinator_member', sponsor_id=sponsor.id, member_id=req.member_id) }}"
-                                                            class="button is-success is-outlined">
-                                                            <span class="icon">
-                                                                <i class="fa-solid fa-check-square"></i>
-                                                            </span>
-                                                            <span>อนุมัติคำขอแก้ไขผู้ประสานงานหลัก</span>
-                                                        </a>
-                                                        {% endif %}
-                                                    {% endif %}
-                                            {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endif %}
-                                {% endfor %}
-                                </tbody>
-                            </table>
                         </td>
                     </tr>
                     <tr>
@@ -188,7 +150,10 @@
                                 {{ sponsor.registered_datetime|localdatetime }}
                             {% else %}
                                 {% if not sponsor.disable_at %}
-                                รอการตรวจสอบและอนุมัติ
+                                    <span class="icon">
+                                        <i class="fas fa-spinner fa-pulse"></i>
+                                    </span>
+                                    <span>รอการตรวจสอบและอนุมัติ</span>
                                 {% endif %}
                             {% endif %}
                         </td>
@@ -199,7 +164,10 @@
                                 {{ sponsor.expire_date|localdate }}
                             {% else %}
                                 {% if not sponsor.disable_at %}
-                                รอการตรวจสอบและอนุมัติ
+                                    <span class="icon">
+                                        <i class="fas fa-spinner fa-pulse"></i>
+                                    </span>
+                                    <span>รอการตรวจสอบและอนุมัติ</span>
                                 {% endif %}
                             {% endif %}
 
@@ -243,7 +211,7 @@
                                 </thead>
                                 <tbody>
                                 {% for req in sponsor.requests %}
-                                    {% if not req.type == 'edit' %}
+                                    {% if not req.type == 'change' %}
                                     <tr>
                                         <td>{{ req.created_at|localdatetime }}</td>
                                         <td>{% if req.type=='new' %}ขอขึ้นทะเบียน{% else %}ขอต่ออายุ{% endif %}</td>
@@ -448,6 +416,60 @@
             </div>
         </div>
         {% endif %}
+        <table class="table is-fullwidth is-striped is-bordered">
+            <thead>
+            <th>วันที่ส่งคำขอแก้ไขผู้ประสานงานหลัก</th>
+            {% if is_admin %}
+                <th>ประเภทคำขอแก้ไข</th>{% endif %}
+            <th>วันที่อนุมัติคำขอ</th>
+            <th></th>
+            </thead>
+            <tbody>
+            {% for req in sponsor.requests %}
+                {% if req.type == 'change' %}
+                    <tr>
+                        <td>{{ req.created_at|localdatetime }}
+
+                        </td>
+                        {% if is_admin %}
+                            <td>{{ req.comment }}</td>{% endif %}
+                        <td>
+                            {{ req.approved_at|localdatetime or '' }}
+                            {% if is_admin %}
+                                {% if not req.approved_at %}
+                                    {% if 'Lead coordinator' in req.comment %}
+                                        <a onclick="return confirm('แน่ใจหรือไม่ ที่จะอนุมัติการแก้ไข หากอนุมัติ ข้อมูลจะถูกแก้ไขทันที')"
+                                           href="{{ url_for('cmte.change_coordinator_member', sponsor_id=sponsor.id, member_id=req.member_id, request_id=req.id) }}"
+                                           class="button is-success is-outlined">
+                                                            <span class="icon">
+                                                                <i class="fa-solid fa-check-square"></i>
+                                                            </span>
+                                            <span>อนุมัติคำขอแก้ไขผู้ประสานงานหลัก</span>
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if not is_admin %}
+                            {% if not req.cancelled_at and not req.approved_at %}
+                                <a onclick="return confirm('แน่ใจหรือไม่ ที่จะยกเลิกคำขอการแก้ไข')"
+                                           href="{{ url_for('cmte.cancel_request_change_coordinator_member', sponsor_id=sponsor.id, request_id=req.id) }}"
+                                           class="button is-danger is-outlined">
+                                           <span class="icon">
+                                               <i class="fa-solid fa-close"></i>
+                                           </span>
+                                    <span>ยกเลิกคำขอ</span>
+                                </a>
+                            {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
         {% if is_admin %}
         <h1 class="subtitle has-text-centered">ผู้ประสานงานที่ถูกยกเลิกบัญชีแล้ว</h1>
         <div class="columns">

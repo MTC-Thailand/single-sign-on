@@ -793,8 +793,8 @@ def request_change_coordinator_member(sponsor_id, member_id):
     create_request = CMTESponsorRequest(
         sponsor_id=sponsor_id,
         created_at=arrow.now('Asia/Bangkok').datetime,
-        type='edit',
-        comment='Lead coordinator ' + member.email,
+        type='change',
+        comment='Change Lead coordinator to be ' + member.email,
         member=member
     )
     db.session.add(create_request)
@@ -803,16 +803,30 @@ def request_change_coordinator_member(sponsor_id, member_id):
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
-@cmte.route('/sponsors/change-coordinator/<int:sponsor_id>/<int:member_id>', methods=['GET', 'POST'])
+@cmte.route('/sponsors/request/change-coordinator/<int:sponsor_id>/<int:request_id>/cancel', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def cancel_request_change_coordinator_member(sponsor_id, request_id):
+    request = CMTESponsorRequest.query.get(request_id)
+    request.cancelled_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(request)
+    db.session.commit()
+    flash('ยกเลิกคำขอเรียบร้อยแล้ว', 'success')
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+
+@cmte.route('/sponsors/change-coordinator/<int:sponsor_id>/<int:member_id>/<int:request_id>', methods=['GET', 'POST'])
 @login_required
 @cmte_admin_permission.require()
-def change_coordinator_member(sponsor_id, member_id):
+def change_coordinator_member(sponsor_id, member_id, request_id):
     all_member = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id).all()
     for member in all_member:
         member.is_coordinator = False
     member = CMTESponsorMember.query.get(member_id)
     member.is_coordinator = True
     db.session.add(member)
+    request = CMTESponsorRequest.query.get(request_id)
+    request.approved_at = arrow.now('Asia/Bangkok').datetime
     db.session.commit()
     flash('{}เป็นผู้ประสานงานหลัก เรียบร้อยแล้ว'.format(member), 'success')
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
@@ -1112,8 +1126,12 @@ def all_requests():
         requests = CMTESponsorRequest.query.filter_by(verified_at=None).filter(CMTESponsorRequest.paid_at != None).all()
     elif tab == 'edit':
         requests = CMTESponsorEditRequest.query.filter_by(status='pending').all()
+    elif tab == 'change':
+        requests = CMTESponsorRequest.query.filter_by(type='change', approved_at=None).all()
     else:
-        requests = CMTESponsorRequest.query.all()
+        all_request = CMTESponsorRequest.query.all()
+        edit_request = CMTESponsorEditRequest.query.all()
+        requests = all_request + edit_request
     return render_template('cmte/admin/sponsor_registration.html', requests=requests, tab=tab)
 
 
