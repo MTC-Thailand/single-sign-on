@@ -4,13 +4,14 @@ import time
 import os
 import uuid
 from datetime import timedelta, datetime
+from functools import wraps
 from io import BytesIO
 import pandas as pd
 
 import arrow
 import boto3
 from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app, session, \
-    jsonify
+    jsonify, abort
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
@@ -27,6 +28,17 @@ from app.cmte.models import *
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
 bangkok = timezone('Asia/Bangkok')
+
+
+def active_sponsor_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.sponsor.expire_date or \
+                datetime.today() > current_user.sponsor.expire_date:
+            abort(403)
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 @cmte.route('/aws-s3/download/<key>', methods=['GET'])
@@ -65,6 +77,7 @@ def cmte_index():
 
 
 @cmte.get('/events/registration')
+@active_sponsor_required
 @login_required
 @cmte_sponsor_admin_permission.require()
 def register_event():
@@ -604,6 +617,7 @@ def get_cmte_point_input(event_id):
 
 
 @cmte.get('/events/drafts')
+@active_sponsor_required
 @login_required
 @cmte_sponsor_admin_permission.require()
 def show_draft_events():
@@ -732,6 +746,7 @@ def sponsor_member_login():
             if user.verify_password(form.password.data):
                 session['login_as'] = 'cmte_sponsor_admin'
                 login_user(user, remember=False)
+                print(current_user)
                 identity = Identity(user.unique_id)
                 identity_changed.send(current_app._get_current_object(), identity=identity)
                 flash('Logged in successfully', 'success')
@@ -916,7 +931,7 @@ def register_sponsor():
                     s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
                     doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
                     doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
-                    doc.note = request.form.get(field+'_note')
+                    doc.note = request.form.get(field + '_note')
                     db.session.add(doc)
                 if not cmte_admin_permission:
                     sponsor.members.append(current_user)
@@ -963,7 +978,7 @@ def get_org_type(sponsor_id=None):
         detail = 'โปรดระบุ'
     if sponsor_id:
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
-        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{ sponsor.type_detail }</textarea>'''
+        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{sponsor.type_detail}</textarea>'''
     else:
         type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
     resp = make_response(type_detail)
@@ -1008,8 +1023,8 @@ def request_edit_sponsor(sponsor_id):
             db.session.add(sponsor)
 
             s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
-                                         aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
-                                         region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
             for field, _file in request.files.items():
                 filename = _file.filename
                 key = uuid.uuid4()
@@ -1251,7 +1266,8 @@ def manage_edit_sponsor(request_id):
     edit_request = CMTESponsorEditRequest.query.get(request_id)
     current_version = edit_request.sponsor.versions[edit_request.version_index]
     previous_version = current_version.previous
-    return render_template('cmte/admin/edit_sponsor.html', current_version=current_version, previous_version=previous_version,
+    return render_template('cmte/admin/edit_sponsor.html', current_version=current_version,
+                           previous_version=previous_version,
                            edit_request=edit_request)
 
 
