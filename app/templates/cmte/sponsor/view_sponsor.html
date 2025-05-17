@@ -138,7 +138,7 @@
                         <td class="content">
                             <ul>
                             {% for member in sponsor.members|sort(attribute="id") %}
-                                <li>{{ member }} {% if member.is_coordinator %} <i class="far fa-tag"></i>ผู้ประสานงานหลัก{% endif %}</li>
+                                <li>{{ member }} {% if member.is_coordinator %} <span class="tag is-success"><span class="icon"><i class="fas fa-user-check"></i></span> ผู้ประสานงานหลัก{% endif %}</span></li>
                             {% endfor %}
                             </ul>
                         </td>
@@ -502,7 +502,7 @@
         <div class="buttons is-centered">
             <a href="{{ url_for('cmte.all_requests') }}" class="button is-light">
                 <span class="icon">
-                    <i class="far fa-arrow-left"></i>
+                    <i class="fas fa-chevron-left"></i>
                 </span>
                 <span>กลับ</span>
             </a>
