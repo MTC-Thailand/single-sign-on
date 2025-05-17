@@ -115,20 +115,20 @@
         <div class="buttons is-centered">
             <a href="{{ url_for('cmte.approved_edit_sponsor', request_id=edit_request.id, status='approved') }}" class="button is-medium is-success">
                 <span class="icon">
-                    <i class="far fa-check fa-fade"></i>
+                    <i class="fas fa-check"></i>
                 </span>
                 <span>อนุมัติการแก้ไข</span>
             </a>
             <a href="{{ url_for('cmte.approved_edit_sponsor', request_id=edit_request.id, status='reject') }}" class="button is-medium is-danger">
                 <span class="icon">
-                    <i class="far fa-close fa-fade"></i>
+                    <i class="fas fa-reply"></i>
                 </span>
                 <span>ไม่อนุมัติการแก้ไข</span>
             </a>
         </div>
         {% endif %}
         <div class="buttons is-centered">
-            <a href="{{ url_for('cmte.all_requests') }}" class="button is-light is-small">
+            <a href="{{ url_for('cmte.all_requests') }}" class="button is-light">
                 <span>กลับ</span>
             </a>
         </div>
