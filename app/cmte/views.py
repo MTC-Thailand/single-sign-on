@@ -33,8 +33,7 @@ bangkok = timezone('Asia/Bangkok')
 def active_sponsor_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.sponsor.expire_date or \
-                datetime.today() > current_user.sponsor.expire_date:
+        if not current_user.sponsor.expire_date:
             abort(403)
         return f(*args, **kwargs)
 
@@ -115,6 +114,7 @@ def create_event(event_id=None):
         event.start_date = arrow.get(event.start_date, 'Asia/Bangkok').datetime
         event.end_date = arrow.get(event.end_date, 'Asia/Bangkok').datetime
         event.sponsor = current_user.sponsor
+        event.submission_due_date = event.end_date + timedelta(days=30)
         s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                  aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                  region_name=os.environ.get('BUCKETEER_AWS_REGION'))
@@ -134,6 +134,88 @@ def create_event(event_id=None):
         return redirect(url_for('cmte.preview_event', event_id=event.id))
     flash('กรุณาตรวจสอบความถูกต้องของข้อมูล', 'warning')
     return render_template('cmte/event_registration.html', form=form, event=event)
+
+
+@cmte.route('/events/<int:event_id>/venue', methods=['GET', 'POST'])
+@active_sponsor_required
+@login_required
+@cmte_sponsor_admin_permission.require()
+def sponsor_edit_venue(event_id):
+    event = CMTEEvent.query.get(event_id)
+
+    class WebsiteForm(ModelForm):
+        class Meta:
+            model = CMTEEvent
+            only = ['venue']
+
+    form = WebsiteForm(obj=event)
+
+    if request.method == 'GET':
+        return f'''
+        <form hx-swap="innerHTML" hx-target="#venue"
+            hx-post="{url_for('cmte.sponsor_edit_venue', event_id=event.id)}">
+        {form.hidden_tag()}
+        <div class="field">
+            <div class="control">
+            {form.venue(class_="textarea")}
+            </div>
+        </div>
+        <div class="field">
+            <div class="control">
+                <button class="button is-success" type=submit>บันทึก</button>
+            </div>
+        </div>
+        </form>
+        '''
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(event)
+            db.session.add(event)
+            db.session.commit()
+            return event.venue
+        else:
+            return form.errors
+
+
+@cmte.route('/events/<int:event_id>/website', methods=['GET', 'POST'])
+@active_sponsor_required
+@login_required
+@cmte_sponsor_admin_permission.require()
+def sponsor_edit_website(event_id):
+    event = CMTEEvent.query.get(event_id)
+
+    class WebsiteForm(ModelForm):
+        class Meta:
+            model = CMTEEvent
+            only = ['website']
+
+    form = WebsiteForm(obj=event)
+
+    if request.method == 'GET':
+        return f'''
+        <form hx-swap="innerHTML" hx-target="#website"
+            hx-post="{url_for('cmte.sponsor_edit_website', event_id=event.id)}">
+        {form.hidden_tag()}
+        <div class="field">
+            <div class="control">
+            {form.website(class_="textarea")}
+            </div>
+        </div>
+        <div class="field">
+            <div class="control">
+                <button class="button is-success" type=submit>บันทึก</button>
+            </div>
+        </div>
+        </form>
+        '''
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(event)
+            db.session.add(event)
+            db.session.commit()
+            return event.website
+        else:
+            return form.errors
 
 
 @cmte.post('/fee-rates')
@@ -554,11 +636,25 @@ def get_events():
                    draw=request.args.get('draw', type=int))
 
 
-@cmte.get('/admin/events/load-pending/pages/<int:page_no>')
+@cmte.get('/admin/api/events')
 @login_required
 @cmte_sponsor_admin_permission.require()
-def load_pending_events(page_no=1):
-    events = CMTEEvent.query.filter_by(approved_datetime=None).offset(page_no * 10).limit(10)
+def load_pending_events():
+    records_total = CMTEEvent.query.count()
+    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for event in query:
+        event_dict = event.to_dict()
+        event_dict['link'] = url_for('cmte.preview_event', event_id=event.id)
+        data.append(event_dict)
+    return jsonify({'data': data,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
 
 
 @cmte.post('/admin/events/<int:event_id>/approve')
@@ -624,7 +720,7 @@ def show_draft_events():
     page = request.args.get('page', type=int, default=1)
     query = CMTEEvent.query.filter_by(submitted_datetime=None)
     events = query.paginate(page=page, per_page=20)
-    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
+    next_url = url_for('cmte.load_pending_events', page_no=events.next_num) if events.has_next else None
     return render_template('cmte/draft_events.html',
                            events=events.items, next_url=next_url)
 
@@ -645,9 +741,9 @@ def show_submitted_events():
 @cmte_sponsor_admin_permission.require()
 def show_approved_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).order_by(CMTEEvent.start_datetime)
+    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).order_by(CMTEEvent.start_date)
     events = query.paginate(page=page, per_page=20)
-    next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
+    next_url = url_for('cmte.load_pending_events', page_no=events.next_num) if events.has_next else None
     return render_template('cmte/approved_events.html', events=events.items, next_url=next_url)
 
 
@@ -1283,12 +1379,14 @@ def approved_edit_sponsor(request_id):
 
     if status == 'reject':
         current_version_index = edit_request.version_index
-        previous_version = edit_request.sponsor.versions[current_version_index - 1]
-        if previous_version:
-            for column in edit_request.sponsor.__table__.columns:
-                field_name = column.name
-                if hasattr(previous_version, field_name):
-                    setattr(edit_request.sponsor, field_name, getattr(previous_version, field_name))
+        current_version = edit_request.sponsor.versions[current_version_index]
+        current_version.revert()
+        db.session.commit()
+        # if previous_version:
+        #     for column in edit_request.sponsor.__table__.columns:
+        #         field_name = column.name
+        #         if hasattr(previous_version, field_name):
+        #             setattr(edit_request.sponsor, field_name, getattr(previous_version, field_name))
 
     db.session.commit()
     flash('บันทึกข้อมูลเรียบร้อยแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนแล้ว',
@@ -1431,6 +1529,8 @@ def admin_event_edit(event_id=None):
             if not event:
                 event = CMTEEvent()
             form.populate_obj(event)
+            if event.approved_datetime:
+                event.submission_due_date = event.approved_datetime + timedelta(days=30)
             db.session.add(event)
             db.session.commit()
             flash('เพิ่มกิจกรรมเรียบร้อย', 'success')

@@ -31,7 +31,8 @@ class CMTEEventForm(ModelForm):
         model = CMTEEvent
         datetime_format = '%d/%m/%Y %H:%M'
 
-    event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
+    event_type = QuerySelectField('ประเภทกิจกรรม',
+                                  query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
 
 
@@ -41,7 +42,8 @@ class CMTEAdminEventForm(ModelForm):
         datetime_format = '%d/%m/%Y %H:%M'
         date_format = '%d/%m/%Y'
 
-    event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
+    event_type = QuerySelectField('ประเภทกิจกรรม',
+                                  query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
     sponsor = QuerySelectField('สถาบันฝึกอบรม', query_factory=lambda: CMTEEventSponsor.query.all())
     activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query.all())
@@ -58,6 +60,7 @@ class IndividualScoreForm(ModelForm):
         model = CMTEEventParticipationRecord
         only = ['start_date', 'end_date', 'desc']
         date_format = '%d/%m/%Y'
+
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
 
@@ -66,6 +69,7 @@ class IndividualScoreAdminForm(ModelForm):
         model = CMTEEventParticipationRecord
         only = ['start_date', 'end_date', 'desc', 'score', 'reason']
         date_format = '%d/%m/%Y'
+
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
     activity = QuerySelectField('ชนิดกิจกรรม',
                                 query_factory=lambda: CMTEEventActivity.query.all(),
@@ -100,7 +104,8 @@ class CMTESponsorMemberForm(ModelForm):
     class Meta:
         model = CMTESponsorMember
 
-    password = PasswordField('รหัสผ่าน', validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
+    password = PasswordField('รหัสผ่าน',
+                             validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
     confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
 
 
@@ -117,7 +122,6 @@ class CMTESponsorMemberChangePasswordForm(FlaskForm):
     password = PasswordField('รหัสผ่าน',
                              validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
     confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
-
 
 
 class CMTESponsorMemberLoginForm(ModelForm):
@@ -140,19 +144,18 @@ class CMTEEventSponsorForm(ModelForm):
 
     registered_date = DateField()
     qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
-                                              query_factory=lambda:CMTESponsorQualification.query.all(),
+                                              query_factory=lambda: CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
-    private_sector = SelectField(choices=[('','องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
+    private_sector = SelectField(choices=[('', 'องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
 
 
 class CMTESponsorEditForm(ModelForm):
-
     qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
-                                              query_factory=lambda:CMTESponsorQualification.query.all(),
+                                              query_factory=lambda: CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
-    private_sector = SelectField(choices=[('','องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
+    private_sector = SelectField(choices=[('', 'องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
 
 
 class CMTESponsorPaymentForm(FlaskForm):
@@ -204,4 +207,5 @@ class CMTEAdminEventActivityForm(ModelForm):
     class Meta:
         model = CMTEEventActivity
         exclude = ['created_at', 'updated_at']
+
     event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
