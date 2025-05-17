@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Sponsor Detail{% endblock %}
+
+{% block content %}
+    {% include "cmte/nav.html" %}
+    <section class="section" id="app">
+        {% include "messages.html" %}
+        <h1 class="title has-text-centered">รายการขอแก้ไขสถาบันฝึกอบรม {{ current_version.name }}</h1>
+        <h1 class="title has-text-centered">
+            สถานะ: {% if edit_request.status == 'reject' %}ปฏิเสธการแก้ไข{% else %}อนุมัติการแก้ไข{% endif %}
+        </h1>
+        <div class="columns">
+            <div class="column">
+                <table class="table is-fullwidth is-striped is-bordered">
+                    <tbody>
+                    <tr>
+                        <td></td>
+                        <td>ข้อมูลเดิม</td>
+                        <td><strong>ข้อมูลใหม่</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ชื่อองค์กร</strong></td>
+                        <td> {{ previous_version.name }}</td>
+                        <td {% if previous_version.name != current_version.name %}
+                            class="has-text-danger"
+                            {% endif %}>
+                            {{ current_version.name }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>สังกัด</strong></td>
+                        <td>{{ previous_version.affiliation or '' }}</td>
+                        <td{% if previous_version.affiliation != current_version.affiliation %}
+                            class="has-text-danger"
+                            {% endif %}>
+                            {{ current_version.affiliation or '' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ลักษณะองค์กร</strong></td>
+                        <td>{{ previous_version.type }}</td>
+                        <td {% if previous_version.type != current_version.type %}
+                            class="has-text-danger"
+                            {% endif %}>
+                            {{ current_version.type }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>รายละเอียดองค์กร</strong></td>
+                        <td>{{ previous_version.type_detail or '' }}</td>
+                        <td>
+                            <span {% if previous_version.type_detail != current_version.type_detail %}
+                                    class="has-text-danger" {% endif %}>
+                                {{ current_version.type_detail or '' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>ที่อยู่</strong></td>
+                        <td>{{ previous_version.address }} {{ previous_version.zipcode }}</td>
+                        <td {% if previous_version.address != current_version.address %}
+                            class="has-text-danger"
+                            {% endif %}>
+                            {{ current_version.address }}
+                             <span {% if previous_version.zipcode != current_version.zipcode %}
+                                    class="has-text-danger" {% endif %}>
+                            {{ current_version.zipcode }}
+                             </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>โทรศัพท์</strong></td>
+                        <td>{{ previous_version.telephone }}</td>
+                        <td {% if previous_version.telephone != current_version.telephone %}
+                            class="has-text-danger"
+                            {% endif %}>
+                            {{ current_version.telephone }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>email</strong></td>
+                        <td>{{ previous_version.email or '' }}</td>
+                        <td {% if previous_version.email != current_version.email %}
+                            class="has-text-danger"
+                            {% endif %}>
+                            {{ current_version.email or '' }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% for q in current_version.qualifications %}
+            <li>
+                {{ q }}
+            </li>
+        {% endfor %}
+        {% for doc in current_version.docs %}
+            {% if not doc.is_payment_slip %}
+                <a class="button is-small" href="{{ url_for('cmte.download_file', key=doc.key,
+                    download_filename=doc.filename) }}">
+                    <span class="icon">
+                        <i class="fas fa-cloud-download-alt"></i>
+                    </span>
+                    <span>{{ doc.filename }}</span>
+                </a>
+                <a onclick="return confirm('แน่ใจหรือไม่ ที่จะ**ลบ**ไฟล์นี้')"
+                   class="button is-small is-danger" href="{{ url_for('cmte.admin_delete_doc',doc_id=doc.id,
+                       sponsor_id=current_version.id) }}">
+                       <span class="icon">
+                           <i class="fas fa-trash"></i>
+                       </span>
+                </a>
+            {% endif %}
+        {% endfor %}
+        <hr>
+        {% if not edit_request.updated_at %}
+        <div class="buttons is-centered">
+            <a href="{{ url_for('cmte.approved_edit_sponsor', request_id=edit_request.id, status='approved') }}" class="button is-medium is-success">
+                <span class="icon">
+                    <i class="far fa-check fa-fade"></i>
+                </span>
+                <span>อนุมัติการแก้ไข</span>
+            </a>
+            <a href="{{ url_for('cmte.approved_edit_sponsor', request_id=edit_request.id, status='reject') }}" class="button is-medium is-danger">
+                <span class="icon">
+                    <i class="far fa-close fa-fade"></i>
+                </span>
+                <span>ไม่อนุมัติการแก้ไข</span>
+            </a>
+        </div>
+        {% endif %}
+        <div class="buttons is-centered">
+            <a href="{{ url_for('cmte.all_requests') }}" class="button is-light is-small">
+                <span>กลับ</span>
+            </a>
+        </div>
+    </section>
+{% endblock %}

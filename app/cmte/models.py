@@ -5,8 +5,13 @@ from sqlalchemy_utils import EmailType
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.validators import DataRequired
 from pytz import timezone
+from datetime import datetime, timedelta
+from sqlalchemy_continuum import make_versioned
+import sqlalchemy as sa
 
 from app import db
+
+make_versioned(user_cls=None)
 
 event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
                                 db.Column('event_type_id', db.Integer,
@@ -15,10 +20,17 @@ event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
                                           db.ForeignKey('cmte_event_fee_rates.id'))
                                 )
 
+sponsor_qualifications = db.Table('sponsor_qualification_assoc',
+                                           db.Column('event_sponsor_id', db.ForeignKey('cmte_event_sponsors.id')),
+                                           db.Column('qualification_id',
+                                                     db.ForeignKey('cmte_sponsor_qualification.id')),
+                                           )
+
 BANGKOK = timezone('Asia/Bangkok')
 
 
 class CMTEEventSponsor(db.Model):
+    __versioned__ = {}
     __tablename__ = 'cmte_event_sponsors'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_id = db.Column(db.Integer)
@@ -28,14 +40,43 @@ class CMTEEventSponsor(db.Model):
     address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
     zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
     telephone = db.Column('telephone', db.String(), info={'label': 'หมายเลขโทรศัพท์'})
+    email = db.Column('email', EmailType(), info={'label': 'E-mail'})
+    website = db.Column('website', db.String(), info={'label': 'website'})
     registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
     expire_date = db.Column('expire_date', db.Date())
+    type = db.Column(db.String(), info={'label': 'ลักษณะขององค์กร',
+             'choices': [(c, c) for c in (
+                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)',
+                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)',
+                 'เป็นสถานพยาบาล',
+                 'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด',
+                 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน')]})
+    type_detail = db.Column('type_detail', db.String())
+    qualifications = db.relationship('CMTESponsorQualification', secondary=sponsor_qualifications)
+    private_sector = db.Column('private_sector', db.Boolean(), default=False)
+    disable_at = db.Column('disable_at', db.DateTime(timezone=True))
 
     def __str__(self):
         return self.name
 
+    def expire_status(self):
+        today = datetime.now().date()
+        status = "inactive"
+        if self.expire_date:
+            status = "active"
+            if self.expire_date:
+                if self.expire_date < today:
+                    status = "expired"
+                else:
+                    delta = self.expire_date - today
+                    if delta.days <= 90:
+                        status = "nearly_expire"
+
+        return status
+
 
 class CMTESponsorMember(UserMixin, db.Model):
+    __versioned__ = {}
     __tablename__ = 'cmte_sponsor_members'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     old_user_id = db.Column('old_user_id', db.Integer())
@@ -46,28 +87,128 @@ class CMTESponsorMember(UserMixin, db.Model):
     _password_hash = db.Column(db.String(255))
     mobile_phone = db.Column('mobile_phone', db.String(), info={'label': 'โทรศัพท์มือถือ'})
     telephone = db.Column('telephone', db.String(), info={'label': 'โทรศัพท์'})
+    position = db.Column('position', db.String(), info={'label': 'ตำแหน่ง'})
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship(CMTEEventSponsor,
                               backref=db.backref('members', lazy='dynamic', cascade="all, delete-orphan"))
     is_coordinator = db.Column('is_coordinator', db.Boolean(), default=False)
+    is_valid = db.Column('is_valid', db.Boolean(), default=True)
+
+    @property
+    def is_active(self):
+        return self.is_valid
 
     def verify_password(self, password):
         return check_password_hash(self._password_hash, password)
 
     @property
     def password(self):
-        raise ValueError
+        #raise ValueError
+        return 'Password is not accessible'
 
     @password.setter
     def password(self, pw):
         self._password_hash = generate_password_hash(pw)
 
     def __str__(self):
-        return f'{self.firstname} {self.lastname}'
+        return f'{self.title or ""} {self.firstname} {self.lastname}'
 
     @property
     def unique_id(self):
         return f'sponsor-member-{self.id}'
+
+
+class CMTESponsorQualification(db.Model):
+    __tablename__ = 'cmte_sponsor_qualification'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    type = db.Column('type', db.String(255), nullable=False)
+    private_sector = db.Column('private_sector', db.Boolean(), default=False)
+
+    def __str__(self):
+        return self.type
+
+
+class CMTESponsorRequest(db.Model):
+    __tablename__ = 'cmte_sponsor_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('requests', lazy='dynamic'))
+    member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
+    member = db.relationship(CMTESponsorMember,
+                              backref=db.backref('member_requests', lazy='dynamic'))
+    type = db.Column('type', db.String())
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    expired_sponsor_date = db.Column('expired_sponsor_date', db.Date())
+    approved_at = db.Column('approved_at', db.DateTime(timezone=True))
+    paid_at = db.Column('paid_at', db.DateTime(timezone=True))
+    verified_at = db.Column('verified_at', db.DateTime(timezone=True))
+    comment = db.Column('comment', db.String())
+    rejected_at = db.Column('rejected_at', db.DateTime(timezone=True))
+    cancelled_at = db.Column('cancelled_at', db.DateTime(timezone=True))
+
+
+class CMTESponsorEditRequest(db.Model):
+    __tablename__ = 'cmte_sponsor_edit_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('edit_requests', lazy='dynamic'))
+    member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
+    member = db.relationship(CMTESponsorMember,
+                              backref=db.backref('edit_requests', lazy='dynamic'))
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    status = db.Column('status', db.String())
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
+    version_index = db.Column('version_index', db.Integer())
+
+
+class CMTESponsorDoc(db.Model):
+    __tablename__ = 'cmte_sponsor_docs'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    request_id = db.Column('request_id', db.ForeignKey('cmte_sponsor_requests.id'))
+    request = db.relationship(CMTESponsorRequest,
+                              backref=db.backref('docs', lazy='dynamic'))
+    sponsor = db.relationship(CMTEEventSponsor, backref=db.backref('docs', cascade='all, delete-orphan', lazy='dynamic'))
+    qualification_id = db.Column('qualification_id', db.ForeignKey('cmte_sponsor_qualification.id'))
+    qualification = db.relationship(CMTESponsorQualification,
+                              backref=db.backref('docs'))
+    key = db.Column('key', db.Text(), nullable=False)
+    filename = db.Column('filename', db.Text(), nullable=False)
+    upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
+    note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
+    is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
+
+
+class CMTEReceiptDoc(db.Model):
+    __tablename__ = 'cmte_receipt_docs'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    request_id = db.Column('request_id', db.ForeignKey('cmte_sponsor_requests.id'))
+    request = db.relationship(CMTESponsorRequest,
+                              backref=db.backref('receipt_docs'))
+    key = db.Column('key', db.Text(), nullable=False)
+    filename = db.Column('filename', db.Text(), nullable=False)
+    upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
+    note = db.Column('note', db.Text(), info={'label': 'คำอธิบาย'})
+
+
+class CMTEReceiptDetail(db.Model):
+    __tablename__ = 'cmte_receipt_details'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('receipt_details'))
+    name = db.Column('name', db.String())
+    receipt_item = db.Column('receipt_item', db.Text())
+    tax_id = db.Column('tax_id', db.String())
+    address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
+    zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
+
+    def __str__(self):
+        return f'รายละเอียดบนใบเสร็จ ออกใบนาม: {self.name } รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode}'
+
+
 
 
 class CMTEEventCategory(db.Model):
@@ -321,3 +462,5 @@ class CMTEFeePaymentRecord(db.Model):
                 'start_date': self.start_date.strftime('%Y-%m-%d') if self.start_date else None,
                 'payment_datetime': self.payment_datetime.isoformat() if self.payment_datetime else None,
                 'license_number': self.license_number}
+
+sa.orm.configure_mappers()

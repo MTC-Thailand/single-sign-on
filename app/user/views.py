@@ -4,7 +4,8 @@ from flask_principal import identity_changed, Identity, AnonymousIdentity
 from werkzeug.security import check_password_hash
 
 from app import db, admin_permission, cmte_admin_permission
-from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent, CMTEEventParticipationRecord
+from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent, CMTEEventParticipationRecord, CMTEEventSponsor, \
+    CMTESponsorRequest, CMTESponsorEditRequest
 from app.models import User, Client
 from app.user import user_bp as user
 from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm
@@ -93,6 +94,9 @@ def admin_index():
 @login_required
 @cmte_admin_permission.require()
 def cmte_admin_index():
+    requests = CMTESponsorRequest.query.filter_by(approved_at=None, cancelled_at=None).count()
+    edit_requests = CMTESponsorEditRequest.query.filter_by(status='pending').count()
+    pending_requests = requests + edit_requests
     pending_payments = CMTEFeePaymentRecord.query.filter_by(payment_datetime=None).count()
     pending_individual_records = CMTEEventParticipationRecord.query.filter_by(individual=True,
                                                                               approved_date=None,
@@ -101,5 +105,5 @@ def cmte_admin_index():
     return render_template('cmte/admin/index.html',
                            pending_payments=pending_payments,
                            pending_events=pending_events,
-                           pending_individual_records=pending_individual_records
-                           )
+                           pending_individual_records=pending_individual_records,
+                           pending_requests=pending_requests)
