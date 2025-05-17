@@ -507,6 +507,26 @@ def test_member_pid_local_endpoint(pid):
         pprint(resp.json())
 
 
+@app.cli.command('test-member-pid-endpoint')
+@click.argument('pid')
+def test_member_pid_endpoint(pid):
+    import requests
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
+    base_url = 'https://mtc-webservices.herokuapp.com'
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id, 'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/pids/{pid}',
+                        headers={'Authorization': f'Bearer {token}'})
+    if resp.status_code != 200:
+        print(f'Error! {resp.status_code}')
+    else:
+        pprint(resp.json())
+
+
 @app.cli.command('test-member-license-local-endpoint')
 @click.argument('license_number')
 def test_member_license_local_endpoint(license_number):
@@ -514,6 +534,26 @@ def test_member_license_local_endpoint(license_number):
     client_id = os.environ.get('CLIENT_ID')
     client_secret = os.environ.get('CLIENT_SECRET')
     base_url = 'http://127.0.0.1:5000'
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id, 'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/licenses/{license_number}',
+                        headers={'Authorization': f'Bearer {token}'})
+    if resp.status_code != 200:
+        print(f'Error! {resp.status_code}')
+    else:
+        pprint(resp.json())
+
+
+@app.cli.command('test-member-license-endpoint')
+@click.argument('license_number')
+def test_member_license_endpoint(license_number):
+    import requests
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
+    base_url = 'https://mtc-webservices.herokuapp.com'
     print('Getting an access token..')
     resp = requests.post(f'{base_url}/api/auth/login',
                          json={'client_id': client_id, 'client_secret': client_secret})
@@ -544,10 +584,10 @@ def test_member_info_endpoint(pid):
     if resp.status_code == 200:
         pprint(resp.json())
     else:
-        print(f'Error! {resp.status_code}')
+        print(f'Error! {resp.json()}')
 
 
-@app.cli.command('test-member-info-endpoint-local')
+@app.cli.command('test-member-info-local-endpoint')
 @click.argument('pid')
 def test_member_info_endpoint_local(pid):
     import requests
@@ -562,7 +602,7 @@ def test_member_info_endpoint_local(pid):
     print('Fetching data..')
     resp = requests.get(f'{base_url}/api/members/{pid}/info',
                         headers={'Authorization': f'Bearer {token}'})
-    pprint(resp.json())
+    pprint(resp.text)
 
 
 @app.cli.command('test-cmte-upcoming-events')
