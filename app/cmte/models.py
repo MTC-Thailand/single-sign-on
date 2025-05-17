@@ -133,7 +133,9 @@ class CMTESponsorRequest(db.Model):
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     sponsor_id = db.Column('sponsor_id', db.ForeignKey('cmte_event_sponsors.id'))
     sponsor = db.relationship(CMTEEventSponsor,
-                              backref=db.backref('requests', lazy='dynamic'))
+                              backref=db.backref('requests',
+                                                 lazy='dynamic',
+                                                 cascade='all, delete-orphan'))
     member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
     member = db.relationship(CMTESponsorMember,
                               backref=db.backref('member_requests', lazy='dynamic'))
