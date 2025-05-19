@@ -198,10 +198,6 @@ class CMTEAdminEventTypeForm(ModelForm):
         model = CMTEEventType
         exclude = ['created_at', 'updated_at']
 
-    fee_rates = QuerySelectMultipleField(query_factory=lambda: CMTEEventFeeRate.query.all(),
-                                         widget=ListWidget(prefix_label=False),
-                                         option_widget=CheckboxInput())
-
 
 class CMTEAdminEventActivityForm(ModelForm):
     class Meta:
@@ -209,3 +205,6 @@ class CMTEAdminEventActivityForm(ModelForm):
         exclude = ['created_at', 'updated_at']
 
     event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
+    fee_rates = QuerySelectMultipleField(query_factory=lambda: CMTEEventFeeRate.query.all(),
+                                         widget=ListWidget(prefix_label=False),
+                                         option_widget=CheckboxInput())

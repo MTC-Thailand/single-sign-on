@@ -13,18 +13,16 @@ from app import db
 
 make_versioned(user_cls=None)
 
-event_type_fee_rates = db.Table('cmte_event_type_fee_assoc',
-                                db.Column('event_type_id', db.Integer,
-                                          db.ForeignKey('cmte_event_types.id')),
-                                db.Column('fee_rate_id', db.Integer,
-                                          db.ForeignKey('cmte_event_fee_rates.id'))
-                                )
+event_activity_fee_rates = db.Table('cmte_event_activity_fee_assoc',
+                                    db.Column('event_activity_id', db.Integer, db.ForeignKey('cmte_event_activities.id')),
+                                    db.Column('fee_rate_id', db.Integer, db.ForeignKey('cmte_event_fee_rates.id'))
+                                    )
 
 sponsor_qualifications = db.Table('sponsor_qualification_assoc',
-                                           db.Column('event_sponsor_id', db.ForeignKey('cmte_event_sponsors.id')),
-                                           db.Column('qualification_id',
-                                                     db.ForeignKey('cmte_sponsor_qualification.id')),
-                                           )
+                                  db.Column('event_sponsor_id', db.ForeignKey('cmte_event_sponsors.id')),
+                                  db.Column('qualification_id',
+                                            db.ForeignKey('cmte_sponsor_qualification.id')),
+                                  )
 
 BANGKOK = timezone('Asia/Bangkok')
 
@@ -45,12 +43,12 @@ class CMTEEventSponsor(db.Model):
     registered_datetime = db.Column('registered_datetime', db.DateTime(timezone=True))
     expire_date = db.Column('expire_date', db.Date())
     type = db.Column(db.String(), info={'label': 'ลักษณะขององค์กร',
-             'choices': [(c, c) for c in (
-                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)',
-                 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)',
-                 'เป็นสถานพยาบาล',
-                 'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด',
-                 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน')]})
+                                        'choices': [(c, c) for c in (
+                                            'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)',
+                                            'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)',
+                                            'เป็นสถานพยาบาล',
+                                            'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด',
+                                            'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน')]})
     type_detail = db.Column('type_detail', db.String())
     qualifications = db.relationship('CMTESponsorQualification', secondary=sponsor_qualifications)
     private_sector = db.Column('private_sector', db.Boolean(), default=False)
@@ -103,7 +101,7 @@ class CMTESponsorMember(UserMixin, db.Model):
 
     @property
     def password(self):
-        #raise ValueError
+        # raise ValueError
         return 'Password is not accessible'
 
     @password.setter
@@ -138,7 +136,7 @@ class CMTESponsorRequest(db.Model):
                                                  cascade='all, delete-orphan'))
     member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
     member = db.relationship(CMTESponsorMember,
-                              backref=db.backref('member_requests', lazy='dynamic'))
+                             backref=db.backref('member_requests', lazy='dynamic'))
     type = db.Column('type', db.String())
     created_at = db.Column('created_at', db.DateTime(timezone=True))
     expired_sponsor_date = db.Column('expired_sponsor_date', db.Date())
@@ -158,7 +156,7 @@ class CMTESponsorEditRequest(db.Model):
                               backref=db.backref('edit_requests', lazy='dynamic'))
     member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
     member = db.relationship(CMTESponsorMember,
-                              backref=db.backref('edit_requests', lazy='dynamic'))
+                             backref=db.backref('edit_requests', lazy='dynamic'))
     created_at = db.Column('created_at', db.DateTime(timezone=True))
     status = db.Column('status', db.String())
     updated_at = db.Column('updated_at', db.DateTime(timezone=True))
@@ -172,10 +170,11 @@ class CMTESponsorDoc(db.Model):
     request_id = db.Column('request_id', db.ForeignKey('cmte_sponsor_requests.id'))
     request = db.relationship(CMTESponsorRequest,
                               backref=db.backref('docs', lazy='dynamic'))
-    sponsor = db.relationship(CMTEEventSponsor, backref=db.backref('docs', cascade='all, delete-orphan', lazy='dynamic'))
+    sponsor = db.relationship(CMTEEventSponsor,
+                              backref=db.backref('docs', cascade='all, delete-orphan', lazy='dynamic'))
     qualification_id = db.Column('qualification_id', db.ForeignKey('cmte_sponsor_qualification.id'))
     qualification = db.relationship(CMTESponsorQualification,
-                              backref=db.backref('docs'))
+                                    backref=db.backref('docs'))
     key = db.Column('key', db.Text(), nullable=False)
     filename = db.Column('filename', db.Text(), nullable=False)
     upload_datetime = db.Column('upload_datetime', db.DateTime(timezone=True))
@@ -208,9 +207,7 @@ class CMTEReceiptDetail(db.Model):
     zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
 
     def __str__(self):
-        return f'รายละเอียดบนใบเสร็จ ออกใบนาม: {self.name } รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode}'
-
-
+        return f'รายละเอียดบนใบเสร็จ ออกใบนาม: {self.name} รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode}'
 
 
 class CMTEEventCategory(db.Model):
@@ -237,7 +234,6 @@ class CMTEEventType(db.Model):
     submission_due = db.Column('submission_due', db.Integer(), default=30, info={'label': 'กำหนดส่งรายชื่อผู้เข้าร่วม'})
     max_score = db.Column('max_score', db.Integer(), default=25, info={'label': 'คะแนนสูงสุดที่อนุมัติได้'})
     score_criteria = db.Column('score_criteria', db.String(), info={'label': 'เกณฑ์การพิจารณาอนุมัติคะแนน'})
-    fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_type_fee_rates, backref=db.backref('event_types'), info={'label': 'อัตราค่าธรรมเนียม'})
     desc = db.Column('desc', db.Text(), info={'label': 'รายละเอียด'})
     deprecated = db.Column('deprecated', db.Boolean(), default=False, info={'label': 'ยกเลิก'})
     created_at = db.Column('created_at', db.DateTime(timezone=True))
@@ -270,6 +266,9 @@ class CMTEEventActivity(db.Model):
     deprecated = db.Column('deprecated', db.Boolean(), default=False, info={'label': 'ยกเลิก'})
     created_at = db.Column('created_at', db.DateTime(timezone=True))
     updated_at = db.Column('updated_at', db.DateTime(timezone=True))
+    fee_rates = db.relationship('CMTEEventFeeRate', secondary=event_activity_fee_rates,
+                                backref=db.backref('event_activities'),
+                                info={'label': 'อัตราค่าธรรมเนียม'})
 
     def __str__(self):
         return self.name
@@ -349,6 +348,7 @@ class CMTEEvent(db.Model):
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
     cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
     event_code = db.Column('event_code', db.String(), info={'label': 'Code'})
+
     # TODO: add a field for an approver
 
     def to_dict(self):
@@ -359,8 +359,10 @@ class CMTEEvent(db.Model):
             'end_date': self.end_date.astimezone(BANGKOK).isoformat() if self.end_date else None,
             'event_type': str(self.event_type) if self.event_type else None,
             'fee_rate': str(self.fee_rate) if self.fee_rate else None,
-            'submitted_datetime': self.submitted_datetime.astimezone(BANGKOK).isoformat() if self.submitted_datetime else None,
-            'approved_datetime': self.approved_datetime.astimezone(BANGKOK).isoformat() if self.approved_datetime else None,
+            'submitted_datetime': self.submitted_datetime.astimezone(
+                BANGKOK).isoformat() if self.submitted_datetime else None,
+            'approved_datetime': self.approved_datetime.astimezone(
+                BANGKOK).isoformat() if self.approved_datetime else None,
             'venue': self.venue,
             'points': self.cmte_points,
             'website': self.website,
@@ -464,5 +466,6 @@ class CMTEFeePaymentRecord(db.Model):
                 'start_date': self.start_date.strftime('%Y-%m-%d') if self.start_date else None,
                 'payment_datetime': self.payment_datetime.isoformat() if self.payment_datetime else None,
                 'license_number': self.license_number}
+
 
 sa.orm.configure_mappers()

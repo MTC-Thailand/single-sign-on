@@ -71,7 +71,19 @@
                         </div>
                     </div>
                     <div class="field is-horizontal">
-                        <div class="field-label"></div>
+                        <div class="field-label is-normal">
+                            <label class="label">{{form.fee_rates.label}}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control is-expanded">
+                                    {{form.fee_rates()}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-label"><label class="label">เงื่อนไขการยื่นขอคะแนน</label></div>
                         <div class="field-body">
                             <div class="field">
                                 <div class="control is-expanded">
