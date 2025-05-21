@@ -650,8 +650,17 @@ def get_events():
 @login_required
 @cmte_sponsor_admin_permission.require()
 def load_pending_events():
-    records_total = CMTEEvent.query.count()
-    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)
+    type_ = request.args.get('type_')
+    query = CMTEEvent.query.filter_by(sponsor_id=current_user.sponsor_id)
+    records_total = query.count()
+    if type_ == 'drafting':
+        query = query.filter_by(submitted_datetime=None, approved_datetime=None)
+    elif type_ == 'pending':
+        query = query.filter(CMTEEvent.submitted_datetime != None,
+                                       CMTEEvent.approved_datetime == None)
+    else:
+        query = query.filter(CMTEEvent.approved_datetime != None,
+                             CMTEEvent.submitted_datetime != None)
     start = request.args.get('start', type=int)
     length = request.args.get('length', type=int)
     total_filtered = query.count()

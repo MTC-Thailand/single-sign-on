@@ -22,53 +22,16 @@
             <li><a href="{{url_for('cmte.show_approved_events')}}">อนุมัติแล้ว</a></li>
           </ul>
         </div>
-        <table class="table is-fullwidth">
+        <table id="events" class="table is-fullwidth">
           <thead>
           <th>ชื่อ</th>
           <th>วันและเวลา</th>
-          <th>ประเภท</th>
-          <th>อัตราค่าธรรมเนียม</th>
-          <th>สถานะ</th>
-          <th></th>
+          <th>สถานที่</th>
+          <th>วันที่ยื่น</th>
+          <th>วันที่อนุมัติ</th>
           <th></th>
           </thead>
-          <tbody>
-          {% for evt in events %}
-          <tr>
-            <td>{{evt.title}}</td>
-            <td>{{evt.start_date|localdatetime}} - {{evt.end_date|localdatetime}}</td>
-            <td>{{evt.event_type}}</td>
-            <td>
-              {{evt.fee_rate}}
-            </td>
-            <td>
-              {% if not evt.payment_datetime %}
-              <span class="icon">
-                <i class="fa-solid fa-hourglass-half"></i>
-              </span>
-              <span>ยังไม่ชำระ</span>
-              {% endif %}
-            </td>
-            <td><a class="button is-small is-link is-outlined" href="{{url_for('cmte.preview_event', event_id=evt.id)}}">
-              <span class="icon">
-                <i class="fa-solid fa-circle-info"></i>
-              </span>
-              <span>รายละเอียด</span>
-            </a></td>
-            <td>
-              <a class="button is-small is-danger is-outlined" hx-delete="{{url_for('cmte.cancel_event', event_id=evt.id)}}"
-                 hx-confirm="ต้องการยกเลิกกิจกรรมนี้ใช่หรือไม่"
-                 hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
-              >
-                <span class="icon">
-                  <i class="fa-solid fa-trash"></i>
-                </span>
-                <span>ยกเลิก</span>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-          </tbody>
+          <tbody></tbody>
         </table>
         <div class="buttons is-centered">
           {% if next_url %}
@@ -84,4 +47,71 @@
     </div>
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+{{super()}}
+<script>
+  $.fn.dataTable.moment('lll');
+  $(document).ready(function (){
+    $('#events').DataTable({
+      ajax: {{url_for('cmte.load_pending_events', type_="drafting")|tojson|safe}},
+    order: [[1, 'desc']],
+            processing: true,
+            columns: [
+      {
+        data: 'title',
+        render: function (data, type, row) {
+          return `<a href="${row['link']}">${data}</a>`
+        },
+        orderable: false
+      },
+      {
+        data: 'start_date',
+        render: function (data, type) {
+          if (data !== null) {
+            return moment(data).format('lll')
+          } else {
+            return null
+          }
+        },
+        orderable: true
+      },
+      {
+        data: 'end_date',
+        render: function (data, type) {
+          if (data !== null) {
+            return moment(data).format('lll')
+          } else {
+            return null
+          }
+        },
+        orderable: true
+      },
+      {data: 'venue', orderable: false},
+      {
+        data: 'submitted_datetime',
+        render: function (data, type) {
+          if (data !== null) {
+            return moment(data).format('lll')
+          } else {
+            return null
+          }
+        },
+        orderable: true
+      },
+      {
+        data: 'approved_datetime',
+        render: function (data, type) {
+          if (data !== null) {
+            return moment(data).format('lll')
+          } else {
+            return null
+          }
+        },
+        orderable: true
+      },
+    ]
+  });
+  })
+</script>
 {% endblock %}
