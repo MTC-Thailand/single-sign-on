@@ -13,7 +13,7 @@
         <h1 class="subtitle has-text-centered">ลงทะเบียนกิจกรรมเพื่อขออนุมัติคะแนน</h1>
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column is-half is-offset-3 box">
+            <div class="column is-half is-offset-3">
                 <form method="post" hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }' enctype="multipart/form-data">
                     {{form.hidden_tag()}}
                     <h5 class="title is-size-5">
@@ -29,16 +29,15 @@
                         <label class="label">{{form.event_type.label}}</label>
                         <div class="select">
                             {% if event %}
-                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates', fee_rate_id=event.fee_rate_id), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change, load", "hx-post": url_for('cmte.get_event_activities', activity_id=event.activity_id), "hx-swap": "innerHTML", "hx-target": "#activities"}) }}
                             {% else %}
-                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates'), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change, load", "hx-post": url_for('cmte.get_event_activities'), "hx-swap": "innerHTML", "hx-target": "#activities"}) }}
                             {% endif %}
                         </div>
                     </div>
                     <div class="field">
                         <label class="label">ชนิดกิจกรรม</label>
-                        <div class="select">
-                            <select id="activities"></select>
+                        <div class="select" id="activities">
                         </div>
                     </div>
                     <div class="field">
@@ -147,6 +146,9 @@
 <script>
     $(function() {
         htmx.trigger('#event_type', 'change')
+        document.addEventListener('triggerGetFeeRates', function () {
+            htmx.trigger('#activity-select', 'change')
+        })
         $("input[name='start_date']").daterangepicker({
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',

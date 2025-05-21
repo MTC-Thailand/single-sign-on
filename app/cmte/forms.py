@@ -34,6 +34,7 @@ class CMTEEventForm(ModelForm):
     event_type = QuerySelectField('ประเภทกิจกรรม',
                                   query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
+    activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query)
 
 
 class CMTEAdminEventForm(ModelForm):

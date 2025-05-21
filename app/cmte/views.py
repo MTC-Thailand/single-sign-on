@@ -218,24 +218,34 @@ def sponsor_edit_website(event_id):
             return form.errors
 
 
-@cmte.post('/fee-rates')
+@cmte.post('/event_activites')
 @login_required
-def get_fee_rates():
+def get_event_activities():
     event_type_id = request.form.get('event_type', type=int)
-    fee_rate_id = request.args.get('fee_rate_id', type=int)
     activity_id = request.args.get('activity_id', type=int)
     event_type = CMTEEventType.query.get(event_type_id)
-    options = ''
-    for fr in event_type.fee_rates:
-        checked = 'checked' if fr.id == fee_rate_id else ''
-        options += f'<label class="radio is-danger"><input type="radio" required {checked} name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
-    options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
-
-    options += '<select hx-swap-oob="true" id="activities" name="activity">'
+    url_ = url_for('cmte.get_fee_rates')
+    options = f'''<select id="activity-select" name="activity" hx-headers='{{"X-CSRF-Token": "{generate_csrf()}"}}' hx-post="{url_}" hx-trigger="change, load" hx-swap="innerHTML" hx-target="#feeRateSelectField">'''
     for a in event_type.activities:
         selected = 'selected' if activity_id == a.id else ''
         options += f'<option {selected} value="{a.id}">{a.name}</li>'
     options += '</select>'
+    resp = make_response(options)
+    resp.headers['HX-Trigger'] = 'triggerGetFeeRates'
+    return options
+
+
+@cmte.post('/fee-rates')
+@login_required
+def get_fee_rates():
+    activity_id = request.form.get('activity', type=int)
+    activity = CMTEEventActivity.query.get(activity_id)
+    options = ''
+    for fr in activity.fee_rates:
+        checked = 'checked' if fr in activity.fee_rates else ''
+        options += f'<label class="radio is-danger"><input type="radio" required {checked} name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
+    options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
+
     return options
 
 
