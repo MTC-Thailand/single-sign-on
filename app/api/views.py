@@ -533,7 +533,7 @@ class MemberInfo(Resource):
         data['lic_b_date'] = member.license.start_date.isoformat()
         data['lic_exp_date'] = member.license.end_date.isoformat()
         data['document_addr'] = data.pop('address_id_doc', None) or ''
-        data['birthday'] = member.dob.isoformat()
+        data['birthday'] = member.dob.isoformat() if member.dob else None
 
         work_office = {'office_position': data.pop('position', None) or '',
                        'office_name': data.pop('office_name', None) or '',
@@ -541,7 +541,7 @@ class MemberInfo(Resource):
                        'function': data.pop('function_name', None) or '',
                        'employer': data.pop('emp_owner_name', None) or '',
                        'contract': data.pop('contract_name', None) or ''}
-        mem_id = data['mem_id']
+        mem_id = data.get('mem_id', None)
         data['office'] = work_office
 
         query = f'''
