@@ -59,7 +59,7 @@
                     <div class="field">
                         <label class="label">{{form.dob.label}}</label>
                         <div class="control">
-                            {{form.dob(class="input", type="text")}}
+                            {{form.dob(class="input", autocomplete="off", type="text")}}
                         </div>
                     </div>
                     <div class="field">
@@ -148,9 +148,8 @@
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',
             cancelButtonClasses: 'is-light',
-        {% if not form.dob.data %}
-        startDate: moment().startOf('hour'),
-        {% else %}
+           autoUpdateInput: false,
+        {% if form.dob.data %}
         startDate: {{form.dob.data.strftime('%d/%m/%Y')|tojson|safe}},
         {% endif %}
         timePicker: false,
@@ -159,6 +158,9 @@
             format: 'DD/MM/YYYY'
         }
     })
+        $("input[name='dob']").on('apply.daterangepicker', function (ev, picker) {
+            $("input[name='dob']").val(picker.startDate.format('DD/MM/YYYY'))
+        })
         $("input[name='license-issue_date']").daterangepicker({
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',
