@@ -348,6 +348,8 @@ class CMTEEvent(db.Model):
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
     cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
     event_code = db.Column('event_code', db.String(), info={'label': 'Code'})
+    comment = db.Column('comment', db.String())
+    payment_approved_at = db.Column('payment_approve_datetime', db.DateTime(timezone=True), info={'label': 'วันที่ตรวจสอบการชำระเงิน'})
 
     # TODO: add a field for an approver
 
