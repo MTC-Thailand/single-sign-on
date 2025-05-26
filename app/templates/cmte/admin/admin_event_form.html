@@ -33,17 +33,15 @@
                         <label class="label">{{form.event_type.label}}</label>
                         <div class="select">
                             {% if event %}
-                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates', fee_rate_id=event.fee_rate_id, activity_id=event.activity_id), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change, load", "hx-post": url_for('cmte.get_event_activities', event_id=event.id), "hx-swap": "innerHTML", "hx-target": "#activities"}) }}
                             {% else %}
-                            {{ form.event_type(required=True, **{"hx-trigger": "change", "hx-post": url_for('cmte.get_fee_rates'), "hx-swap": "innerHTML", "hx-target": "#feeRateSelectField"}) }}
+                            {{ form.event_type(required=True, **{"hx-trigger": "change, load", "hx-post": url_for('cmte.get_event_activities'), "hx-swap": "innerHTML", "hx-target": "#activities"}) }}
                             {% endif %}
                         </div>
                     </div>
                     <div class="field">
                         <label class="label">{{form.activity.label}}</label>
-                        <div class="select">
-                            {{form.activity(id="activities")}}
-                        </div>
+                        <div class="select" id="activities"></div>
                     </div>
                     <div class="field">
                         <label class="label">ค่าธรรมเนียม</label>
@@ -82,7 +80,7 @@
                     <div class="field">
                         <label class="label">{{form.approved_datetime.label}}</label>
                         <div class="control">
-                            {{form.approved_datetime(class="input", type="text")}}
+                            {{form.approved_datetime(class="input", type="text", autocomplete="off")}}
                         </div>
                     </div>
                     <div class="field">
@@ -237,9 +235,8 @@
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',
             cancelButtonClasses: 'is-light',
-        {% if not form.approved_datetime.data %}
-        startDate: moment().startOf('hour'),
-        {% else %}
+            autoUpdateInput: false,
+        {% if form.approved_datetime.data %}
         startDate: {{form.approved_datetime.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
         {% endif %}
         timePicker: true,
@@ -251,5 +248,8 @@
         }
     })
     });
+    $('input[name="approved_datetime"]').on('apply.daterangepicker', function (evt, picker) {
+        $(this).val(picker.startDate.format('DD/MM/YYYY HH:mm'))
+    })
 </script>
 {% endblock %}

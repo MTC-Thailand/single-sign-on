@@ -10,10 +10,16 @@
                 <article class="panel is-info">
                     <p class="panel-heading">Admin</p>
                     <a class="panel-block" href="{{url_for('cmte.all_requests', tab='new')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-university"></i>
+                        </span>
                         ขอขึ้นทะเบียน /ต่ออายุสถาบัน
                         <span class="tag is-success is-rounded">{{pending_requests or 0}}</span>
                     </a>
                     <a class="panel-block" href="{{url_for('cmte.all_sponsors')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-university"></i>
+                        </span>
                         ข้อมูลสถาบัน
                     </a>
                     <a class="panel-block" href="{{url_for('cmte.admin_pending_events')}}">

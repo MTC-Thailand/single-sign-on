@@ -63,6 +63,9 @@
                                 </span>
                                 <span>download slip</span>
                             </a>
+                            <a class="button">
+                                <span>ยืนยันหลักฐานการโอน</span>
+                            </a>
                             {% endif %}
                         </td>
                         {% else %}
@@ -151,10 +154,14 @@
                             >
                                 <div class="field has-addons">
                                     <div class="control is-expanded">
-                                        <input type="number" required step="0.1" class="input is-danger" name="cmte_points">
+                                        <input {% if not event.submitted_datetime %} disabled {% endif %}
+                                               type="number"
+                                               required step="0.1"
+                                               class="input is-danger"
+                                               name="cmte_points" />
                                     </div>
                                     <div class="control">
-                                        <button type="submit" class="button is-link">
+                                        <button {% if not event.submitted_datetime %} disabled {% endif %} type="submit" class="button is-link">
                                             <span class="icon">
                                                 <i class="fa-solid fa-circle-check"></i>
                                             </span>
@@ -163,6 +170,22 @@
                                     </div>
                                 </div>
                             </form>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>รายการขอรายละเอียดเพิ่มเติม</td>
+                        <td id="request-message">{{event.comment}}</td>
+                        <td>
+                            <button class="button"
+                                    hx-indicator="this"
+                                    hx-target="#request-message"
+                                    hx-swap="innerHTML"
+                                    hx-get="{{url_for('cmte.admin_request_info', event_id=event.id)}}">
+                                <span class="icon">
+                                    <i class="fas fa-reply"></i>
+                                </span>
+                                <span>Send Comment</span>
+                            </button>
                         </td>
                     </tr>
                     {% endif %}
@@ -226,9 +249,9 @@
                         <span>ลบกิจกรรม</span>
                     </a>
                     <a class="button is-outlined is-dark" href="{{url_for('cmte.admin_event_edit', event_id=event.id)}}">
-                    <span class="icon">
-                        <i class="fas fa-pencil-alt"></i>
-                    </span>
+                        <span class="icon">
+                            <i class="fas fa-pencil-alt"></i>
+                        </span>
                         <span>แก้ไขข้อมูลกิจกรรม</span>
                     </a>
                 </div>

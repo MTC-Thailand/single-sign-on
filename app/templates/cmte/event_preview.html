@@ -15,6 +15,14 @@
             <div class="column">
                 <h2 class="title">{{event.event_type}}</h2>
                 <h3 class="subtitle">{{event.title}}</h3>
+                {% if not event.approved_datetime and event.comment %}
+                <div class="notification is-danger is-light">
+                    <span class="icon">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                    <span>{{event.comment}}</span>
+                </div>
+                {% endif %}
                 <table class="table is-fullwidth is-bordered">
                     <tbody>
                     <tr>
@@ -78,13 +86,35 @@
                         </td>
                     </tr>
                     <tr>
+                        <td><strong>เอกสารประกอบ</strong></td>
+                        <td>
+                            <ul>
+                                {% for doc in event.docs %}
+                                <li>
+                                    {{doc.filename}}
+                                    <a href="{{url_for('cmte.download_file', key=doc.key, download_filename=doc.filename)}}">
+                                    <span class="icon">
+                                        <i class="fa-solid fa-file-arrow-down"></i>
+                                    </span>
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
                         <td><strong>หน่วยคะแนนที่อนุมัติ</strong></td>
                         <td><h1 class="title is-size-4">{{event.cmte_points or 'ยังไม่กำหนด'}}</h1></td>
                         <td></td>
                     </tr>
                     <tr>
                         <td><strong>อัตราค่าธรรมเนียมขออนุมัติจัดกิจกรรม</strong></td>
-                        <td>{{event.fee_rate}}</td>
+                        <td><strong>{{event.fee_rate}}</strong>
+                            {% if not event.payment_datetime %}
+                            <a class="tag is-danger is-light" href="{{url_for('cmte.process_payment', event_id=event.id, pay_amount=event.fee_rate.fee_rate)}}">กรุณาดำเนินการชำระค่าธรรมเนียมเพื่อยื่นขออนุมัติกิจกรรม</a>
+                            {% endif %}
+                        </td>
                         {% if event.payment_datetime %}
                         <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}
                             {% if event.payment_slip %}
@@ -145,7 +175,7 @@
                     </a>
                     {% endif %}
                     {% if not event.payment_datetime %}
-                    <a class="button is-warning" href="{{url_for('cmte.process_payment', event_id=event.id)}}">
+                    <a class="button is-warning" href="{{url_for('cmte.process_payment', event_id=event.id, pay_amount=event.fee_rate.fee_rate)}}">
                         <span class="icon">
                             <i class="fa-solid fa-credit-card"></i>
                         </span>

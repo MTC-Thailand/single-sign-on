@@ -30,11 +30,13 @@ class CMTEEventForm(ModelForm):
     class Meta:
         model = CMTEEvent
         datetime_format = '%d/%m/%Y %H:%M'
+        exclude = ['payment_datetime', 'comment', 'submitted_datetime', 'cancelled_datetime']
 
     event_type = QuerySelectField('ประเภทกิจกรรม',
                                   query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
-    activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query)
+    activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query.all())
+    fee_rate = QuerySelectField('อัตรค่าธรรมเนียม', query_factory=lambda: CMTEEventFeeRate.query.all())
 
 
 class CMTEAdminEventForm(ModelForm):
@@ -42,12 +44,14 @@ class CMTEAdminEventForm(ModelForm):
         model = CMTEEvent
         datetime_format = '%d/%m/%Y %H:%M'
         date_format = '%d/%m/%Y'
+        exclude = ['payment_datetime', 'comment', 'cancelled_datetime']
 
     event_type = QuerySelectField('ประเภทกิจกรรม',
                                   query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
     sponsor = QuerySelectField('สถาบันฝึกอบรม', query_factory=lambda: CMTEEventSponsor.query.all())
     activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query.all())
+    fee_rate = QuerySelectField('อัตรค่าธรรมเนียม', query_factory=lambda: CMTEEventFeeRate.query.all())
 
 
 class ParticipantForm(FlaskForm):
@@ -142,8 +146,9 @@ class CMTESponsorDocForm(ModelForm):
 class CMTEEventSponsorForm(ModelForm):
     class Meta:
         model = CMTEEventSponsor
+        datetime_format = '%d/%m/%Y %H:%M'
+        date_format = '%d/%m/%Y'
 
-    registered_date = DateField()
     qualifications = QuerySelectMultipleField('หลักฐานแสดงคุณสมบัติขององค์กร',
                                               query_factory=lambda: CMTESponsorQualification.query.all(),
                                               widget=ListWidget(prefix_label=False),

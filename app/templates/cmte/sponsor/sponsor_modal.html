@@ -14,17 +14,23 @@
                         {{ form.name(class="input", required=True) }}
                     </div>
                 </div>
+                <div class="field">
+                    <label class="label">ประเภท</label>
+                    <div class="select">
+                        {{ form.private_sector() }}
+                    </div>
+                </div>
                 {% if is_admin %}
                     <div class="field">
                         <label class="label">วันที่ขึ้นทะเบียน</label>
                         <div class="control">
-                            {{ form.registered_date(class="input") }}
+                            {{ form.registered_datetime(class="input", type="text", autocomplete="off") }}
                         </div>
                     </div>
                     <div class="field">
                         <label class="label">วันที่หมดอายุ</label>
                         <div class="control">
-                            {{ form.expire_date(class="input") }}
+                            {{ form.expire_date(class="input", type="text", autocomplete="off") }}
                         </div>
                     </div>
                     <div class="field">
@@ -118,5 +124,41 @@
     })
     window.addEventListener('closeModal', (evt) => {
         htmx.removeClass(htmx.find('#sponsor-modal'), 'is-active')
+    })
+    $("input[name='registered_datetime']").daterangepicker({
+        buttonClasses: 'button is-small',
+        applyButtonClasses: 'is-link',
+        cancelButtonClasses: 'is-light',
+        autoUpdateInput: false,
+        {% if form.registered_datetime.data %}
+        startDate: {{form.registered_datetime.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+        {% endif %}
+        timePicker: true,
+        timePicker24Hour: true,
+        timePickerIncrement: 30,
+        singleDatePicker: true,
+        locale: {
+            format: 'DD/MM/YYYY HH:mm'
+        }
+    })
+    $('input[name="registered_datetime"]').on('apply.daterangepicker', function (evt, picker) {
+        $(this).val(picker.startDate.format('DD/MM/YYYY HH:mm'))
+    })
+    $("input[name='expire_date']").daterangepicker({
+        buttonClasses: 'button is-small',
+        applyButtonClasses: 'is-link',
+        cancelButtonClasses: 'is-light',
+        autoUpdateInput: false,
+        {% if form.expire_date.data %}
+        startDate: {{form.expire_date.data.strftime('%d/%m/%Y')|tojson|safe}},
+        {% endif %}
+        timePicker: false,
+        singleDatePicker: true,
+        locale: {
+        format: 'DD/MM/YYYY'
+    }
+    })
+    $('input[name="expire_date"]').on('apply.daterangepicker', function (evt, picker) {
+        $(this).val(picker.startDate.format('DD/MM/YYYY'))
     })
 </script>

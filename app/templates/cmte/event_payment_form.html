@@ -18,13 +18,21 @@
                     <img src="{{url_for('static', filename='qrcode-payment.png')}}">
                 </figure>
                 <h2 class="title is-size-4 has-text-centered">เลขบัญชี 1420016105 ธนาคารกรุงไทย</h2>
+                {% if pay_amount %}
+                <h1 class="title is-size-5 has-text-warning has-text-centered">
+                    <span class="icon"><i class="fas fa-money-bill-alt"></i></span>
+                    <span>
+                        ยอดชำระ {{pay_amount}} บาท
+                    </span>
+                </h1>
+                {% endif %}
                 <form method="post" enctype="multipart/form-data">
                     {{form.hidden_tag()}}
                     <div class="field">
                         <label class="label">{{form.upload_file.label}}</label>
                         <div class="control">
-                            {{form.upload_file(required=True)}}
-                            <p class="help is-danger">หากอัพโหลดซ้ำไฟล์เดิมจะถูกลบทิ้ง</p>
+                            {{form.upload_file(required=False)}}
+                            <p class="help is-danger">กรุณาอัพโหลดสลิปหลักฐานการโอน หากอัพโหลดซ้ำไฟล์เดิมจะถูกลบทิ้ง</p>
                         </div>
                     </div>
                     <div class="field">

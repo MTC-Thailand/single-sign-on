@@ -27,13 +27,13 @@
                         <div class="field">
                             <label class="label">วันที่ขึ้นทะเบียน</label>
                             <div class="control">
-                                {{ form.registered_date(class="input") }}
+                                {{ form.registered_datetime(class="input", type="text", autocomplete="off") }}
                             </div>
                         </div>
                         <div class="field">
                             <label class="label">วันที่หมดอายุ</label>
                             <div class="control">
-                                {{ form.expire_date(class="input") }}
+                                {{ form.expire_date(class="input", type="text", autocomplete="off") }}
                             </div>
                         </div>
                     {% endif %}

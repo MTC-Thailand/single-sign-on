@@ -106,11 +106,7 @@ def create_event(event_id=None):
     if form.validate_on_submit():
         if not event_id:
             event = CMTEEvent()
-        event_activity_id = request.form.get('event_activity_id', type=int)
         form.populate_obj(event)
-        event.activity_id = event_activity_id
-        event_type_fee_rate_id = request.form.get('event_type_fee_rate', type=int)
-        event.fee_rate_id = event_type_fee_rate_id
         event.start_date = arrow.get(event.start_date, 'Asia/Bangkok').datetime
         event.end_date = arrow.get(event.end_date, 'Asia/Bangkok').datetime
         event.sponsor = current_user.sponsor
@@ -134,6 +130,16 @@ def create_event(event_id=None):
         return redirect(url_for('cmte.preview_event', event_id=event.id))
     flash('กรุณาตรวจสอบความถูกต้องของข้อมูล', 'warning')
     return render_template('cmte/event_registration.html', form=form, event=event)
+
+
+@cmte.delete('/events/docs/<int:doc_id>')
+@login_required
+@cmte_sponsor_admin_permission.require()
+def remove_doc(doc_id):
+    doc = CMTEEventDoc.query.get(doc_id)
+    db.session.delete(doc)
+    db.session.commit()
+    return ''
 
 
 @cmte.route('/events/<int:event_id>/venue', methods=['GET', 'POST'])
@@ -222,28 +228,37 @@ def sponsor_edit_website(event_id):
 @login_required
 def get_event_activities():
     event_type_id = request.form.get('event_type', type=int)
-    activity_id = request.args.get('activity_id', type=int)
+    event_id = request.args.get('event_id', type=int)
+    if event_id:
+        event = CMTEEvent.query.get(event_id)
+        activity_id = event.activity_id
+    else:
+        activity_id = None
     event_type = CMTEEventType.query.get(event_type_id)
-    url_ = url_for('cmte.get_fee_rates')
+    url_ = url_for('cmte.get_fee_rates', event_id=event_id)
     options = f'''<select id="activity-select" name="activity" hx-headers='{{"X-CSRF-Token": "{generate_csrf()}"}}' hx-post="{url_}" hx-trigger="change, load" hx-swap="innerHTML" hx-target="#feeRateSelectField">'''
     for a in event_type.activities:
         selected = 'selected' if activity_id == a.id else ''
         options += f'<option {selected} value="{a.id}">{a.name}</li>'
     options += '</select>'
-    resp = make_response(options)
-    resp.headers['HX-Trigger'] = 'triggerGetFeeRates'
     return options
 
 
 @cmte.post('/fee-rates')
 @login_required
 def get_fee_rates():
+    event_id = request.args.get('event_id')
+    if event_id:
+        event = CMTEEvent.query.get(event_id)
+        fee_rate_id = event.fee_rate_id
+    else:
+        fee_rate_id = None
     activity_id = request.form.get('activity', type=int)
     activity = CMTEEventActivity.query.get(activity_id)
     options = ''
-    for fr in activity.fee_rates:
-        checked = 'checked' if fr in activity.fee_rates else ''
-        options += f'<label class="radio is-danger"><input type="radio" required {checked} name="event_type_fee_rate" value="{fr.id}"/> {fr}</label><br>'
+    for rate in activity.fee_rates:
+        checked = 'checked' if rate.id == fee_rate_id else ''
+        options += f'<label class="radio is-danger"><input type="radio" required {checked} name="fee_rate" value="{rate.id}"/>{rate}</label><br>'
     options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
 
     return options
@@ -326,6 +341,48 @@ def admin_preview_event(event_id):
                            next_url=next_url,
                            form=form,
                            participant_form=participant_form)
+
+
+@cmte.route('/admin/events/<int:event_id>/request_info', methods=('GET', 'POST'))
+@login_required
+@cmte_admin_permission.require()
+def admin_request_info(event_id):
+    event = CMTEEvent.query.get(event_id)
+    if request.method == 'POST':
+        message = request.form.get('request_info_message')
+        if message:
+            event.comment = message
+            event.submitted_datetime = None
+            db.session.add(event)
+            db.session.commit()
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
+
+    csrf_token = f'{{"X-CSRF-Token": "{generate_csrf()}" }}'
+    template = f'''
+    <form>
+    <div class="field">
+        <div class="control">
+            <textarea class="textarea" name="request_info_message">{event.comment}</textarea>
+        </div>
+    </div>
+    <div class="field">
+        <div class="control">
+            <button class="button is-success"
+                hx-post="{url_for('cmte.admin_request_info', event_id=event_id)}"
+                hx-headers='{csrf_token}'
+                hx-target="#request-message"
+                hx-swap="innerHTML"
+                hx-indicator="this"
+            >
+                <span>Send</span>
+            </button>
+        </div>
+    </div>
+    </form>
+    '''
+    return template
 
 
 @cmte.route('/api/events/<int:event_id>/participants', methods=('GET', 'POST'))
@@ -468,6 +525,7 @@ def submit_event(event_id):
 @login_required
 @cmte_sponsor_admin_permission.require()
 def process_payment(event_id):
+    pay_amount = request.args.get('pay_amount', None)
     form = CMTEPaymentForm()
     event = CMTEEvent.query.get(event_id)
     if request.method == 'POST':
@@ -494,7 +552,7 @@ def process_payment(event_id):
             db.session.commit()
             flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
             return redirect(url_for('cmte.preview_event', event_id=event_id))
-    return render_template('cmte/event_payment_form.html', event=event, form=form)
+    return render_template('cmte/event_payment_form.html', event=event, form=form, pay_amount=pay_amount)
 
 
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
@@ -519,7 +577,6 @@ def edit_participants(event_id: int = None, rec_id: int = None):
                                rec_id=rec_id)
 
     if request.method == 'DELETE':
-        print(request.headers.get('X-CSRF-Token'))
         rec = CMTEEventParticipationRecord.query.get(rec_id)
         db.session.delete(rec)
         db.session.commit()
@@ -616,7 +673,8 @@ def get_events():
     if _type == 'approved':
         query = query.filter(CMTEEvent.approved_datetime != None)
     elif _type == 'pending':
-        query = query.filter(CMTEEvent.approved_datetime == None)
+        query = query.filter(CMTEEvent.approved_datetime == None,
+                             CMTEEvent.submitted_datetime != None)
     if new_only == 'true':
         query = query.filter(CMTEEvent.start_date >= datetime.today())
     total_filtered = query.count()
@@ -624,7 +682,6 @@ def get_events():
     r_column = re.compile('order\[(\d)\]\[column\]')
     order_dir = ''.join((filter(r_dir.match, request.args.keys())))
     order_column = ''.join((filter(r_column.match, request.args.keys())))
-    print(order_dir, order_column, request.args.get(order_dir), request.args.get(order_column))
     if order_column and order_dir:
         dir_ = request.args.get(order_dir)
         col_idx = request.args.get(order_column)
@@ -861,7 +918,6 @@ def sponsor_member_login():
             if user.verify_password(form.password.data):
                 session['login_as'] = 'cmte_sponsor_admin'
                 login_user(user, remember=False)
-                print(current_user)
                 identity = Identity(user.unique_id)
                 identity_changed.send(current_app._get_current_object(), identity=identity)
                 flash('Logged in successfully', 'success')
@@ -882,7 +938,6 @@ def register_sponsor_member(sponsor_id=None):
     if sponsor_id:
         all_members = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id) \
             .filter(CMTESponsorMember.is_valid != False).count()
-        print(all_members)
         if all_members >= 10:
             flash(f'ไม่สามารถเพิ่มข้อมูลใหม่ได้ เนื่องจากจำนวนผู้ประสานงานมีมากกว่าที่กำหนด', 'danger')
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
@@ -1030,13 +1085,6 @@ def register_sponsor():
                 db.session.add(sponsor)
                 db.session.commit()
 
-                if cmte_admin_permission:
-                    dt = '{} {}'.format(form.registered_date.data, "08:30:00")
-                    registered_datetime = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-                    sponsor.registered_datetime = registered_datetime
-                    db.session.add(sponsor)
-                    db.session.commit()
-
                 s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                          aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                          region_name=os.environ.get('BUCKETEER_AWS_REGION'))
@@ -1180,10 +1228,6 @@ def manage_sponsor(sponsor_id):
     if form.validate_on_submit():
         event_sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form.populate_obj(event_sponsor)
-        if cmte_admin_permission:
-            dt = '{} {}'.format(form.registered_date.data, "08:30:00")
-            registered_datetime = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-            event_sponsor.registered_datetime = registered_datetime
 
         db.session.add(event_sponsor)
         db.session.commit()
@@ -1555,7 +1599,6 @@ def admin_event_edit(event_id=None):
             flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_preview_event', event_id=event.id))
         else:
-            print(form.activity.data, 'activity field value')
             flash(f'Error {form.errors}', 'danger')
     return render_template('cmte/admin/admin_event_form.html', form=form, event=event)
 
@@ -1653,7 +1696,6 @@ def admin_individual_score_edit(record_id):
                     doc.note = doc_form.note.data
                     record.docs.append(doc)
                     db.session.add(doc)
-                    print(doc.key)
             db.session.add(record)
             db.session.commit()
             flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')

@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
 {% block content %}
 {% include "cmte/admin_nav.html" %}
     <section class="section">
@@ -64,7 +69,7 @@
             <div class="buttons is-centered">
                 <a href="{{url_for('users.cmte_admin_index')}}" class="button is-light">
                     <span class="icon">
-                      <i class="far fa-arrow-left"></i>
+                        <i class="fas fa-chevron-left"></i>
                     </span>
                     <span>กลับ</span>
                 </a>
@@ -74,6 +79,8 @@
 {% endblock %}
 {% block scripts %}
     {{ super() }}
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
         $(document).ready(function () {
             $('#sponsors').DataTable({
