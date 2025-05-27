@@ -36,7 +36,10 @@ class CMTEEventForm(ModelForm):
                                   query_factory=lambda: CMTEEventType.query.order_by(CMTEEventType.number).all())
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
     activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query.all())
-    fee_rate = QuerySelectField('อัตรค่าธรรมเนียม', query_factory=lambda: CMTEEventFeeRate.query.all())
+    fee_rate = QuerySelectField('อัตรค่าธรรมเนียม', query_factory=lambda: CMTEEventFeeRate.query.all(),
+                                allow_blank=True,
+                                widget=ListWidget(prefix_label=False),
+                                option_widget=CheckboxInput())
 
 
 class CMTEAdminEventForm(ModelForm):
@@ -51,7 +54,10 @@ class CMTEAdminEventForm(ModelForm):
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=3)
     sponsor = QuerySelectField('สถาบันฝึกอบรม', query_factory=lambda: CMTEEventSponsor.query.all())
     activity = QuerySelectField('ชนิดกิจกรรม', query_factory=lambda: CMTEEventActivity.query.all())
-    fee_rate = QuerySelectField('อัตรค่าธรรมเนียม', query_factory=lambda: CMTEEventFeeRate.query.all())
+    fee_rate = QuerySelectField('อัตรค่าธรรมเนียม', query_factory=lambda: CMTEEventFeeRate.query.all(),
+                                allow_blank=True,
+                                widget=ListWidget(prefix_label=False),
+                                option_widget=CheckboxInput())
 
 
 class ParticipantForm(FlaskForm):
@@ -212,5 +218,6 @@ class CMTEAdminEventActivityForm(ModelForm):
 
     event_type = QuerySelectField('ประเภทกิจกรรม', query_factory=lambda: CMTEEventType.query.all())
     fee_rates = QuerySelectMultipleField(query_factory=lambda: CMTEEventFeeRate.query.all(),
+                                         allow_blank=True,
                                          widget=ListWidget(prefix_label=False),
                                          option_widget=CheckboxInput())
