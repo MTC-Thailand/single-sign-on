@@ -68,7 +68,7 @@ def load_user(user_id):
     elif session.get('login_as') == 'cmte_sponsor_admin':
         return CMTESponsorMember.query.get(int(user_id))
 
-    return User.query.filter_by(id=user_id, is_activated=True).first()
+    return User.query.get(int(user_id))
 
 
 @identity_loaded.connect_via(app)

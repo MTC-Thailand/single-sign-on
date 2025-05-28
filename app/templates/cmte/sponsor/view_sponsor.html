@@ -372,12 +372,12 @@
                     <thead>
                         <th>ชื่อ - นามสกุล</th>
                         <th>ตำแหน่ง</th>
+                        <th>Valid</th>
                         <th>email</th>
                         <th colspan="2">โทรศัพท์</th>
                     </thead>
                     <tbody>
                     {% for member in sponsor.members|sort(attribute="id") %}
-                        {% if member.is_active != False %}
                     <tr>
                         <td>
                             <a href="{{ url_for('cmte.manage_member', member_id=member.id) }}">
@@ -392,6 +392,15 @@
                             {% else %}
                                 ผู้ประสานงานรอง
                             {% endif %}
+                        </td>
+                        <td>
+                            <span class="icon">
+                            {% if member.is_valid %}
+                                <i class="fa-solid fa-circle-check has-text-success"></i>
+                            {% else %}
+                                <i class="fa-solid fa-circle-xmark has-text-danger"></i>
+                            {% endif %}
+                            </span>
                         </td>
                         <td>{{ member.email or '' }}</td>
                         <td>{{ member.mobile_phone or '' }} {{ member.telephone or '' }}</td>
@@ -410,7 +419,6 @@
                         {% endif %}
                         </td>
                     </tr>
-                        {% endif %}
                     {% endfor %}
                     </tbody>
                 </table>

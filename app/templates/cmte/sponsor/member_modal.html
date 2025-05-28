@@ -15,6 +15,12 @@
                         {{ form.is_coordinator() }}
                     </div>
                 </div>
+                <div class="field">
+                    <label class="label">Is valid?</label>
+                    <div class="control">
+                        {{ form.is_valid() }}
+                    </div>
+                </div>
                 {% endif %}
                 <div class="field">
                     <label class="label">{{form.title.label}}</label>

@@ -47,7 +47,22 @@
                             <td>โทรศัพท์</td>
                             <td>{{ member.mobile_phone or '' }} {{ member.telephone or '' }}</td>
                         </tr>
+                        <tr>
+                            <td>Valid</td>
+                            <td>
+                            <span class="icon">
+                            {% if member.is_valid %}
+                                <i class="fa-solid fa-circle-check has-text-success"></i>
+                            {% else %}
+                                <i class="fa-solid fa-circle-xmark has-text-danger"></i>
+                            {% endif %}
+                            </span>
+                            </td>
+                        </tr>
                     </table>
+                    <a class="button" href="{{url_for('cmte.manage_sponsor', sponsor_id=member.sponsor.id)}}">
+                        Back
+                    </a>
                 </div>
             </div>
         </div>
