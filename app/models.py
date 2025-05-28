@@ -16,13 +16,17 @@ from .members.models import Member
 alphabet = string.digits
 
 
-class User(db.Model, UserMixin):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column('name', db.String(), unique=True, nullable=False, info={'label': 'Username'})
     _password_hash = db.Column(db.String(255))
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     is_activated = db.Column('is_activated', db.Boolean(), default=False)
+
+    @property
+    def is_active(self):
+        return self.is_activated
 
     @property
     def password(self):
