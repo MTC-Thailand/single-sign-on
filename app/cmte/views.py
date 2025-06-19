@@ -259,7 +259,10 @@ def get_fee_rates():
     for rate in activity.fee_rates:
         checked = 'checked' if rate.id == fee_rate_id else ''
         options += f'<label class="radio is-danger"><input type="radio" required {checked} name="fee_rate" value="{rate.id}"/>{rate}</label><br>'
-    options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมที่เหมาะสม</p>'
+    if activity.fee_rates:
+        options += '<p class="help is-danger">โปรดเลือกค่าธรรมเนียมการขออนุมัติคะแนนที่เหมาะสม</p>'
+    else:
+        options += '<p class="help is-info">ไม่มีค่าธรรมเนียมการขออนุมัติคะแนน</p>'
 
     return options
 
