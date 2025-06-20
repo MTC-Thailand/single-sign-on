@@ -9,22 +9,54 @@
 {% include "cmte/nav.html" %}
 <section class="section">
     <div class="container">
-        <h1 class="title">Event Registration Preview</h1>
+        <div class="columns">
+            <div class="column">
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        {% if event.submitted_datetime %}
+                        <li><a href="{{url_for('cmte.show_submitted_events')}}">Events</a></li>
+                        {% elif event.approved_datetime %}
+                        <li><a href="{{url_for('cmte.show_approved_events')}}">Events</a></li>
+                        {% else %}
+                        <li><a href="{{url_for('cmte.show_draft_events')}}">Events</a></li>
+                        {% endif %}
+                        <li class="is-active"><a href="#">Event Registration</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        <h1 class="title has-text-centered">Event Registration Preview</h1>
         {% include "messages.html" %}
         <div class="columns">
             <div class="column">
-                <h2 class="title">{{event.event_type}}</h2>
-                <h3 class="subtitle">{{event.title}}</h3>
-                {% if not event.approved_datetime and event.comment %}
-                <div class="notification is-danger is-light">
+                {% if (not event.approved_datetime and not event.cancelled_datetime) and event.comment and event.is_editable %}
+                <div class="notification is-warning is-light">
                     <span class="icon">
                         <i class="fas fa-info-circle"></i>
                     </span>
                     <span>{{event.comment}}</span>
                 </div>
                 {% endif %}
+                {% if (not event.approved_datetime or not event.cancelled_datetime) and event.info_request and event.is_editable %}
+                <div class="notification is-danger is-light">
+                    <span class="icon">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                    <span>{{event.info_request}}</span>
+                </div>
+                {% endif %}
                 <table class="table is-fullwidth is-bordered">
                     <tbody>
+                    <tr>
+                        <td><strong>ชื่อกิจกรรม</strong></td>
+                        <td>{{event.title}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><strong>สถานะ</strong></td>
+                        <td><span class="tag is-info is-medium">{{event.status}}</span></td>
+                        <td></td>
+                    </tr>
                     <tr>
                         <td><strong>ประเภท</strong></td>
                         <td>{{event.event_type}}</td>
@@ -49,6 +81,7 @@
                         <td><strong>สถานที่</strong></td>
                         <td id="venue">{{event.venue or 'ไม่ระบุ'}}</td>
                         <td>
+                            {% if event.is_editable %}
                             <a class="button is-light"
                                hx-get="{{url_for('cmte.sponsor_edit_venue', event_id=event.id)}}"
                                hx-target="#venue"
@@ -60,6 +93,7 @@
                                 </span>
                                 <span>แก้ไข</span>
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -72,6 +106,7 @@
                             {% endif %}
                         </td>
                         <td>
+                            {% if event.is_editable %}
                             <a class="button is-light"
                                hx-get="{{url_for('cmte.sponsor_edit_website', event_id=event.id)}}"
                                hx-target="#website"
@@ -83,25 +118,39 @@
                                 </span>
                                 <span>แก้ไข</span>
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
                         <td><strong>เอกสารประกอบ</strong></td>
-                        <td>
-                            <ul>
+                        <td class="content">
+                            <ol>
                                 {% for doc in event.docs %}
+                                {% if not doc.is_payment_slip %}
                                 <li>
-                                    {{doc.filename}}
                                     <a href="{{url_for('cmte.download_file', key=doc.key, download_filename=doc.filename)}}">
+                                    <span>
+                                    {{doc.filename}}
+                                    </span>
                                     <span class="icon">
                                         <i class="fa-solid fa-file-arrow-down"></i>
                                     </span>
                                     </a>
                                 </li>
+                                {% endif %}
                                 {% endfor %}
-                            </ul>
+                            </ol>
                         </td>
-                        <td></td>
+                        <td>
+                            {% if event.is_editable %}
+                            <a href="{{url_for('cmte.edit_event', event_id=event.id, next=request.url)}}" class="button is-light">
+                                <span class="icon">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </span>
+                                <span>แก้ไข</span>
+                            </a>
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
                         <td><strong>หน่วยคะแนนที่อนุมัติ</strong></td>
@@ -113,29 +162,30 @@
                         <td><strong>{{event.fee_rate}}</strong>
                             {% if not event.payment_datetime %}
                             <a class="tag is-danger is-light" href="{{url_for('cmte.process_payment', event_id=event.id, pay_amount=event.fee_rate.fee_rate)}}">กรุณาดำเนินการชำระค่าธรรมเนียมเพื่อยื่นขออนุมัติกิจกรรม</a>
-                            {% endif %}
-                        </td>
-                        {% if event.payment_datetime %}
-                        <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}
-                            {% if event.payment_slip %}
-                            <a class="button is-small" href="{{url_for('cmte.download_file', key=event.payment_slip.key, download_filename=event.payment_slip.filename)}}">
+                            {% else %}
+                            <a class="button is-success is-small" href="{{url_for('cmte.download_file', key=event.payment_slip.key, download_filename=event.payment_slip.filename)}}">
                                 <span class="icon">
-                                    <i class="fas fa-cloud-download-alt"></i>
+                                    <i class="fa-solid fa-file-arrow-down"></i>
                                 </span>
-                                <span>download slip</span>
-                           </a>
-                            <a class="button is-small" href="{{url_for('cmte.process_payment', event_id=event.id)}}">
-                                <span class="icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </span>
-                                <span>upload slip</span>
+                                <span>Download Slip</span>
                             </a>
                             {% endif %}
+                        </td>
+                        <td>
+                            {% if event.payment_datetime and not event.submitted_datetime %}
+                            ชำระเมื่อ {{event.payment_datetime|localdatetime}}
+                            <a class="button is-warning is-small" href="{{url_for('cmte.process_payment', event_id=event.id)}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-file-arrow-up"></i>
+                                </span>
+                                <span>Upload New Slip</span>
+                            </a>
+                            <p class="help has-text-danger">หากอัพโหลดไฟล์ใหม่ระบบจะยกเลิกไฟล์เดิม</p>
                         {% else %}
                         </td>
-                        <td></td>
                         {% endif %}
                     </tr>
+                    {% if event.approved_datetime %}
                     <tr>
                         <td><strong>ต้องส่งรายชื่อผู้เข้าร่วมกิจกรรมภายในวันที่</strong></td>
                         <td>
@@ -151,11 +201,12 @@
                             </span>
                         </td>
                     </tr>
+                    {% endif %}
                     </tbody>
                 </table>
                 <div id="participant-form"></div>
                 <div class="buttons is-centered">
-                    {% if not event.submitted_datetime %}
+                    {% if event.is_editable %}
                     <a href="{{url_for('cmte.edit_event', event_id=event.id, next=request.url)}}" class="button is-link is-outlined">
                         <span class="icon">
                             <i class="fa-solid fa-pencil"></i>
@@ -163,7 +214,7 @@
                         <span>แก้ไขข้อมูล</span>
                     </a>
                     {% endif %}
-                    {% if event.payment_datetime and not event.submitted_datetime %}
+                    {% if event.payment_datetime and (not event.submitted_datetime or event.is_pending) %}
                     <a hx-confirm="ท่านต้องการยื่นขออนุมัติกิจกรรมนี้หรือไม่"
                        hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
                        hx-post="{{url_for('cmte.submit_event', event_id=event.id, next=request.url)}}"

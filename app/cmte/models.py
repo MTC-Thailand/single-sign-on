@@ -57,6 +57,18 @@ class CMTEEventSponsor(db.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def num_pending_events(self):
+        return self.events.filter_by(is_pending=True).count()
+
+    @property
+    def num_approved_events(self):
+        return self.events.filter(CMTEEvent.approved_datetime != None).count()
+
+    @property
+    def num_submitted_events(self):
+        return self.events.filter_by(submitted_datetime=None).count()
+
     def expire_status(self):
         today = datetime.now().date()
         status = "inactive"
@@ -336,7 +348,7 @@ class CMTEEvent(db.Model):
     approved_datetime = db.Column('approved_datetime', db.DateTime(timezone=True), info={'label': 'วันที่อนุมัติ'})
     cancelled_datetime = db.Column('cancelled_datetime', db.DateTime(timezone=True))
     sponsor_id = db.Column('sponsor_id', db.Integer, db.ForeignKey('cmte_event_sponsors.id'))
-    sponsor = db.relationship('CMTEEventSponsor', backref=db.backref('events'))
+    sponsor = db.relationship('CMTEEventSponsor', backref=db.backref('events', lazy='dynamic'))
     submission_due_date = db.Column('submission_due_date', db.Date())
     website = db.Column('website', db.Text(), info={'label': 'ลิงค์ไปยังเว็บไซต์ลงทะเบียน/ประชาสัมพันธ์'})
     coord_name = db.Column('coord_name', db.String(), info={'label': 'ชื่อผู้ประสานงาน'})
@@ -348,15 +360,17 @@ class CMTEEvent(db.Model):
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
     cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
     event_code = db.Column('event_code', db.String(), info={'label': 'Code'})
-    comment = db.Column('comment', db.String())
+    comment = db.Column('comment', db.String(), info={'label': 'ข้อคิดเห็นจากศูนย์ CMTE'})
     payment_approved_at = db.Column('payment_approve_datetime', db.DateTime(timezone=True), info={'label': 'วันที่ตรวจสอบการชำระเงิน'})
+    is_pending = db.Column('is_pending', db.Boolean())
+    info_request = db.Column('info_request', db.Text(), info={'label': 'รายการขอข้อมูลเพิ่มเติม'})
 
     # TODO: add a field for an approver
 
     def to_dict(self):
         return {
             'id': self.id,
-            'title': self.title,
+            'title': f'{self.title} (pending)' if self.is_pending else self.title,
             'start_date': self.start_date.astimezone(BANGKOK).isoformat() if self.start_date else None,
             'end_date': self.end_date.astimezone(BANGKOK).isoformat() if self.end_date else None,
             'event_type': str(self.event_type) if self.event_type else None,
@@ -365,6 +379,10 @@ class CMTEEvent(db.Model):
                 BANGKOK).isoformat() if self.submitted_datetime else None,
             'approved_datetime': self.approved_datetime.astimezone(
                 BANGKOK).isoformat() if self.approved_datetime else None,
+            'payment_datetime': self.payment_datetime.astimezone(
+                BANGKOK).isoformat() if self.payment_datetime else None,
+            'payment_approved_at': self.payment_datetime.astimezone(
+                BANGKOK).isoformat() if self.payment_approved_at else None,
             'venue': self.venue,
             'points': self.cmte_points,
             'website': self.website,
@@ -384,6 +402,25 @@ class CMTEEvent(db.Model):
     @property
     def payment_slip(self):
         return self.docs.filter_by(is_payment_slip=True).first()
+
+    @property
+    def is_editable(self):
+        return self.is_pending or not self.submitted_datetime
+
+    @property
+    def status(self):
+        if self.is_pending:
+            return 'รอแก้ไขหรือส่งข้อมูลเพิ่มเติม'
+        elif self.approved_datetime:
+            return 'อนุมัติแล้ว'
+        elif self.submitted_datetime:
+            return 'รออนุมัติคะแนน'
+        elif self.payment_datetime and not self.payment_approved_at:
+            return 'รอตรวจสอบการชำระเงิน'
+        elif not self.payment_datetime:
+            return 'รอชำระเงิน'
+        else:
+            return 'รอยื่นขออนุมัติ'
 
 
 class CMTEEventParticipationRecord(db.Model):

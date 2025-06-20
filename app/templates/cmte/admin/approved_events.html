@@ -23,6 +23,8 @@
           <th>อัตราค่าธรรมเนียม</th>
           <th>สถาบัน</th>
           <th>วันที่ยื่น</th>
+          <th>วันที่แจ้งชำระเงิน</th>
+          <th>วันที่ยืนยันการชำระเงิน</th>
           <th>วันที่อนุมัติ</th>
           </thead>
           <tbody>
@@ -90,6 +92,28 @@
           render: function (data, type) {
             if (data !== null) {
               return moment(data).format('lll')
+            } else {
+              return null
+            }
+          },
+          orderable: true
+        },
+        {
+          data: 'payment_datetime',
+          render: function (data, type) {
+            if (data !== null) {
+              return moment(data).format('lll')
+            } else {
+              return null
+            }
+          },
+          orderable: true
+        },
+        {
+          data: 'payment_approved_at',
+          render: function (data, type) {
+            if (data !== null) {
+              return "<span class='tag is-success is-rounded'>" + moment(data).format('lll') + "</span>"
             } else {
               return null
             }

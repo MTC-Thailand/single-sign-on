@@ -18,8 +18,8 @@
         <div class="tabs is-boxed">
           <ul>
             <li><a href="{{url_for('cmte.show_draft_events')}}">รอยื่นขออนุมัติ</a></li>
-            <li><a href="{{url_for('cmte.show_submitted_events')}}">รอผลการอนุมัติ</a></li>
-            <li class="is-active"><a>อนุมัติแล้ว</a></li>
+            <li><a href="{{url_for('cmte.show_submitted_events')}}">รอผลการอนุมัติ {% if current_user.sponsor.num_pending_events %}<span class="tag is-rounded is-small is-danger">{{current_user.sponsor.num_pending_events}}</span>{% endif %}</a></li>
+            <li class="is-active"><a href="{{url_for('cmte.show_approved_events')}}">อนุมัติแล้ว</a></li>
           </ul>
         </div>
         <table id="events" class="table is-fullwidth">

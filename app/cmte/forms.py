@@ -189,7 +189,7 @@ class CMTESponsorReceiptDocForm(ModelForm):
         model = CMTEReceiptDoc
         only = ['note']
 
-    upload_file = FileField('Document Upload')
+    upload_file = FileField('Slip Upload')
     note = TextAreaField('คำอธิบาย', render_kw={'class': 'textarea'})
 
 

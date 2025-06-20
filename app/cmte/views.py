@@ -354,8 +354,8 @@ def admin_request_info(event_id):
     if request.method == 'POST':
         message = request.form.get('request_info_message')
         if message:
-            event.comment = message
-            event.submitted_datetime = None
+            event.info_request = message
+            event.is_pending = True
             db.session.add(event)
             db.session.commit()
         resp = make_response()
@@ -367,7 +367,7 @@ def admin_request_info(event_id):
     <form>
     <div class="field">
         <div class="control">
-            <textarea class="textarea" name="request_info_message">{event.comment}</textarea>
+            <textarea class="textarea" name="request_info_message">{event.info_request or ""}</textarea>
         </div>
     </div>
     <div class="field">
@@ -379,7 +379,7 @@ def admin_request_info(event_id):
                 hx-swap="innerHTML"
                 hx-indicator="this"
             >
-                <span>Send</span>
+                <span>Send Request</span>
             </button>
         </div>
     </div>
@@ -517,10 +517,16 @@ def submit_event(event_id):
         db.session.add(event)
         db.session.commit()
         flash('ยื่นขออนุมัติเรียบร้อยแล้ว', 'success')
+    elif event.is_pending:
+        event.is_pending = False
+        db.session.add(event)
+        db.session.commit()
+        flash('ยื่นขออนุมัติเรียบร้อยแล้ว', 'success')
     else:
-        flash('รายการนี้ได้ยื่นขออนุมัติแล้ว', 'success')
+        flash('รายการนี้ได้ยื่นขออนุมัติแล้ว', 'warning')
     resp = make_response()
-    resp.headers['HX-Redirect'] = request.args.get('next') or url_for('cmte.cmte_index')
+    resp.headers['HX-Refresh'] = 'true'
+    # resp.headers['HX-Redirect'] = request.args.get('next') or url_for('cmte.cmte_index')
     return resp
 
 
@@ -541,7 +547,7 @@ def process_payment(event_id):
                                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))
             _file = form.upload_file.upload_file.data
-            if _file:
+            if _file:  # a file is required
                 filename = _file.filename
                 key = uuid.uuid4()
                 s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
@@ -550,11 +556,13 @@ def process_payment(event_id):
                 doc.note = form.upload_file.note.data
                 doc.is_payment_slip = True
                 db.session.add(doc)
-            event.payment_datetime = arrow.now('Asia/Bangkok').datetime
-            db.session.add(event)
-            db.session.commit()
-            flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
-            return redirect(url_for('cmte.preview_event', event_id=event_id))
+                event.payment_datetime = arrow.now('Asia/Bangkok').datetime
+                db.session.add(event)
+                db.session.commit()
+                flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
+                return redirect(url_for('cmte.preview_event', event_id=event_id))
+            else:
+                flash('กรุณาแนบสลิปหลักฐานการโอนเงิน', 'danger')
     return render_template('cmte/event_payment_form.html', event=event, form=form, pay_amount=pay_amount)
 
 
@@ -665,7 +673,9 @@ def get_events():
         1: CMTEEvent.start_date,
         2: CMTEEvent.end_date,
         7: CMTEEvent.submitted_datetime,
-        8: CMTEEvent.approved_datetime
+        8: CMTEEvent.payment_datetime,
+        9: CMTEEvent.payment_approved_at,
+        10: CMTEEvent.approved_datetime,
     }
     search = request.args.get('search[value]')
     start = request.args.get('start', type=int)
@@ -699,6 +709,7 @@ def get_events():
     for event in query:
         _data = event.to_dict()
         _data['link'] = url_for('cmte.admin_preview_event', event_id=event.id)
+        print(_data)
         data.append(_data)
     return jsonify(data=data,
                    recordsFiltered=total_filtered,
@@ -742,14 +753,32 @@ def load_pending_events():
 def approve_event(event_id):
     event = CMTEEvent.query.get(event_id)
     event.approved_datetime = arrow.now('Asia/Bangkok').datetime
-    event.submitted_datetime = event.approved_datetime + timedelta(days=event.event_type.submission_due)
+    event.submission_due_date = event.approved_datetime + timedelta(days=event.event_type.submission_due)
     cmte_points = request.form.get('cmte_points', type=float)
     event.cmte_points = cmte_points
+    event.is_pending = False
     db.session.add(event)
     db.session.commit()
     flash('อนุมัติกิจกรรมเรียบร้อย', 'success')
     resp = make_response()
     resp.headers['HX-Refresh'] = "true"
+    return resp
+
+
+@cmte.delete('/admin/events/<int:event_id>/unapprove')
+@login_required
+@cmte_admin_permission.require()
+def unapprove_event(event_id):
+    event = CMTEEvent.query.get(event_id)
+    event.approved_datetime = None
+    event.submission_due_date = None
+    event.is_pending = False
+    event.is_approved = None
+    event.cmte_points = None
+    db.session.add(event)
+    db.session.commit()
+    resp = make_response()
+    resp.headers['HX-Refresh'] = 'true'
     return resp
 
 
@@ -1714,6 +1743,20 @@ def admin_individual_score_edit(record_id):
 @cmte_admin_permission.require()
 def admin_approve_individual_score_payment(record_id):
     pass
+
+
+@cmte.route('/events/<int:event_id>/payment-confirm', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_confirm_payment(event_id):
+    event = CMTEEvent.query.get(event_id)
+    event.payment_approved_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(event)
+    db.session.commit()
+    template = f'''
+    <span class='tag is-rounded is-small is-success'>{event.payment_approved_at.strftime('%d/%m/%Y %H:%M')}</span>
+    '''
+    return template
 
 
 @cmte.route('/admin/events/management', methods=['GET', 'POST', 'DELETE'])
