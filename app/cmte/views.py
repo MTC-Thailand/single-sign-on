@@ -797,7 +797,7 @@ def get_cmte_point_input(event_id):
 @cmte_sponsor_admin_permission.require()
 def show_draft_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter_by(submitted_datetime=None)
+    query = CMTEEvent.query.filter_by(submitted_datetime=None, sponsor=current_user.sponsor)
     events = query.paginate(page=page, per_page=20)
     next_url = url_for('cmte.load_pending_events', page_no=events.next_num) if events.has_next else None
     return render_template('cmte/draft_events.html',
@@ -809,7 +809,9 @@ def show_draft_events():
 @cmte_sponsor_admin_permission.require()
 def show_submitted_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter(CMTEEvent.submitted_datetime != None).filter(CMTEEvent.approved_datetime == None)
+    query = CMTEEvent.query.filter(CMTEEvent.submitted_datetime != None)\
+        .filter(CMTEEvent.approved_datetime == None)\
+        .filter_by(sponsor=current_user.sponsor)
     events = query.paginate(page=page, per_page=20)
     next_url = url_for('cmte.pending_events', page=events.next_num) if events.has_next else None
     return render_template('cmte/submitted_events.html', events=events.items, next_url=next_url)
@@ -820,7 +822,8 @@ def show_submitted_events():
 @cmte_sponsor_admin_permission.require()
 def show_approved_events():
     page = request.args.get('page', type=int, default=1)
-    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None).order_by(CMTEEvent.start_date)
+    query = CMTEEvent.query.filter(CMTEEvent.approved_datetime != None)\
+        .filter_by(sponsor=current_user.sponsor).order_by(CMTEEvent.start_date)
     events = query.paginate(page=page, per_page=20)
     next_url = url_for('cmte.load_pending_events', page_no=events.next_num) if events.has_next else None
     return render_template('cmte/approved_events.html', events=events.items, next_url=next_url)
