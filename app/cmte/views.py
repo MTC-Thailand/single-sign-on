@@ -285,32 +285,36 @@ def add_participants(event_id):
     form = CMTEParticipantFileUploadForm()
     event = CMTEEvent.query.get(event_id)
     _file = form.upload_file.data
-    df = pd.read_excel(_file, sheet_name='Sheet1')
-    for idx, row in df.iterrows():
-        license_number = str(row['license_number'])
-        score = float(row['score'])
-        license = License.query.filter_by(number=license_number).first()
-        if not license:
-            errors.append({
-                'name': row['name'],
-                'license_number': row['license_number'],
-                'score': row['score'],
-                'note': 'License not found.'
-            })
-            continue
+    if _file:
+        df = pd.read_excel(_file, sheet_name='Sheet1')
+        for idx, row in df.iterrows():
+            license_number = str(row['license_number'])
+            score = float(row['score'])
+            license = License.query.filter_by(number=license_number).first()
+            if not license:
+                errors.append({
+                    'name': row['name'],
+                    'license_number': row['license_number'],
+                    'score': row['score'],
+                    'note': 'License not found.'
+                })
+                continue
 
-        rec = CMTEEventParticipationRecord.query.filter_by(
-            license_number=license_number,
-            event_id=event_id).first()
-        if not rec:
-            rec = CMTEEventParticipationRecord()
-            rec.license_number = license_number
-            rec.event_id = event_id
-        rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-        rec.score = event.cmte_points if score > event.cmte_points else score
-        db.session.add(rec)
-        db.session.commit()
-    flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
+            rec = CMTEEventParticipationRecord.query.filter_by(
+                license_number=license_number,
+                event_id=event_id).first()
+            if not rec:
+                rec = CMTEEventParticipationRecord()
+                rec.license_number = license_number
+                rec.event_id = event_id
+            rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+            rec.score = event.cmte_points if score > event.cmte_points else score
+            rec.submitted_name = row['name']
+            db.session.add(rec)
+            db.session.commit()
+        flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
+    else:
+        flash('ไม่พบ file ข้อมูล', 'danger')
     if errors:
         df_ = pd.DataFrame(errors)
         return render_template('cmte/admin/upload_errors.html', errors=df_.to_html(classes=['table is-striped']),

@@ -428,6 +428,7 @@ class CMTEEventParticipationRecord(db.Model):
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     license_number = db.Column('license_number', db.ForeignKey('licenses.number'),
                                info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
+    submitted_name = db.Column('submitted_name', db.String())
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
     event = db.relationship(CMTEEvent, backref=db.backref('participants', cascade='all, delete-orphan'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
@@ -450,6 +451,13 @@ class CMTEEventParticipationRecord(db.Model):
     @property
     def is_valid(self):
         return (self.score_valid_until < self.license.end_date) and self.approved_date is not None
+
+    @property
+    def status(self):
+        if self.approved_date:
+            return 'อนุมัติ'
+        else:
+            return 'รออนุมัติ'
 
     def set_score_valid_date(self):
         if self.event:
