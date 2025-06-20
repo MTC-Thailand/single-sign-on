@@ -60,10 +60,16 @@ class CMTEAdminEventForm(ModelForm):
                                 option_widget=CheckboxInput())
 
 
-class ParticipantForm(FlaskForm):
+class AdminParticipantForm(FlaskForm):
     license_number = StringField('License Number')
     score = DecimalField('Score', validators=[NumberRange(min=0)])
     approved_date = DateField('Approved Date', validators=[Optional()])
+
+
+class ParticipantForm(FlaskForm):
+    license_number = StringField('License Number')
+    score = DecimalField('Score', validators=[NumberRange(min=0),
+                                              DataRequired(message='Please enter a valid score.')])
 
 
 class IndividualScoreForm(ModelForm):

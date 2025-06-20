@@ -470,8 +470,11 @@ class CMTEEventParticipationRecord(db.Model):
         return {
             'id': self.id,
             'name': self.license.member.th_fullname,
+            'submitted_name': self.submitted_name if self.submitted_name else self.license.member.th_fullname,
+            'name_matched': 'Mismatched' if self.submitted_name and self.submitted_name != self.license.member.th_fullname else '',
             'license_number': self.license_number,
             'score': self.score,
+            'status': self.status,
             'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
             'approved_at': self.approved_date.isoformat() if self.approved_date else None,
         }

@@ -276,40 +276,14 @@
                         <th>หมายเลขใบอนุญาต (ท.น.)</th>
                         <th>ชื่อที่ส่งขอคะแนน</th>
                         <th>ชื่อจากระบบ</th>
+                        <th></th>
                         <th>คะแนนที่ได้รับ</th>
                         <th>เพิ่มเมื่อ</th>
                         <th>สถานะ</th>
+                        <th>อนุมัติเมื่อ</th>
                         <th></th>
                         </thead>
                         <tbody>
-                        {% for rec in event.participants %}
-                        <tr>
-                            <td>{{rec.license_number}}</td>
-                            <td>{{rec.license.member.th_fullname}}</td>
-                            <td>{{rec.submitted_name}}</td>
-                            <td>{{rec.score}}</td>
-                            <td>{{rec.create_datetime|localdatetime}}</td>
-                            <td>{{rec.status}}</td>
-                            <td>
-                                <a class="icon"
-                                   hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
-                                   hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
-                                   hx-indicator="this"
-                                   hx-target="closest tr"
-                                   hx-delete="{{url_for('cmte.edit_participants', rec_id=rec.id, event_id=rec.event.id, _method='DELETE')}}">
-                                    <span class="icon">
-                                        <i class="fa-solid fa-trash-can has-text-danger"></i>
-                                    </span>
-                                </a>
-                                <a class="icon" hx-get="{{url_for('cmte.edit_participants', rec_id=rec.id, event_id=rec.event.id, _method='GET')}}"
-                                    hx-target="#participant-form" hx-swap="innerHTML">
-                                    <span class="icon">
-                                        <i class="fa-solid fa-pencil has-text-dark"></i>
-                                    </span>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -321,13 +295,67 @@
 {% block scripts %}
 {{super()}}
 <script>
+    $.fn.dataTable.moment('lll');
     $(document).ready(()=>{
-        $('#participant-list-table').DataTable();
+        var pTable = new DataTable("#participant-list-table", {
+            ajax: {{url_for('cmte.get_event_participants', event_id=event.id)|tojson|safe}},
+            processing: true,
+            initComplete: function() {
+                htmx.process(htmx.find('#participant-list-table'))
+            },
+            columns: [
+            {data: 'license_number', orderable: false},
+            {data: 'submitted_name', orderable: false},
+            {data: 'name', orderable: false},
+            {
+                data: 'name_matched',
+                render: function (data, type, row) {
+                    if (data) {
+                        return `<span class="tag is-danger has-text-white">${data}</span>`
+                    } else {
+                        return ''
+                    }
+                },
+                orderable: false
+            },
+            {data: 'score', orderable: false},
+            {
+                data: 'created_at',
+                render: function (data, type) {
+                    if (data !== null) {
+                        return moment(data).format('lll')
+                    } else {
+                        return null
+                    }
+                },
+                orderable: true
+            },
+            {data: 'status', orderable: false},
+            {
+                data: 'approved_at',
+                render: function (data, type) {
+                    if (data !== null) {
+                        return moment(data).format('lll')
+                    } else {
+                        return null
+                    }
+                },
+                orderable: true
+            },
+            {data: 'action', orderable: false},
+            ]
+        });
+        document.body.addEventListener('reloadAjax', function (evt) {
+            pTable.ajax.reload(function () {
+                htmx.process(htmx.find('#participant-list-table'))
+            })
+        })
     })
-    document.addEventListener('alertError', function () {
+    document.body.addEventListener('alertError', function (evt) {
         Swal.fire({
             icon: 'error',
-            title: 'รายการนี้เพิ่มแล้ว'
+            title: 'Error happened.',
+            text: 'กรุณาตรวจสอบจำนวนคะแนน หรือรายชื่ออาจจะซ้ำ'
         });
     })
 </script>

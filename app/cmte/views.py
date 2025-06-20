@@ -324,6 +324,31 @@ def add_participants(event_id):
     return redirect(url_for('cmte.preview_event', event_id=event_id))
 
 
+@cmte.get('/api/event/<int:event_id>/participants')
+@login_required
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
+def get_event_participants(event_id):
+    search = request.args.get('search[value]')
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    query = CMTEEventParticipationRecord.query.filter_by(event_id=event_id)
+    if search:
+        query = query.filter(db.or_(CMTEEventParticipationRecord.license_number.like(f'%{search}%')))
+    total_filtered = query.count()
+    query = query.order_by(CMTEEventParticipationRecord.license_number).offset(start).limit(length)
+
+    data = []
+    for record in query:
+        _data = record.to_dict()
+        _data['action'] = render_template('cmte/partials/event_record_edit_template.html', record=record)
+        data.append(_data)
+    print(data)
+    return jsonify(data=data,
+                   recordsFiltered=total_filtered,
+                   recordsTotal=query.count(),
+                   draw=request.args.get('draw', type=int))
+
+
 @cmte.get('/events/participants/template-file')
 @login_required
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
@@ -573,9 +598,11 @@ def process_payment(event_id):
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
 @cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['GET', 'DELETE', 'POST'])
 @login_required
-@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
+@cmte_sponsor_admin_permission.require()
 def edit_participants(event_id: int = None, rec_id: int = None):
+    event = CMTEEvent.query.get(event_id)
     form = ParticipantForm()
+    resp = make_response()
     if request.method == 'GET':
         license = None
         if rec_id:
@@ -583,7 +610,6 @@ def edit_participants(event_id: int = None, rec_id: int = None):
             if rec:
                 form.license_number.data = rec.license_number
                 form.score.data = rec.score
-                form.approved_date.data = rec.approved_date
                 license = rec.license
         return render_template('cmte/modals/participant_form.html',
                                form=form,
@@ -595,40 +621,39 @@ def edit_participants(event_id: int = None, rec_id: int = None):
         rec = CMTEEventParticipationRecord.query.get(rec_id)
         db.session.delete(rec)
         db.session.commit()
-        resp = make_response()
+        resp.headers['HX-Trigger-After-Swap'] = 'reloadAjax'
         return resp
     if form.validate_on_submit():
         if rec_id:
             rec = CMTEEventParticipationRecord.query.get(rec_id)
-            if rec:
+            if not rec or form.score.data > event.cmte_points:
+                resp.headers['HX-Trigger'] = 'closeModal, alertError'
+            else:
                 rec.score = form.score.data
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-                if form.approved_date.data:
-                    rec.approved_date = form.approved_date.data
-                    rec.set_score_valid_date()
+                db.session.add(rec)
+                db.session.commit()
+                # if form.approved_date.data:
+                #     rec.approved_date = form.approved_date.data
+                #     rec.set_score_valid_date()
         else:
             rec = CMTEEventParticipationRecord.query.filter_by(license_number=form.license_number.data,
                                                                event_id=event_id).first()
-            if rec:
-                resp = make_response()
+            if rec or form.score.data > event.cmte_points:
                 resp.headers['HX-Trigger'] = 'alertError'
                 return resp
             else:
                 rec = CMTEEventParticipationRecord(event_id=event_id, license_number=form.license_number.data,
-                                                   score=float(form.score.data))
+                                                   score=form.score.data)
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-                if form.approved_date.data:
-                    rec.set_score_valid_date()
-        db.session.add(rec)
-        db.session.commit()
-        flash('เพิ่มข้อมูลเรียบร้อยแล้ว', 'success')
-        resp = make_response()
-        resp.headers['HX-Refresh'] = 'true'
+                # if form.approved_date.data:
+                #     rec.set_score_valid_date()
+                db.session.add(rec)
+                db.session.commit()
+        resp.headers['HX-Trigger-After-Swap'] = 'reloadAjax, closeModal'
         return resp
     else:
-        flash(f'{form.errors}', 'danger')
-        resp = make_response()
-        resp.headers['HX-Refresh'] = 'true'
+        resp.headers['HX-Trigger'] = 'alertError'
         return resp
 
 
