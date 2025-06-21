@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Sponsor Form{% endblock %}
+
+{% block content %}
+    {% include "cmte/nav.html" %}
+    <section class="section">
+        <h1 class="title has-text-centered">แก้ไขข้อมูลสถาบัน {{ sponsor.name }}</h1>
+        <div class="columns">
+            <div class="column box">
+                {% include "messages.html" %}
+                <form method="post" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="field">
+                        <label class="label">ชื่อหน่วยงาน</label>
+                        <div class="control">
+                            {{ form.name(class="input is-danger") }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{ form.affiliation.label }}</label>
+                        <div class="control">
+                            {{ form.affiliation(class="input is-danger") }}
+                        </div>
+                    </div>
+                    <label class="label">ลักษณะองค์กร</label>
+                    <div class="field">
+                        <div class="select">
+                            {{ form.type(**{'hx-get': url_for("cmte.get_org_type", sponsor_id=sponsor.id),
+                            'hx-target': '#related-type', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label" style="padding-left: 50px">
+                            <div id="related-type"></div>
+                        </label>
+                    </div>
+                    <div class="field">
+                        <label class="label">ประเภทหน่วยงาน</label>
+                        <div class="select">
+                            {{ form.private_sector(**{'hx-get': url_for("cmte.get_qualifications"),
+                            'hx-target': '#related-doc', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
+                        <label class="label" style="padding-left: 50px">
+                        </label>
+                    </div>
+                    <div id="related-doc"></div>
+                    <div class="field">
+                        {% for doc in sponsor.docs %}
+                            {% if not doc.is_payment_slip %}
+                                <a class="button is-small" href="{{url_for('cmte.download_file', key=doc.key,
+                                    download_filename=doc.filename)}}">
+                                    <span class="icon">
+                                        <i class="fas fa-cloud-download-alt"></i>
+                                    </span>
+                                    <span>{{ doc.filename }}</span>
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="field">
+                        <label class="label">{{ form.address.label }}ของหน่วยงาน</label>
+                        <div class="control">
+                            {{ form.address(class="textarea") }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">รหัสไปรษณีย์</label>
+                        <div class="control">
+                            {{ form.zipcode(class="input") }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">เบอร์โทรศัพท์ของหน่วยงาน</label>
+                        <div class="control">
+                            {{ form.telephone(class="input is-danger") }}
+                        </div>
+                        <p class="help is-info">กรุณากรอกเฉพาะหมายเลข เช่น 09099045xx</p>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{ form.email.label }} ของหน่วยงาน/ผู้ประสานงาน</label>
+                        <div class="control">
+                            {{ form.email(class="input") }}
+                        </div>
+                    </div>
+                    <div class="field is-grouped">
+                        <a type="button" href="{{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}" class="button is-light">Cancel</a>
+                        <div class="control">
+                            <input type="submit" value="submit" class="button is-danger">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $(document).ready(()=>{
+        htmx.trigger('#private_sector', 'change')
+        htmx.trigger('#type', 'change')
+    })
+    </script>
+{% endblock %}
+

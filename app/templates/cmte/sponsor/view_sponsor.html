@@ -9,11 +9,22 @@
         <h1 class="title has-text-centered">สถาบันฝึกอบรม {{ sponsor.name }}</h1>
         {% if is_admin %}
         <h1 class="subtitle has-text-centered">(ฝั่ง admin)</h1>
+        <p class="notification">
+        {% for req in sponsor.requests %}
+            {% if req.paid_at and not req.verified_at %}รอ verify payment{% endif %}
+            {% if not req.approved_at %}
+                {% if req.comment %}
+                    {% if 'Lead coordinator' in req.comment %}
+                        รออนุมัติแก้ไขผู้ประสานงานหลัก
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        </p>
         <div class="columns">
             <div class="column">
                 <div class="has-text-centered">
-                    <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
-                       hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                    <a href="{{ url_for('cmte.edit_sponsor', sponsor_id=sponsor.id) }}"
                        class="button is-success">
                             <span class="icon">
                             <i class="fa-solid fa-pencil"></i>

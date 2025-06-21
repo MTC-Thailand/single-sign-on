@@ -1285,13 +1285,13 @@ def request_edit_sponsor(sponsor_id):
                                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))
             for field, _file in request.files.items():
-                filename = _file.filename
-                key = uuid.uuid4()
-                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
-                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
-                doc.note = request.form.get(field + '_note')
                 if filename:
+                    filename = _file.filename
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = request.form.get(field + '_note')
                     db.session.add(doc)
             db.session.commit()
             version_index = sponsor.versions.count() - 1
@@ -1431,6 +1431,7 @@ def request_renew_sponsor(sponsor_id):
 @login_required
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def sponsor_modal(sponsor_id):
+    #delete this function
     if sponsor_id:
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         form = CMTEEventSponsorForm(obj=sponsor)
@@ -1512,6 +1513,37 @@ def approved_renew_sponsor(request_id):
     flash('อนุมัติคำขอต่ออายุสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
     # send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
+
+
+@cmte.route('/sponsors/<int:sponsor_id>/edit', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def edit_sponsor(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    form = CMTEEventSponsorForm(obj=sponsor)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(sponsor)
+            db.session.add(sponsor)
+
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            for field, _file in request.files.items():
+                filename = _file.filename
+                if filename:
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = request.form.get(field + '_note')
+                    db.session.add(doc)
+            db.session.commit()
+            flash(f'แก้ไขข้อมูลเรียบร้อย', 'success')
+            return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+        else:
+            flash(f'Errors: {form.errors}', 'danger')
+    return render_template('cmte/admin/edit_sponsor_info.html', form=form, sponsor=sponsor)
 
 
 @cmte.route('/sponsors-edit/<int:request_id>', methods=['GET', 'POST'])
