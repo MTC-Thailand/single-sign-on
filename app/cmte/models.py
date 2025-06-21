@@ -364,6 +364,7 @@ class CMTEEvent(db.Model):
     payment_approved_at = db.Column('payment_approve_datetime', db.DateTime(timezone=True), info={'label': 'วันที่ตรวจสอบการชำระเงิน'})
     is_pending = db.Column('is_pending', db.Boolean())
     info_request = db.Column('info_request', db.Text(), info={'label': 'รายการขอข้อมูลเพิ่มเติม'})
+    participant_updated_at = db.Column('participant_updated_at', db.DateTime(timezone=True), info={'label': 'วันที่เพิ่ม/แก้ไขรายชื่อล่าสุด'})
 
     # TODO: add a field for an approver
 
@@ -383,10 +384,13 @@ class CMTEEvent(db.Model):
                 BANGKOK).isoformat() if self.payment_datetime else None,
             'payment_approved_at': self.payment_datetime.astimezone(
                 BANGKOK).isoformat() if self.payment_approved_at else None,
+            'participant_updated_at': self.participant_updated_at.astimezone(
+                BANGKOK).isoformat() if self.participant_updated_at else None,
             'venue': self.venue,
             'points': self.cmte_points,
             'website': self.website,
             'sponsor': str(self.sponsor) if self.sponsor else None,
+            'num_pending_participants': self.num_pending_participants,
         }
 
     def __str__(self):
@@ -422,6 +426,10 @@ class CMTEEvent(db.Model):
         else:
             return 'รอยื่นขออนุมัติ'
 
+    @property
+    def num_pending_participants(self):
+        return self.participants.filter(CMTEEventParticipationRecord.approved_date==None).count()
+
 
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
@@ -430,7 +438,7 @@ class CMTEEventParticipationRecord(db.Model):
                                info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
     submitted_name = db.Column('submitted_name', db.String())
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
-    event = db.relationship(CMTEEvent, backref=db.backref('participants', cascade='all, delete-orphan'))
+    event = db.relationship(CMTEEvent, backref=db.backref('participants', lazy='dynamic', cascade='all, delete-orphan'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
     approved_date = db.Column('approved_date', db.Date())
     start_date = db.Column('start_date', db.Date(), info={'label': 'เริ่ม'})

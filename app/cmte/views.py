@@ -332,8 +332,26 @@ def get_event_participants(event_id):
     start = request.args.get('start', type=int)
     length = request.args.get('length', type=int)
     query = CMTEEventParticipationRecord.query.filter_by(event_id=event_id)
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    if col_name:
+        try:
+            column = getattr(CMTEEventParticipationRecord, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
     if search:
-        query = query.filter(db.or_(CMTEEventParticipationRecord.license_number.like(f'%{search}%')))
+        query = (query.join(License).join(Member, aliased=True)
+                 .filter(or_(Member.th_firstname.contains(search),
+                             Member.th_lastname.contains(search),
+                             Member.en_firstname.contains(search),
+                             Member.en_lastname.contains(search),
+                             License.number.contains(search))))
     total_filtered = query.count()
     query = query.order_by(CMTEEventParticipationRecord.license_number).offset(start).limit(length)
 
@@ -437,12 +455,13 @@ def admin_preview_event_participants(event_id):
                 column = column.desc()
             query = query.order_by(column)
 
-    query = (query.join(License).join(Member, aliased=True)
-             .filter(or_(Member.th_firstname.contains(search),
-                         Member.th_lastname.contains(search),
-                         Member.en_firstname.contains(search),
-                         Member.en_lastname.contains(search),
-                         License.number.contains(search))))
+    if search:
+        query = (query.join(License).join(Member, aliased=True)
+                 .filter(or_(Member.th_firstname.contains(search),
+                             Member.th_lastname.contains(search),
+                             Member.en_firstname.contains(search),
+                             Member.en_lastname.contains(search),
+                             License.number.contains(search))))
     start = request.args.get('start', type=int)
     length = request.args.get('length', type=int)
     total_filtered = query.count()
@@ -450,24 +469,7 @@ def admin_preview_event_participants(event_id):
     participants = []
     for record in query:
         rec_dict = record.to_dict()
-        csrf_token = f'{{"X-CSRF-Token": "{generate_csrf()}" }}'
-        rec_dict['actions'] = f'''
-         <a class="icon"
-           hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
-           hx-headers='{csrf_token}'
-           hx-target="closest tr"
-           hx-delete="{url_for('cmte.edit_participants', rec_id=record.id, event_id=event_id, _method='DELETE')}">
-            <span class="icon">
-                <i class="fa-solid fa-trash-can has-text-danger"></i>
-            </span>
-        </a>
-        <a class="icon" hx-get="{url_for('cmte.edit_participants', rec_id=record.id, event_id=event_id, _method='GET')}"
-           hx-target="#participant-form" hx-swap="innerHTML">
-            <span class="icon">
-                <i class="fa-solid fa-pencil has-text-dark"></i>
-            </span>
-        </a>
-        '''
+        rec_dict['actions'] = render_template('cmte/partials/event_record_edit_template.html', record=record)
         participants.append(rec_dict)
     return jsonify({'data': participants,
                     'recordsFiltered': total_filtered,
@@ -598,20 +600,29 @@ def process_payment(event_id):
 @cmte.route('/events/<int:event_id>/participants', methods=['GET', 'POST'])
 @cmte.route('/events/<int:event_id>/participants/<int:rec_id>', methods=['GET', 'DELETE', 'POST'])
 @login_required
-@cmte_sponsor_admin_permission.require()
+@cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def edit_participants(event_id: int = None, rec_id: int = None):
     event = CMTEEvent.query.get(event_id)
-    form = ParticipantForm()
+    if cmte_admin_permission.can():
+        form = AdminParticipantForm(data={'approved_date': arrow.now('Asia/Bangkok').date()})
+        is_admin = True
+    else:
+        form = ParticipantForm()
+        is_admin = False
+
     resp = make_response()
     if request.method == 'GET':
         license = None
         if rec_id:
             rec = CMTEEventParticipationRecord.query.get(rec_id)
             if rec:
+                if rec.approved_date:
+                    form.approved_date.data = rec.approved_date
                 form.license_number.data = rec.license_number
                 form.score.data = rec.score
                 license = rec.license
         return render_template('cmte/modals/participant_form.html',
+                               is_admin=is_admin,
                                form=form,
                                event_id=event_id,
                                license=license,
@@ -631,11 +642,17 @@ def edit_participants(event_id: int = None, rec_id: int = None):
             else:
                 rec.score = form.score.data
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+                if cmte_admin_permission.can() and form.approved_date.data:
+                    rec.approved_date = form.approved_date.data
+                    rec.set_score_valid_date()
+
+                if not cmte_admin_permission.can():
+                    event.participant_updated_at = rec.create_datetime
+
+                db.session.add(event)
                 db.session.add(rec)
                 db.session.commit()
-                # if form.approved_date.data:
-                #     rec.approved_date = form.approved_date.data
-                #     rec.set_score_valid_date()
+
         else:
             rec = CMTEEventParticipationRecord.query.filter_by(license_number=form.license_number.data,
                                                                event_id=event_id).first()
@@ -646,8 +663,15 @@ def edit_participants(event_id: int = None, rec_id: int = None):
                 rec = CMTEEventParticipationRecord(event_id=event_id, license_number=form.license_number.data,
                                                    score=form.score.data)
                 rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-                # if form.approved_date.data:
-                #     rec.set_score_valid_date()
+                db.session.add(rec)
+                db.session.commit()
+                if cmte_admin_permission.can() and form.approved_date.data:
+                    rec.approved_date = form.approved_date.data
+                    rec.set_score_valid_date()
+
+                if not cmte_admin_permission.can():
+                    event.participant_updated_at = rec.create_datetime
+                db.session.add(event)
                 db.session.add(rec)
                 db.session.commit()
         resp.headers['HX-Trigger-After-Swap'] = 'reloadAjax, closeModal'
@@ -701,10 +725,12 @@ def get_events():
     orderable_columns = {
         1: CMTEEvent.start_date,
         2: CMTEEvent.end_date,
-        7: CMTEEvent.submitted_datetime,
-        8: CMTEEvent.payment_datetime,
-        9: CMTEEvent.payment_approved_at,
-        10: CMTEEvent.approved_datetime,
+        4: CMTEEvent.submitted_datetime,
+        5: CMTEEvent.payment_datetime,
+        6: CMTEEvent.payment_approved_at,
+        7: CMTEEvent.approved_datetime,
+        8: CMTEEvent.participant_updated_at,
+        9: CMTEEvent.num_pending_participants,
     }
     search = request.args.get('search[value]')
     start = request.args.get('start', type=int)
@@ -738,7 +764,6 @@ def get_events():
     for event in query:
         _data = event.to_dict()
         _data['link'] = url_for('cmte.admin_preview_event', event_id=event.id)
-        print(_data)
         data.append(_data)
     return jsonify(data=data,
                    recordsFiltered=total_filtered,
@@ -909,15 +934,22 @@ def search_license():
     today = arrow.now('Asia/Bangkok').date()
     license = License.query.filter_by(number=license_number) \
         .filter(License.end_date >= today).first()
-    form = ParticipantForm(data={'license_number': license_number})
+    if cmte_admin_permission.can():
+        form = AdminParticipantForm(data={'license_number': license_number, 'approved_date': arrow.now('Asia/Bangkok').date()})
+        is_admin = True
+    else:
+        form = ParticipantForm(data={'license_number': license_number})
+        is_admin = False
     if license:
         return render_template('cmte/modals/participant_form.html',
+                               is_admin=is_admin,
                                license=license,
                                event_id=event_id,
                                form=form,
                                rec_id=None)
     else:
         return render_template('cmte/modals/participant_form.html',
+                               is_admin=is_admin,
                                not_found=True,
                                event_id=event_id,
                                form=form,

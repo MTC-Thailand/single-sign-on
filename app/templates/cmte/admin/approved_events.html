@@ -19,13 +19,13 @@
           <th>ชื่อ</th>
           <th>เริ่มต้น</th>
           <th>สิ้นสุด</th>
-          <th>สถานที่</th>
-          <th>อัตราค่าธรรมเนียม</th>
           <th>สถาบัน</th>
           <th>วันที่ยื่น</th>
           <th>วันที่แจ้งชำระเงิน</th>
           <th>วันที่ยืนยันการชำระเงิน</th>
           <th>วันที่อนุมัติ</th>
+          <th>วันที่ส่งรายชื่อ</th>
+          <th>รออนุมัติคะแนน</th>
           </thead>
           <tbody>
           </tbody>
@@ -84,8 +84,6 @@
           },
           orderable: true
         },
-        {data: 'venue', orderable: false},
-        {data: 'fee_rate', orderable: false},
         {data: 'sponsor', orderable: false},
         {
           data: 'submitted_datetime',
@@ -131,6 +129,28 @@
           },
           orderable: true
         },
+        {
+          data: 'participant_updated_at',
+          render: function (data, type) {
+            if (data !== null) {
+              return moment(data).format('lll')
+            } else {
+              return null
+            }
+          },
+          orderable: true
+        },
+        {
+          data: 'num_pending_participants',
+          render: function (data, type) {
+            if (data > 0) {
+              return `<span class="tag is-danger is-rounded">${data}</span>`
+            } else {
+              return ''
+            }
+          },
+          orderable: false,
+        }
       ]
     });
   })

@@ -1,3 +1,4 @@
+{% if not record.approved_date %}
 <a class="icon"
    hx-confirm="ท่านต้องการลบรายการนี้ใช่หรือไม่"
    hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
@@ -13,3 +14,4 @@
         <i class="fa-solid fa-pencil has-text-dark"></i>
     </span>
 </a>
+{% endif %}

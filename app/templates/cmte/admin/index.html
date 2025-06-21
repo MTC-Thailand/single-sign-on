@@ -6,7 +6,11 @@
     <div class="container">
         {% include "messages.html" %}
         <div class="columns">
-            <div class="column is-one-third is-offset-4">
+            <div class="column">
+                <h1 class="title is-size-4">รายการกิจกรรมรออนุมัติคะแนน</h1>
+                {{pending_participants|safe}}
+            </div>
+            <div class="column">
                 <article class="panel is-info">
                     <p class="panel-heading">Admin</p>
                     <a class="panel-block" href="{{url_for('cmte.all_requests', tab='new')}}">
