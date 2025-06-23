@@ -1189,8 +1189,8 @@ def request_edit_sponsor(sponsor_id):
                                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))
             for field, _file in request.files.items():
+                filename = _file.filename
                 if filename:
-                    filename = _file.filename
                     key = uuid.uuid4()
                     s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
                     doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
