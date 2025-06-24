@@ -8,8 +8,14 @@
         {% include "messages.html" %}
         <h1 class="title has-text-centered">สถาบันฝึกอบรม {{ sponsor.name }}</h1>
         {% if is_admin %}
-        <h1 class="subtitle has-text-centered">(ฝั่ง admin)</h1>
-        <p class="notification">
+        <h1 class="subtitle has-text-centered">
+            <span class="icon">
+                <i class="fa-solid fa-user-secret"></i>
+            </span>
+            <span>Admin</span>
+        </h1>
+        <!-- Should add req.status in the request model for simplicity -->
+        <p class="notification is-light is-warning">
         {% for req in sponsor.requests %}
             {% if req.paid_at and not req.verified_at %}รอ verify payment{% endif %}
             {% if not req.approved_at %}

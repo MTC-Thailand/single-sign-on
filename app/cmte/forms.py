@@ -60,10 +60,16 @@ class CMTEAdminEventForm(ModelForm):
                                 option_widget=CheckboxInput())
 
 
-class ParticipantForm(FlaskForm):
+class AdminParticipantForm(FlaskForm):
     license_number = StringField('License Number')
     score = DecimalField('Score', validators=[NumberRange(min=0)])
     approved_date = DateField('Approved Date', validators=[Optional()])
+
+
+class ParticipantForm(FlaskForm):
+    license_number = StringField('License Number')
+    score = DecimalField('Score', validators=[NumberRange(min=0),
+                                              DataRequired(message='Please enter a valid score.')])
 
 
 class IndividualScoreForm(ModelForm):
@@ -189,7 +195,7 @@ class CMTESponsorReceiptDocForm(ModelForm):
         model = CMTEReceiptDoc
         only = ['note']
 
-    upload_file = FileField('Document Upload')
+    upload_file = FileField('Slip Upload')
     note = TextAreaField('คำอธิบาย', render_kw={'class': 'textarea'})
 
 

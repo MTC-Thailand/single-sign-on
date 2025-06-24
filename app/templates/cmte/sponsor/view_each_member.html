@@ -60,9 +60,11 @@
                             </td>
                         </tr>
                     </table>
+                    {% if member.sponsor %}
                     <a class="button" href="{{url_for('cmte.manage_sponsor', sponsor_id=member.sponsor.id)}}">
                         Back
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

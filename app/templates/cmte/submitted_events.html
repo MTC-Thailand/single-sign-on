@@ -18,7 +18,7 @@
         <div class="tabs is-boxed">
           <ul>
             <li><a href="{{url_for('cmte.show_draft_events')}}">รอยื่นขออนุมัติ</a></li>
-            <li class="is-active"><a>รอผลการอนุมัติ</a></li>
+            <li class="is-active"><a>รอผลการอนุมัติ {% if current_user.sponsor.num_pending_events %}<span class="tag is-rounded is-small is-danger">{{current_user.sponsor.num_pending_events}}</span>{% endif %}</a></li>
             <li><a href="{{url_for('cmte.show_approved_events')}}">อนุมัติแล้ว</a></li>
           </ul>
         </div>
@@ -40,14 +40,23 @@
             <td>{{evt.event_type}}</td>
             <td>{{evt.fee_rate}}</td>
             <td>{{evt.submitted_datetime|localdatetime}}</td>
-            <td><a class="button is-small is-link is-outlined" href="{{url_for('cmte.preview_event', event_id=evt.id, next_url=request.url)}}">
-              <span class="icon">
-                <i class="fa-solid fa-circle-info"></i>
-              </span>
-              <span>รายละเอียด</span>
-            </a></td>
             <td>
-              <a class="button is-small is-danger is-outlined" hx-delete="{{url_for('cmte.cancel_event', event_id=evt.id)}}"
+              <a class="button is-small" href="{{url_for('cmte.preview_event', event_id=evt.id, next_url=request.url)}}">
+                {% if evt.info_request and evt.is_pending %}
+                <span class="icon">
+                  <i class="fa-solid fa-circle-info has-text-danger"></i>
+                </span>
+                <span class="has-text-danger">ขอข้อมูลเพิ่ม</span>
+                {% else %}
+                <span class="icon">
+                  <i class="fa-solid fa-circle-info"></i>
+                </span>
+                <span>รายละเอียด</span>
+                {% endif %}
+              </a>
+            </td>
+            <td>
+              <a class="button is-small is-danger" hx-delete="{{url_for('cmte.cancel_event', event_id=evt.id)}}"
                  hx-confirm="ต้องการยกเลิกกิจกรรมนี้ใช่หรือไม่"
                  hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
               >

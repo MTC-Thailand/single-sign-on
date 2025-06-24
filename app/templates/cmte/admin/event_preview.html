@@ -14,13 +14,36 @@
 {% include "cmte/admin_nav.html" %}
 <section class="section">
     <div class="container">
-        <h1 class="title has-text-centered">Event Preview</h1>
+        <div class="columns">
+            <div class="column">
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        {% if event.approved_datetime %}
+                        <li><a href="{{url_for('cmte.admin_approved_events')}}">Events</a></li>
+                        {% else %}
+                        <li><a href="{{url_for('cmte.admin_pending_events')}}">Events</a></li>
+                        {% endif %}
+                        <li class="is-active"><a href="#">Event Registration</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        <h1 class="title has-text-centered">Admin Event Preview</h1>
         {% include "messages.html" %}
         <div class="columns">
             <div class="column">
-                <h3 class="title">{{event.title}}</h3>
                 <table class="table is-fullwidth is-bordered">
                     <tbody>
+                    <tr>
+                        <td><strong>ชื่อกิจกรรม</strong></td>
+                        <td>{{event.title}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><strong>สถานะ</strong></td>
+                        <td><span class="tag is-info is-medium">{{event.status}}</span></td>
+                        <td></td>
+                    </tr>
                     <tr>
                         <td><strong>ประเภท</strong></td>
                         <td>{{event.event_type}}</td>
@@ -55,17 +78,31 @@
                         <td><strong>อัตราค่าธรรมเนียมขออนุมัติจัดกิจกรรม</strong></td>
                         <td>{{event.fee_rate}}</td>
                         {% if event.payment_datetime %}
-                        <td>ชำระเมื่อ {{event.payment_datetime|localdatetime}}
+                        <td>
                             {% if event.payment_slip %}
-                            <a class="button is-small" href="{{url_for('cmte.download_file', key=event.payment_slip.key, download_filename=event.payment_slip.filename)}}">
-                                <span class="icon">
-                                    <i class="fas fa-cloud-download-alt"></i>
+                            <a href="{{url_for('cmte.download_file', key=event.payment_slip.key, download_filename=event.payment_slip.filename)}}">
+                                <span>
+                                    ชำระเมื่อ {{event.payment_datetime|localdatetime}}
                                 </span>
-                                <span>download slip</span>
+                                <span class="icon">
+                                    <i class="fa-solid fa-file-arrow-down"></i>
+                                </span>
                             </a>
-                            <a class="button">
-                                <span>ยืนยันหลักฐานการโอน</span>
-                            </a>
+                            {% if not event.payment_approved_at %}
+                            <div id="confirm_payment">
+                                <a class="button is-success" hx-post="{{url_for('cmte.admin_confirm_payment', event_id=event.id)}}"
+                                   hx-indicator="this"
+                                   hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                                   hx-target="#confirm_payment" hx-swap="innerHTML">
+                                    <span class="icon">
+                                        <i class="fa-solid fa-check"></i>
+                                    </span>
+                                    <span>ยืนยันการชำระเงิน</span>
+                                </a>
+                            </div>
+                            {% else %}
+                            <span class="tag is-rounded is-small is-success">{{event.payment_approved_at|localdatetime}}</span>
+                            {% endif %}
                             {% endif %}
                         </td>
                         {% else %}
@@ -74,9 +111,10 @@
                     </tr>
                     <tr>
                         <td><strong>เอกสารประกอบ</strong></td>
-                        <td>
-                            <ul>
+                        <td class="content">
+                            <ol>
                                 {% for doc in event.docs %}
+                                {% if not doc.is_payment_slip %}
                                 <li>
                                     {{doc.filename}}
                                     <a href="{{url_for('cmte.download_file', key=doc.key, download_filename=doc.filename)}}">
@@ -85,8 +123,9 @@
                                     </span>
                                     </a>
                                 </li>
+                                {% endif %}
                                 {% endfor %}
-                            </ul>
+                            </ol>
                         </td>
                         <td></td>
                     </tr>
@@ -124,16 +163,30 @@
                             <h1 class="subtitle is-size-6">เมื่อ {{event.approved_datetime|localdatetime}}</h1>
                         </td>
                         <td id="cmtePointBtn">
-                            <a class="button is-light"
-                               hx-get="{{url_for('cmte.get_cmte_point_input', event_id=event.id)}}"
-                               hx-target="#cmtePointInput"
-                               hx-swap="innerHTML"
-                            >
-                                <span class="icon">
-                                    <i class="fa-solid fa-pencil"></i>
-                                </span>
-                                <span>แก้ไขคะแนน</span>
-                            </a>
+                            <div class="buttons">
+                                <a class="button is-light"
+                                   hx-get="{{url_for('cmte.get_cmte_point_input', event_id=event.id)}}"
+                                   hx-target="#cmtePointInput"
+                                   hx-indicator="this"
+                                   hx-swap="innerHTML"
+                                >
+                                    <span class="icon">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </span>
+                                    <span>แก้ไขคะแนน</span>
+                                </a>
+                                <a class="button is-danger"
+                                   hx-delete="{{url_for('cmte.unapprove_event', event_id=event.id)}}"
+                                   hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                                   hx-indicator="this"
+                                   hx-confirm="คุณแน่ใจว่าต้องการยกเลิกการอนุมัติคะแนน"
+                                >
+                                    <span class="icon">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                    </span>
+                                    <span>ยกเลิกการอนุมัติ</span>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     <tr>
@@ -143,6 +196,25 @@
                     </tr>
                     {% endif %}
                     {% if event.payment_datetime and not event.approved_datetime %}
+                    <tr>
+                        <td>รายการขอรายละเอียดเพิ่มเติม</td>
+                        <td id="request-message">{{event.info_request or ""}}</td>
+                        <td>
+                            {% if not event.approved_datetime %}
+                            <button class="button is-warning"
+                                    hx-indicator="this"
+                                    hx-target="#request-message"
+                                    hx-swap="innerHTML"
+                                    hx-get="{{url_for('cmte.admin_request_info', event_id=event.id)}}">
+                                <span class="icon">
+                                    <i class="fas fa-reply"></i>
+                                </span>
+                                <span>Send Request</span>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if event.payment_datetime and event.payment_approved_at %}
                     <tr>
                         <td>
                             <strong>คะแนนที่ได้รับอนุมัติ</strong>
@@ -172,22 +244,7 @@
                             </form>
                         </td>
                     </tr>
-                    <tr>
-                        <td>รายการขอรายละเอียดเพิ่มเติม</td>
-                        <td id="request-message">{{event.comment}}</td>
-                        <td>
-                            <button class="button"
-                                    hx-indicator="this"
-                                    hx-target="#request-message"
-                                    hx-swap="innerHTML"
-                                    hx-get="{{url_for('cmte.admin_request_info', event_id=event.id)}}">
-                                <span class="icon">
-                                    <i class="fas fa-reply"></i>
-                                </span>
-                                <span>Send Comment</span>
-                            </button>
-                        </td>
-                    </tr>
+                    {% endif %}
                     {% endif %}
                     <tr>
                         <td>สร้างรหัสกิจกรรม</td>
@@ -309,10 +366,13 @@
                 <div id="participant-table">
                     <table class="table" id="participant-list-table">
                         <thead>
-                        <th>ชื่อ</th>
                         <th>หมายเลขใบอนุญาต (ท.น.)</th>
+                        <th>ชื่อที่ส่งขอคะแนน</th>
+                        <th>ชื่อจากระบบ</th>
+                        <th></th>
                         <th>คะแนนที่ได้รับ</th>
                         <th>เพิ่มเมื่อ</th>
+                        <th>สถานะ</th>
                         <th>อนุมัติเมื่อ</th>
                         <th></th>
                         </thead>
@@ -354,39 +414,65 @@
 <script>
     $.fn.dataTable.moment('lll');
     $(document).ready(()=>{
-        $('#participant-list-table').DataTable({
+        var pTable = new DataTable("#participant-list-table", {
             ajax: {{url_for('cmte.admin_preview_event_participants', event_id=event.id)|tojson|safe}},
-            processing: true,
-            serverSide: true,
-            drawCallback: function (settings) {
-                htmx.process(htmx.find('#participant-table'))
+        processing: true,
+            initComplete: function() {
+            htmx.process(htmx.find('#participant-list-table'))
+        },
+        columns: [
+            {data: 'license_number', orderable: false},
+            {data: 'submitted_name', orderable: false},
+            {data: 'name', orderable: false},
+            {
+                data: 'name_matched',
+                render: function (data, type, row) {
+                    if (data) {
+                        return `<span class="tag is-danger has-text-white">${data}</span>`
+                    } else {
+                        return ''
+                    }
+                },
+                orderable: false
             },
-                columns: [
-            {data: 'name'},
-            {data: 'license_number'},
-            {data: 'score'},
+            {data: 'score', orderable: false},
             {
                 data: 'created_at',
                 render: function (data, type) {
-                    if (data) {
+                    if (data !== null) {
                         return moment(data).format('lll')
                     } else {
                         return null
                     }
-                }
+                },
+                orderable: true
             },
+            {data: 'status', orderable: false},
             {
                 data: 'approved_at',
                 render: function (data, type) {
-                    if (data) {
-                        return moment(data).format('ll')
+                    if (data !== null) {
+                        return moment(data).format('lll')
                     } else {
-                        return "รออนุมัติ"
+                        return null
                     }
-                }
+                },
+                orderable: true
             },
-            {data: 'actions'}
-        ],
+            {data: 'actions', orderable: false},
+        ]
+    });
+        document.body.addEventListener('reloadAjax', function (evt) {
+            pTable.ajax.reload(function () {
+                htmx.process(htmx.find('#participant-list-table'))
+            })
+        })
+    })
+    document.body.addEventListener('alertError', function (evt) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error happened.',
+            text: 'กรุณาตรวจสอบจำนวนคะแนน หรือรายชื่ออาจจะซ้ำ'
         });
     })
 </script>

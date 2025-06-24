@@ -13,6 +13,7 @@ from flask_admin import Admin, AdminIndexView
 from flask_wtf.csrf import CSRFProtect
 from flasgger import Swagger
 from flask_migrate import Migrate
+from flask_mail import Mail, Message
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,7 +21,7 @@ load_dotenv()
 
 class MyAdminIndexView(AdminIndexView):
     def is_accessible(self):
-        return current_user.is_authenticated
+        return current_user.is_authenticated and admin_permission.can()
 
 
 admin = Admin(index_view=MyAdminIndexView())
@@ -38,6 +39,13 @@ login_manager.blueprint_login_views = {
 login_manager.login_message = 'กรุณาลงชื่อเข้าใช้งานระบบ'
 login_manager.login_message_category = 'info'
 principal = Principal()
+mail = Mail()
+
+
+def send_mail(recp, title, message):
+    message = Message(subject=title, body=message, recipients=recp)
+    mail.send(message)
+
 
 from flask_principal import Permission, RoleNeed
 
@@ -54,6 +62,13 @@ api = Api(api_bp, decorators=[csrf.exempt])
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
+    app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+    app.config['MAIL_PORT'] = 587
+    app.config['MAIL_USE_TLS'] = True
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
+    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = ('MTC Web Services', os.environ.get('MAIL_USERNAME'))
     database_url = os.environ.get('DATABASE_URL')
 
     if database_url.startswith('postgresql'):
@@ -72,6 +87,7 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     principal.init_app(app)
+    mail.init_app(app)
 
     from app.members import member_blueprint
     app.register_blueprint(member_blueprint)
@@ -98,7 +114,7 @@ def create_app():
                                CMTEEventResource)
 
     api.add_resource(Login, '/auth/login')
-    api.add_resource(CMTEEventResource,'/cmte/upcoming-events')
+    api.add_resource(CMTEEventResource, '/cmte/upcoming-events')
     api.add_resource(CMTEScore, '/members/<string:lic_id>/cmte/scores')
     api.add_resource(MemberPID, '/members/pids/<string:pid>')
     api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')

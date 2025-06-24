@@ -37,7 +37,7 @@
                 <div class="field">
                     <label class="label">Expiration Date</label>
                     <div class="control">
-                        <input type="text" class="input" value="{{license.end_date}}" readonly>
+                        <input type="text" class="input" value="{{license.end_date|localdate}}" readonly>
                     </div>
                 </div>
                 <div class="field">
@@ -52,12 +52,14 @@
                         {{ form.score(class="input") }}
                     </div>
                 </div>
+                {% if is_admin %}
                 <div class="field">
                     <label class="label">{{ form.approved_date.label }}</label>
                     <div class="control">
                         {{ form.approved_date(class="input") }}
                     </div>
                 </div>
+                {% endif %}
                 {% endif %}
             </section>
             <footer class="modal-card-foot">

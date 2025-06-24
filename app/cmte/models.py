@@ -57,6 +57,18 @@ class CMTEEventSponsor(db.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def num_pending_events(self):
+        return self.events.filter_by(is_pending=True).count()
+
+    @property
+    def num_approved_events(self):
+        return self.events.filter(CMTEEvent.approved_datetime != None).count()
+
+    @property
+    def num_submitted_events(self):
+        return self.events.filter_by(submitted_datetime=None).count()
+
     def expire_status(self):
         today = datetime.now().date()
         status = "inactive"
@@ -336,7 +348,7 @@ class CMTEEvent(db.Model):
     approved_datetime = db.Column('approved_datetime', db.DateTime(timezone=True), info={'label': 'วันที่อนุมัติ'})
     cancelled_datetime = db.Column('cancelled_datetime', db.DateTime(timezone=True))
     sponsor_id = db.Column('sponsor_id', db.Integer, db.ForeignKey('cmte_event_sponsors.id'))
-    sponsor = db.relationship('CMTEEventSponsor', backref=db.backref('events'))
+    sponsor = db.relationship('CMTEEventSponsor', backref=db.backref('events', lazy='dynamic'))
     submission_due_date = db.Column('submission_due_date', db.Date())
     website = db.Column('website', db.Text(), info={'label': 'ลิงค์ไปยังเว็บไซต์ลงทะเบียน/ประชาสัมพันธ์'})
     coord_name = db.Column('coord_name', db.String(), info={'label': 'ชื่อผู้ประสานงาน'})
@@ -348,15 +360,18 @@ class CMTEEvent(db.Model):
     renewed_times = db.Column('renewed_times', db.Integer(), default=0)
     cmte_points = db.Column('cmte_points', db.Numeric(), info={'label': 'คะแนน CMTE'})
     event_code = db.Column('event_code', db.String(), info={'label': 'Code'})
-    comment = db.Column('comment', db.String())
+    comment = db.Column('comment', db.String(), info={'label': 'ข้อคิดเห็นจากศูนย์ CMTE'})
     payment_approved_at = db.Column('payment_approve_datetime', db.DateTime(timezone=True), info={'label': 'วันที่ตรวจสอบการชำระเงิน'})
+    is_pending = db.Column('is_pending', db.Boolean())
+    info_request = db.Column('info_request', db.Text(), info={'label': 'รายการขอข้อมูลเพิ่มเติม'})
+    participant_updated_at = db.Column('participant_updated_at', db.DateTime(timezone=True), info={'label': 'วันที่เพิ่ม/แก้ไขรายชื่อล่าสุด'})
 
     # TODO: add a field for an approver
 
     def to_dict(self):
         return {
             'id': self.id,
-            'title': self.title,
+            'title': f'{self.title} (pending)' if self.is_pending else self.title,
             'start_date': self.start_date.astimezone(BANGKOK).isoformat() if self.start_date else None,
             'end_date': self.end_date.astimezone(BANGKOK).isoformat() if self.end_date else None,
             'event_type': str(self.event_type) if self.event_type else None,
@@ -365,10 +380,17 @@ class CMTEEvent(db.Model):
                 BANGKOK).isoformat() if self.submitted_datetime else None,
             'approved_datetime': self.approved_datetime.astimezone(
                 BANGKOK).isoformat() if self.approved_datetime else None,
+            'payment_datetime': self.payment_datetime.astimezone(
+                BANGKOK).isoformat() if self.payment_datetime else None,
+            'payment_approved_at': self.payment_datetime.astimezone(
+                BANGKOK).isoformat() if self.payment_approved_at else None,
+            'participant_updated_at': self.participant_updated_at.astimezone(
+                BANGKOK).isoformat() if self.participant_updated_at else None,
             'venue': self.venue,
             'points': self.cmte_points,
             'website': self.website,
             'sponsor': str(self.sponsor) if self.sponsor else None,
+            'num_pending_participants': self.num_pending_participants,
         }
 
     def __str__(self):
@@ -385,14 +407,38 @@ class CMTEEvent(db.Model):
     def payment_slip(self):
         return self.docs.filter_by(is_payment_slip=True).first()
 
+    @property
+    def is_editable(self):
+        return self.is_pending or not self.submitted_datetime
+
+    @property
+    def status(self):
+        if self.is_pending:
+            return 'รอแก้ไขหรือส่งข้อมูลเพิ่มเติม'
+        elif self.approved_datetime:
+            return 'อนุมัติแล้ว'
+        elif self.submitted_datetime:
+            return 'รออนุมัติคะแนน'
+        elif self.payment_datetime and not self.payment_approved_at:
+            return 'รอตรวจสอบการชำระเงิน'
+        elif not self.payment_datetime:
+            return 'รอชำระเงิน'
+        else:
+            return 'รอยื่นขออนุมัติ'
+
+    @property
+    def num_pending_participants(self):
+        return self.participants.filter(CMTEEventParticipationRecord.approved_date==None).count()
+
 
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     license_number = db.Column('license_number', db.ForeignKey('licenses.number'),
                                info={'label': 'หมายเลขใบอนุญาต (ท.น.)'})
+    submitted_name = db.Column('submitted_name', db.String())
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
-    event = db.relationship(CMTEEvent, backref=db.backref('participants', cascade='all, delete-orphan'))
+    event = db.relationship(CMTEEvent, backref=db.backref('participants', lazy='dynamic', cascade='all, delete-orphan'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
     approved_date = db.Column('approved_date', db.Date())
     start_date = db.Column('start_date', db.Date(), info={'label': 'เริ่ม'})
@@ -414,6 +460,13 @@ class CMTEEventParticipationRecord(db.Model):
     def is_valid(self):
         return (self.score_valid_until < self.license.end_date) and self.approved_date is not None
 
+    @property
+    def status(self):
+        if self.approved_date:
+            return 'อนุมัติ'
+        else:
+            return 'รออนุมัติ'
+
     def set_score_valid_date(self):
         if self.event:
             if self.event.end_date.date() <= self.license.end_date:
@@ -425,8 +478,11 @@ class CMTEEventParticipationRecord(db.Model):
         return {
             'id': self.id,
             'name': self.license.member.th_fullname,
+            'submitted_name': self.submitted_name if self.submitted_name else self.license.member.th_fullname,
+            'name_matched': 'Mismatched' if self.submitted_name and self.submitted_name != self.license.member.th_fullname else '',
             'license_number': self.license_number,
             'score': self.score,
+            'status': self.status,
             'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
             'approved_at': self.approved_date.isoformat() if self.approved_date else None,
         }

@@ -22,7 +22,8 @@ flasgger==0.9.5
 Flask==2.0.3
 Flask-Admin==1.5.8
 Flask-JWT-Extended==4.4.4
-Flask-Login==0.5.0
+Flask-Login==0.6.3
+Flask-Mail==0.10.0
 Flask-Migrate==3.1.0
 Flask-Principal==0.4.0
 Flask-RESTful==0.3.9
