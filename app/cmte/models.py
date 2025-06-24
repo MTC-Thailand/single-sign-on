@@ -44,12 +44,15 @@ class CMTEEventSponsor(db.Model):
     expire_date = db.Column('expire_date', db.Date())
     type = db.Column(db.String(), info={'label': 'ลักษณะขององค์กร',
                                         'choices': [(c, c) for c in (
-                                            'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)',
-                                            'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)',
-                                            'เป็นสถานพยาบาล',
-                                            'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด',
-                                            'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน')]})
+                                            'สถาบันการศึกษาที่ผลิตบัณฑิตเทคนิคการแพทย์',
+                                            'สถาบันการศึกษา',
+                                            'สถานพยาบาล',
+                                            'สภาวิชาชีพ / สมาคม / ราชวิทยาลัย',
+                                            'หน่วยงานองค์ของรัฐ',
+                                            'บริษัทเอกชน',
+                                            'หน่วยงานอื่นๆ')]})
     type_detail = db.Column('type_detail', db.String())
+    has_med_tech = db.Column('has_med_tech', db.Boolean(), default=True)
     qualifications = db.relationship('CMTESponsorQualification', secondary=sponsor_qualifications)
     private_sector = db.Column('private_sector', db.Boolean(), default=False)
     disable_at = db.Column('disable_at', db.DateTime(timezone=True))
