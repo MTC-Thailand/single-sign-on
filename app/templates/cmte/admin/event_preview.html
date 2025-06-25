@@ -461,10 +461,10 @@
             },
             {data: 'actions', orderable: false},
         ]
+    });
         pTable.on("draw", function () {
             htmx.process(htmx.find('#participant-list-table'))
         })
-    });
         document.body.addEventListener('reloadAjax', function (evt) {
             pTable.ajax.reload(function () {
                 htmx.process(htmx.find('#participant-list-table'))
