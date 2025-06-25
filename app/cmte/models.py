@@ -161,6 +161,7 @@ class CMTESponsorRequest(db.Model):
     comment = db.Column('comment', db.String())
     rejected_at = db.Column('rejected_at', db.DateTime(timezone=True))
     cancelled_at = db.Column('cancelled_at', db.DateTime(timezone=True))
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
 
 
 class CMTESponsorEditRequest(db.Model):
