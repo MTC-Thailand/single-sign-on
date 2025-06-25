@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Additional Sponsor Form{% endblock %}
+
+{% block content %}
+    {% include "cmte/nav.html" %}
+    <section class="section">
+        <h1 class="title has-text-centered">ส่งเอกสารเพิ่มเติม สถาบัน {{ sponsor.name }}</h1>
+        <div class="columns">
+            <div class="column box">
+                {% include "messages.html" %}
+                <form method="post" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="field">
+                        <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
+                        <label class="label" style="padding-left: 50px">
+                        </label>
+                    </div>
+                    <div id="related-doc"></div>
+                    <div class="field">
+                        {% for doc in sponsor.docs %}
+                            {% if not doc.is_payment_slip %}
+                                <a class="button is-small" href="{{url_for('cmte.download_file', key=doc.key,
+                                    download_filename=doc.filename)}}">
+                                    <span class="icon">
+                                        <i class="fas fa-cloud-download-alt"></i>
+                                    </span>
+                                    <span>{{ doc.filename }}</span>
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="field is-grouped">
+                        <a type="button" href="{{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}" class="button is-light">Cancel</a>
+                        <div class="control">
+                            <input type="submit" value="submit" class="button is-danger">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock %}
