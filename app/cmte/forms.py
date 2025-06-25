@@ -3,7 +3,7 @@ from flask_wtf.file import FileField
 from wtforms.validators import NumberRange, EqualTo, Email, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
-from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField
+from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField, RadioField
 from wtforms_components import DateField, DateTimeField, TimeField
 
 from app.cmte.models import *
@@ -131,6 +131,10 @@ class CMTESponsorMemberEditForm(ModelForm):
         model = CMTESponsorMember
 
 
+class CMTESponsorAdditionalRequestForm(FlaskForm):
+    comment = TextAreaField('รายละเอียดที่ต้องการ')
+
+
 class CMTESponsorRequestForm(FlaskForm):
     comment = TextAreaField('เหตุผล')
 
@@ -166,6 +170,9 @@ class CMTEEventSponsorForm(ModelForm):
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
     private_sector = SelectField(choices=[('', 'องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
+    has_med_tech = RadioField(choices=[('True', 'มีนักเทคนิคการแพทย์'), ('False', 'ไม่มีนักเทคนิคการแพทย์')],
+                            validators=[DataRequired()])
+
 
 
 class CMTESponsorEditForm(ModelForm):

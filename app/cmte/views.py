@@ -1333,12 +1333,13 @@ def request_edit_sponsor(sponsor_id):
                                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))
             for field, _file in request.files.items():
                 filename = _file.filename
-                key = uuid.uuid4()
-                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
-                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
-                doc.note = request.form.get(field + '_note')
-                db.session.add(doc)
+                if filename:
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = request.form.get(field + '_note')
+                    db.session.add(doc)
             db.session.commit()
             version_index = sponsor.versions.count() - 1
             create_request = CMTESponsorEditRequest(

@@ -13,7 +13,7 @@
         <div class="columns">
             <div class="column box">
                 {% include "messages.html" %}
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="app">
                     {{ form.hidden_tag() }}
                     <div class="field">
                         <label class="label">ชื่อหน่วยงาน</label>
@@ -52,6 +52,12 @@
                         <label class="label" style="padding-left: 50px">
                             <div id="related-type"></div>
                         </label>
+                    </div>
+                    <div class="field">
+                        <label class="label">นักเทคนิคการแพทย์ในองค์กร</label>
+                        <div class="control">
+                            {{ form.has_med_tech(required=True) }}
+                        </div>
                     </div>
                     <div class="field">
                         <label class="label">ประเภทหน่วยงาน</label>
@@ -151,5 +157,14 @@
             $(this).val(picker.startDate.format('DD/MM/YYYY'))
         })
     })
+</script>
+<script>
+    document.getElementById('app').onsubmit = function(event) {
+        var selectedValue = document.querySelector('input[name="has_med_tech"]:checked');
+        if (!selectedValue) {
+            alert('กรุณาเลือกการมีนักเทคนิคการแพทย์ก่อนส่งฟอร์ม');
+            event.preventDefault();
+        }
+    };
 </script>
 {% endblock %}
