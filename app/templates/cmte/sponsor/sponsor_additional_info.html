@@ -12,6 +12,19 @@
                 <form method="post" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
                     <div class="field">
+                        <label class="label">ชื่อหน่วยงาน</label>
+                        <div class="control">
+                            {{ form.name(class="input", readonly=True) }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">ประเภทหน่วยงาน</label>
+                        <div class="select">
+                            {{ form.private_sector(**{'hx-get': url_for("cmte.get_qualifications"),
+                            'hx-target': '#related-doc', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
+                        </div>
+                    </div>
+                    <div class="field">
                         <label class="label">หลักฐานแสดงคุณสมบัติขององค์กร</label>
                         <label class="label" style="padding-left: 50px">
                         </label>
@@ -40,4 +53,13 @@
             </div>
         </div>
     </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $(document).ready(()=>{
+        htmx.trigger('#private_sector', 'change')
+
+    })
+    </script>
 {% endblock %}

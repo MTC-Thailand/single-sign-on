@@ -1711,7 +1711,7 @@ def sponsor_send_additional_info(sponsor_id, request_id):
             req.updated_at = arrow.now('Asia/Bangkok').datetime
             db.session.add(req)
             db.session.commit()
-            flash(f'แก้ไขข้อมูลเรียบร้อย', 'success')
+            flash(f'ส่งข้อมูลให่เรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบข้อมูล และรอการอนุมัติ', 'success')
             #need to send email to admin?
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
