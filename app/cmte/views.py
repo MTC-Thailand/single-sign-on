@@ -1402,6 +1402,8 @@ def manage_sponsor(sponsor_id):
 def sponsor_payment(sponsor_id, request_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
     form = CMTESponsorPaymentForm(obj=sponsor)
+    form.address.data = f"{sponsor.address} {sponsor.zipcode}"
+    form.shipping_address.data = f"{sponsor.address} {sponsor.zipcode}"
     if request.method == 'POST':
         if form.validate_on_submit():
             doc = CMTESponsorDoc.query.filter_by(sponsor_id=sponsor_id, is_payment_slip=True,
@@ -1445,7 +1447,7 @@ def sponsor_payment(sponsor_id, request_id):
                 receipt_item=form.receipt_item.data if form.receipt_item.data else '',
                 tax_id=form.tax_id.data if form.tax_id.data else '',
                 address=form.address.data,
-                zipcode=form.zipcode.data
+                shipping_address=form.shipping_address.data
             )
             db.session.add(create_receipt)
             db.session.commit()

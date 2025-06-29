@@ -191,7 +191,7 @@ class CMTESponsorPaymentForm(FlaskForm):
     receipt_item = TextAreaField('receipt_item', render_kw={'class': 'textarea'})
     tax_id = TextAreaField('tax_id', render_kw={'class': 'textarea'})
     address = TextAreaField('address', render_kw={'class': 'textarea'})
-    zipcode = TextAreaField('zipcode', render_kw={'class': 'text'})
+    shipping_address = TextAreaField('shipping_address', render_kw={'class': 'textarea'})
     paid_date = DateField()
     paid_time = TimeField()
     upload_file = FormField(CMTESponsorDocForm, default=CMTESponsorDoc)

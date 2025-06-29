@@ -225,7 +225,7 @@ class CMTEReceiptDetail(db.Model):
 
 
     def __str__(self):
-        return f'รายละเอียดบนใบเสร็จ ออกใบนาม: {self.name} รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} {self.zipcode} ที่อยู่จัดส่ง: {self.shipping_address}'
+        return f'รายละเอียดบนใบเสร็จ ออกใบนาม: {self.name} รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} ที่อยู่จัดส่ง: {self.shipping_address}'
 
 
 class CMTEEventCategory(db.Model):
