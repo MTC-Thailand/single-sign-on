@@ -220,7 +220,6 @@ class CMTEReceiptDetail(db.Model):
     receipt_item = db.Column('receipt_item', db.Text())
     tax_id = db.Column('tax_id', db.String())
     address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
-    zipcode = db.Column('zipcode', db.String(), info={'label': 'รหัสไปรษณีย์'})
     shipping_address = db.Column('shipping_address', db.Text(), info={'label': 'ที่อยู่สำหรับจัดส่งใบเสร็จ'})
 
 
