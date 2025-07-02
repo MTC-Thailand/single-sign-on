@@ -24,8 +24,53 @@ from app.members.models import License, Member
 from app.cmte.models import *
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 from flask_mail import Message
-
+from apscheduler.schedulers.blocking import BlockingScheduler
 bangkok = timezone('Asia/Bangkok')
+
+
+# @cmte.route('/sponsor-expiration/notification')
+# def notify_sponsor_expiration():
+#     today = datetime.now().date()
+#     for sponsor in CMTEEventSponsor.query\
+#             .filter(CMTEEventSponsor.expire_date != None).filter(CMTEEventSponsor.disable_at == None):
+#         if (sponsor.expire_date - today).days == 90:
+#             mails = []
+#             all_members = CMTESponsorMember.query.filter_by(sponsor=sponsor).all()
+#             for member in all_members:
+#                 mails.append(member.email)
+#
+#             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+#             message = f'''
+#                           เรียนผู้ประสานงาน
+#
+#                           {sponsor.name} จะหมดอายุการรับรองในอีก 3 เดือน
+#                           \n
+#                           ท่านสามารถดำเนินการส่งคำขอต่ออายุได้ที่ {url}
+#                           \n\n
+#                           หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+#                           '''
+#             send_mail(mails, 'MTC-CMTE แจ้งเตือนการต่ออายุสถาบัน', message)
+#         elif (sponsor.expire_date - today).days == 30:
+#             mails = []
+#             all_members = CMTESponsorMember.query.filter_by(sponsor=sponsor).all()
+#             for member in all_members:
+#                 mails.append(member.email)
+#
+#             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+#             message = f'''
+#                                       เรียนผู้ประสานงาน
+#
+#                                       {sponsor.name} จะหมดอายุการรับรองในอีก 1 เดือน
+#                                       \n
+#                                       ท่านสามารถดำเนินการส่งคำขอต่ออายุได้ที่ {url}
+#                                       \n\n
+#                                       หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+#                                       '''
+#             send_mail(mails, 'MTC-CMTE แจ้งเตือนการต่ออายุสถาบัน', message)
+#
+# scheduler = BlockingScheduler()
+# scheduler.add_job(notify_sponsor_expiration, 'cron', hour=9, minute=0, timezone='Asia/Bangkok')
+# scheduler.start()
 
 
 def active_sponsor_required(f):
