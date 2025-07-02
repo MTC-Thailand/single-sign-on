@@ -16,7 +16,13 @@
                     <tbody>
                     <tr>
                         <td></td>
-                        <td>ข้อมูลเดิม</td>
+                        <td>ข้อมูลเดิม ณ
+                            {% if previous_version.updated_at %}
+                            {{ previous_version.updated_at|localdatetime }}
+                            {% else %}
+                            {{ previous_version.registered_datetime|localdatetime }}
+                            {% endif %}
+                        </td>
                         <td><strong>ข้อมูลใหม่</strong></td>
                     </tr>
                     <tr>

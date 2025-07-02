@@ -1679,6 +1679,7 @@ def approved_edit_sponsor(request_id):
     status = request.args.get("status")
     edit_request.status = status
     edit_request.updated_at = arrow.now('Asia/Bangkok').datetime
+    edit_request.sponsor.updated_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(edit_request)
 
     if status == 'reject':
