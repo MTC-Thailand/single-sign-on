@@ -1622,7 +1622,7 @@ def approved_renew_sponsor(request_id):
                     หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
                     '''
     if not current_app.debug:
-        send_mail(mails, 'MTC-CMTE อนุมัติการต่อทะเบียน กรุณาชำระค่าธรรมเนียม', message)
+        send_mail(mails, 'MTC-CMTE อนุมัติการต่อทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม', message)
     else:
         print(mails, message)
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
