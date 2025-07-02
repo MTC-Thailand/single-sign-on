@@ -56,6 +56,7 @@ class CMTEEventSponsor(db.Model):
     qualifications = db.relationship('CMTESponsorQualification', secondary=sponsor_qualifications)
     private_sector = db.Column('private_sector', db.Boolean(), default=False)
     disable_at = db.Column('disable_at', db.DateTime(timezone=True))
+    updated_at = db.Column('updated_at', db.DateTime(timezone=True))
 
     def __str__(self):
         return self.name
