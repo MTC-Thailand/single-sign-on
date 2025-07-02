@@ -1372,7 +1372,7 @@ def request_edit_sponsor(sponsor_id):
         if form.validate_on_submit():
             form.populate_obj(sponsor)
             db.session.add(sponsor)
-
+            sponsor.has_med_tech = form.has_med_tech.data == 'True'
             s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))

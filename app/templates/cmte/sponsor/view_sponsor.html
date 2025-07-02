@@ -116,6 +116,10 @@
                         <td>{{ sponsor.type }} {{ sponsor.type_detail or '' }}</td>
                     </tr>
                     <tr>
+                        <td><strong>นักเทคนิคการแพทย์ในองค์กร</strong></td>
+                        <td>{% if sponsor.has_med_tech %}มีนักเทคนิคการแพทย์{% else %}ไม่มีนักเทคนิคการแพทย์{% endif %}</td>
+                    </tr>
+                    <tr>
                         <td><strong>หลักฐานแสดงคุณสมบัติขององค์กร</strong></td>
                         <td>
                             {% for q in sponsor.qualifications %}

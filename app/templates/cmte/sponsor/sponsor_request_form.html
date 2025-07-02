@@ -36,6 +36,12 @@
                         </label>
                     </div>
                     <div class="field">
+                        <label class="label">นักเทคนิคการแพทย์ในองค์กร</label>
+                        <div class="control">
+                            {{ form.has_med_tech(required=True) }}
+                        </div>
+                    </div>
+                    <div class="field">
                         <label class="label">ประเภทหน่วยงาน</label>
                         <div class="select">
                             {{ form.private_sector(**{'hx-get': url_for("cmte.get_qualifications"),

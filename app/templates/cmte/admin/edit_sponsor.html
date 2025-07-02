@@ -55,6 +55,16 @@
                         </td>
                     </tr>
                     <tr>
+                        <td><strong>การมีนักเทคนิคการแพทย์</strong></td>
+                        <td>{% if previous_version.has_med_tech %}มีนักเทคนิคการแพทย์{% else %}ไม่มีนักเทคนิคการแพทย์{% endif %}</td>
+                        <td>
+                            <span {% if previous_version.has_med_tech != current_version.has_med_tech %}
+                                    class="has-text-danger" {% endif %}>
+                                {% if current_version.has_med_tech %}มีนักเทคนิคการแพทย์{% else %}ไม่มีนักเทคนิคการแพทย์{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
                         <td><strong>ที่อยู่</strong></td>
                         <td>{{ previous_version.address }} {{ previous_version.zipcode }}</td>
                         <td {% if previous_version.address != current_version.address %}

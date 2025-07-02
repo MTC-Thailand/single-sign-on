@@ -181,6 +181,8 @@ class CMTESponsorEditForm(ModelForm):
                                               widget=ListWidget(prefix_label=False),
                                               option_widget=CheckboxInput())
     private_sector = SelectField(choices=[('', 'องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
+    has_med_tech = RadioField(choices=[('True', 'มีนักเทคนิคการแพทย์'), ('False', 'ไม่มีนักเทคนิคการแพทย์')],
+                              validators=[DataRequired()])
 
 
 class CMTESponsorPaymentForm(FlaskForm):
