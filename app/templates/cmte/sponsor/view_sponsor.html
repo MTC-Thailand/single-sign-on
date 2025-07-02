@@ -361,6 +361,7 @@
                                             {% if not req.receipt_docs %}
                                                 {% for s in sponsor.receipt_details %}{{ s }}{% endfor %}
                                                 {% if is_admin %}
+                                                    {% if req.verified_at %}
                                                     <a class="button is-small" href="{{url_for('cmte.sponsor_upload_receipt',
                                                         sponsor_id=sponsor.id, request_id=req.id)}}">
                                                         <span class="icon">
@@ -368,6 +369,7 @@
                                                         </span>
                                                         <span class="has-text-danger">แนบใบเสร็จ</span>
                                                     </a>
+                                                    {% endif %}
                                                 {% endif %}
                                             {% else %}
                                                 {% for doc in req.receipt_docs %}
