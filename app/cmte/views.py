@@ -1686,12 +1686,14 @@ def approved_edit_sponsor(request_id):
         current_version = edit_request.sponsor.versions[current_version_index]
         current_version.revert()
         db.session.commit()
+        topic = 'MTC-CMTE สถานะการขอแก้ไขข้อมูลสถาบัน:ไม่อนุมัติการแก้ไข'
         # if previous_version:
         #     for column in edit_request.sponsor.__table__.columns:
         #         field_name = column.name
         #         if hasattr(previous_version, field_name):
         #             setattr(edit_request.sponsor, field_name, getattr(previous_version, field_name))
-    print(status)
+    elif status == 'approved':
+        topic = 'MTC-CMTE สถานะการขอแก้ไขข้อมูลสถาบัน:อนุมัติการแก้ไข'
     db.session.commit()
     flash('บันทึกข้อมูลเรียบร้อยแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนแล้ว',
           'warning')
@@ -1700,7 +1702,6 @@ def approved_edit_sponsor(request_id):
     all_members = CMTESponsorMember.query.filter_by(sponsor=edit_request.sponsor).all()
     for member in all_members:
         mails.append(member.email)
-    # recheck
     url = url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor.id, _external=True)
     message = f'''
                     เรียนผู้ประสานงาน 
@@ -1712,7 +1713,7 @@ def approved_edit_sponsor(request_id):
                     หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
                     '''
     if not current_app.debug:
-        send_mail(mails, 'MTC-CMTE สถานะการขอแก้ไขข้อมูลสถาบัน', message)
+        send_mail(mails, topic, message)
     else:
         print(mails, message)
     return redirect(url_for('cmte.manage_edit_sponsor', request_id=request_id))

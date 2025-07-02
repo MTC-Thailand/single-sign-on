@@ -407,6 +407,17 @@
                                         <td>{{ req.status }}</td>
                                         <td>
                                             {{ req.updated_at|localdatetime or '' }}
+                                            {% if is_admin %}
+                                                {% if not req.updated_at %}
+                                                    <a href="{{ url_for('cmte.manage_edit_sponsor', request_id=req.id) }}"
+                                                       class="button is-success is-outlined">
+                                                        <span class="icon">
+                                                            <i class="fas fa-star has-text-warning fa-pulse"></i>
+                                                        </span>
+                                                        <span>รายละเอียด</span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 {% endfor %}
