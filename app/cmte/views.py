@@ -1228,6 +1228,8 @@ def request_change_coordinator_member(sponsor_id, member_id):
     flash('ส่งคำขอเป็นผู้ประสานงานหลัก เรียบร้อยแล้ว', 'success')
 
     url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+    topic_name = member.sponsor.name[:30]+'...' if len(member.sponsor.name) > 30 else member.sponsor.name
+    topic = 'MTC-CMTE คำขอเปลี่ยนผู้ประสานงานหลักจาก '+topic_name
     message = f'''
                  เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
 
@@ -1238,9 +1240,9 @@ def request_change_coordinator_member(sponsor_id, member_id):
                  ระบบ MTC-CMTE
                  '''
     if not current_app.debug:
-        send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอเปลี่ยนผู้ประสานงานหลัก', message)
+        send_mail(['cmtethailand@gmail.com'], topic, message)
     else:
-        print(message)
+        print(topic, message)
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
@@ -1321,6 +1323,8 @@ def register_sponsor():
                     flash(f'ลงทะเบียนเรียบร้อย', 'success')
 
                     url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+                    topic_name = member.sponsor.name[:30] + '...' if len(member.sponsor.name) > 30 else member.sponsor.name
+                    topic = 'MTC-CMTE คำขอขึ้นทะเบียนสถาบันจาก ' + topic_name
                     message = f'''
                                      เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
 
@@ -1331,7 +1335,7 @@ def register_sponsor():
                                      ระบบ MTC-CMTE
                                      '''
                     if not current_app.debug:
-                        send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอขึ้นทะเบียนสถาบัน', message)
+                        send_mail(['cmtethailand@gmail.com'], topic, message)
                     else:
                         print(message)
                     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor.id))
@@ -1428,6 +1432,8 @@ def request_edit_sponsor(sponsor_id):
             db.session.commit()
 
             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+            topic = 'MTC-CMTE คำขอแก้ไขข้อมูลสถาบันจาก ' + topic_name
             message = f'''
                          เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
 
@@ -1438,7 +1444,7 @@ def request_edit_sponsor(sponsor_id):
                          ระบบ MTC-CMTE
                          '''
             if not current_app.debug:
-                send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอแก้ไขข้อมูลสถาบัน', message)
+                send_mail(['cmtethailand@gmail.com'], topic, message)
             else:
                 print(message)
             flash(f'ส่งขอแก้ไขข้อมูลเรียบร้อย', 'success')
@@ -1539,6 +1545,8 @@ def sponsor_payment(sponsor_id, request_id):
             db.session.commit()
 
             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+            topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+            topic = 'MTC-CMTE หลักฐานการชำระเงินจาก ' + topic_name
             message = f'''
                              เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
 
@@ -1549,7 +1557,7 @@ def sponsor_payment(sponsor_id, request_id):
                              ระบบ MTC-CMTE
                              '''
             if not current_app.debug:
-                send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE สถาบันแนบหลักฐานการชำระเงิน', message)
+                send_mail(['cmtethailand@gmail.com'], topic, message)
             else:
                 print(message)
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
@@ -1577,6 +1585,8 @@ def request_renew_sponsor(sponsor_id):
         flash('ส่งคำขอต่ออายุสถาบันเรียบร้อยแล้ว', 'success')
 
         url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+        topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+        topic = 'MTC-CMTE คำขอต่ออายุสถาบันจาก ' + topic_name
         message = f'''
                      เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
 
@@ -1587,7 +1597,7 @@ def request_renew_sponsor(sponsor_id):
                      ระบบ MTC-CMTE
                      '''
         if not current_app.debug:
-            send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอต่ออายุสถาบัน', message)
+            send_mail(['cmtethailand@gmail.com'], topic, message)
         else:
             print(message)
     else:
@@ -1869,6 +1879,8 @@ def sponsor_send_additional_info(sponsor_id, request_id):
             flash(f'ส่งข้อมูลเรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบข้อมูล และรอการอนุมัติ', 'success')
 
             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+            topic = 'MTC-CMTE เอกสารเพิ่มเติมจาก ' + topic_name
             message = f'''
                          เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
 
@@ -1879,7 +1891,7 @@ def sponsor_send_additional_info(sponsor_id, request_id):
                          ระบบ MTC-CMTE
                          '''
             if not current_app.debug:
-                send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE สถาบันแก้ไขเอกสารแล้ว', message)
+                send_mail(['cmtethailand@gmail.com'], topic, message)
             else:
                 print(message)
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
