@@ -41,7 +41,7 @@ bangkok = timezone('Asia/Bangkok')
 #
 #             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
 #             message = f'''
-#                           เรียนผู้ประสานงาน
+#                           เรียน ผู้ประสานงาน
 #
 #                           {sponsor.name} จะหมดอายุการรับรองในอีก 3 เดือน
 #                           \n
@@ -58,7 +58,7 @@ bangkok = timezone('Asia/Bangkok')
 #
 #             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
 #             message = f'''
-#                                       เรียนผู้ประสานงาน
+#                                       เรียน ผู้ประสานงาน
 #
 #                                       {sponsor.name} จะหมดอายุการรับรองในอีก 1 เดือน
 #                                       \n
@@ -1126,7 +1126,7 @@ def register_sponsor_member(sponsor_id=None):
                 sponsor = CMTEEventSponsor.query.get(sponsor_id)
                 if not current_app.debug:
                     message = f'''
-                    เรียนท่านเจ้าของอีเมล
+                    เรียน ท่านเจ้าของอีเมล
                     
                     บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์ของหน่วยงาน {sponsor.name}
                     \n
@@ -1144,7 +1144,7 @@ def register_sponsor_member(sponsor_id=None):
                 db.session.commit()
                 if not current_app.debug:
                     message = f'''
-                    เรียนท่านเจ้าของอีเมล
+                    เรียน ท่านเจ้าของอีเมล
     
                     บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานหลักของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์
                     \n
@@ -1226,6 +1226,21 @@ def request_change_coordinator_member(sponsor_id, member_id):
     db.session.add(create_request)
     db.session.commit()
     flash('ส่งคำขอเป็นผู้ประสานงานหลัก เรียบร้อยแล้ว', 'success')
+
+    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+    message = f'''
+                 เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                 สถาบัน {member.sponsor.name} ส่งคำขอเปลี่ยนผู้ประสานงานหลัก
+                 \n
+                 สามารถดูรายละเอียดได้ที่ {url}
+                 \n\n
+                 ระบบ MTC-CMTE
+                 '''
+    if not current_app.debug:
+        send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอเปลี่ยนผู้ประสานงานหลัก', message)
+    else:
+        print(message)
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
@@ -1304,6 +1319,21 @@ def register_sponsor():
                     db.session.add(create_request)
                     db.session.commit()
                     flash(f'ลงทะเบียนเรียบร้อย', 'success')
+
+                    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+                    message = f'''
+                                     เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                                     สถาบัน {member.sponsor.name} ส่งคำขอขึ้นทะเบียนสถาบัน
+                                     \n
+                                     สามารถดูรายละเอียดได้ที่ {url}
+                                     \n\n
+                                     ระบบ MTC-CMTE
+                                     '''
+                    if not current_app.debug:
+                        send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอขึ้นทะเบียนสถาบัน', message)
+                    else:
+                        print(message)
                     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor.id))
                 else:
                     flash(f'เพิ่มสถาบันใหม่เรียบร้อย', 'success')
@@ -1396,8 +1426,22 @@ def request_edit_sponsor(sponsor_id):
             )
             db.session.add(create_request)
             db.session.commit()
+
+            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            message = f'''
+                         เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                         สถาบัน {sponsor.name} ส่งคำขอแก้ไขแก้ไขมูล
+                         \n
+                         สามารถดูรายละเอียดได้ที่ {url}
+                         \n\n
+                         ระบบ MTC-CMTE
+                         '''
+            if not current_app.debug:
+                send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอแก้ไขข้อมูลสถาบัน', message)
+            else:
+                print(message)
             flash(f'ส่งขอแก้ไขข้อมูลเรียบร้อย', 'success')
-            # send email to admin
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
             flash(f'Errors: {form.errors}', 'danger')
@@ -1493,6 +1537,21 @@ def sponsor_payment(sponsor_id, request_id):
             )
             db.session.add(create_receipt)
             db.session.commit()
+
+            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+            message = f'''
+                             เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                             สถาบัน {sponsor.name} แนบหลักฐานการชำระเงินแล้ว
+                             \n
+                             สามารถดูรายละเอียดได้ที่ {url}
+                             \n\n
+                             ระบบ MTC-CMTE
+                             '''
+            if not current_app.debug:
+                send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE สถาบันแนบหลักฐานการชำระเงิน', message)
+            else:
+                print(message)
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
             flash(f'Error {form.errors}', 'danger')
@@ -1516,6 +1575,21 @@ def request_renew_sponsor(sponsor_id):
         db.session.add(create_request)
         db.session.commit()
         flash('ส่งคำขอต่ออายุสถาบันเรียบร้อยแล้ว', 'success')
+
+        url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+        message = f'''
+                     เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                     สถาบัน {sponsor.name} ส่งคำขอต่ออายุสถาบัน
+                     \n
+                     สามารถดูรายละเอียดได้ที่ {url}
+                     \n\n
+                     ระบบ MTC-CMTE
+                     '''
+        if not current_app.debug:
+            send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE คำขอต่ออายุสถาบัน', message)
+        else:
+            print(message)
     else:
         flash('มีการส่งคำขอต่ออายุสถาบันแล้ว', 'success')
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
@@ -1613,7 +1687,7 @@ def approved_renew_sponsor(request_id):
 
     url = url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor.id, _external=True)
     message = f'''
-                    เรียนผู้ประสานงาน 
+                    เรียน ผู้ประสานงาน 
 
                     คำขอต่ออายุสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
                     \n
@@ -1705,7 +1779,7 @@ def approved_edit_sponsor(request_id):
         mails.append(member.email)
     url = url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor.id, _external=True)
     message = f'''
-                    เรียนผู้ประสานงาน 
+                    เรียน ผู้ประสานงาน 
 
                     คำขอแก้ไขข้อมูลสถาบัน {edit_request.sponsor.name} ถูกอัพเดทสถานะแล้ว 
                     \n
@@ -1745,7 +1819,7 @@ def additional_request_sponsor(sponsor_id, request_id):
         member = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id).first()
         url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
         message = f'''
-                      เรียนท่านเจ้าของอีเมล
+                      เรียน ท่านเจ้าของอีเมล
 
                       คำขอของหน่วยงาน {sponsor.name} มีการขอเอกสารเพิ่มเติมเพื่อประกอบการอนุมัติ
                       \n
@@ -1792,8 +1866,22 @@ def sponsor_send_additional_info(sponsor_id, request_id):
             req.updated_at = arrow.now('Asia/Bangkok').datetime
             db.session.add(req)
             db.session.commit()
-            flash(f'ส่งข้อมูลให่เรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบข้อมูล และรอการอนุมัติ', 'success')
-            #need to send email to admin?
+            flash(f'ส่งข้อมูลเรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบข้อมูล และรอการอนุมัติ', 'success')
+
+            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            message = f'''
+                         เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                         สถาบัน {sponsor.name} ดำเนินการแก้ไขเอกสาร เพื่อขอขึ้นทะเบียนเรียบร้อยแล้ว
+                         \n
+                         สามารถดูรายละเอียดได้ที่ {url}
+                         \n\n
+                         ระบบ MTC-CMTE
+                         '''
+            if not current_app.debug:
+                send_mail(['cmtethailand@gmail.com'], 'MTC-CMTE สถาบันแก้ไขเอกสารแล้ว', message)
+            else:
+                print(message)
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
             flash(f'Errors: {form.errors}', 'danger')
@@ -1833,7 +1921,7 @@ def reject_sponsor(sponsor_id, request_id):
 
         url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
         message = f'''
-                        เรียนผู้ประสานงาน 
+                        เรียน ผู้ประสานงาน 
 
                         คำขอขึ้นทะเบียนสถาบัน {sponsor.name} ถูกปฏิเสธ
                         \n
@@ -1884,7 +1972,7 @@ def verified_payment_sponsor(request_id):
         sponsor.expire_date = expire_date - timedelta(days=1)
         topic = 'MTC-CMTE อนุมัติการต่ออายุทะเบียน'
         message = f'''
-                        เรียนผู้ประสานงาน 
+                        เรียน ผู้ประสานงาน 
 
                         คำขอต่ออายุทะเบียนสถาบัน {sponsor.name} ผ่านการอนุมัติแล้ว 
                         \n
@@ -1899,7 +1987,7 @@ def verified_payment_sponsor(request_id):
         sponsor.expire_date = expire_date - timedelta(days=1)
         topic = 'MTC-CMTE อนุมัติการขึ้นทะเบียน'
         message = f'''
-                        เรียนผู้ประสานงาน 
+                        เรียน ผู้ประสานงาน 
 
                         คำขอขึ้นทะเบียนสถาบัน {sponsor.name} ผ่านการอนุมัติแล้ว 
                         \n
