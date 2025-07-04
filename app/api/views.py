@@ -335,6 +335,8 @@ class MemberLicense(Resource):
 
 
 class MemberInfo(Resource):
+    # TODO: Add an endpoint for updating an address
+    # TODO: Add an endpoint for adding new member
     @jwt_required()
     def get(self, pin):
         """
