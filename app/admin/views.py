@@ -148,10 +148,13 @@ def view_member_password():
             return 'No license found.'
         else:
             return f'''
+            <div class="notification">
+            <p>ชื่อ {license.member.th_fullname}</p>
             <p>หมายเลขโทรศัพท์ {license.member.tel}</p>
             <p>วันเดือนปีเกิด {license.member.dob}</p>
             <p>username: {license.member.username}</p>
             <p>password: {license.member.password}</p>
+            </div>
             <a class="button" hx-swap="innerHTML"
                 hx-target="#password-text"
                 hx-get="{url_for('webadmin.edit_member_password', member_id=license.member.id)}">
