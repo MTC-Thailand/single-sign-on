@@ -16,7 +16,13 @@
                     <tbody>
                     <tr>
                         <td></td>
-                        <td>ข้อมูลเดิม</td>
+                        <td>ข้อมูลเดิม ณ
+                            {% if previous_version.updated_at %}
+                            {{ previous_version.updated_at|localdatetime }}
+                            {% else %}
+                            {{ previous_version.registered_datetime|localdatetime }}
+                            {% endif %}
+                        </td>
                         <td><strong>ข้อมูลใหม่</strong></td>
                     </tr>
                     <tr>
@@ -51,6 +57,16 @@
                             <span {% if previous_version.type_detail != current_version.type_detail %}
                                     class="has-text-danger" {% endif %}>
                                 {{ current_version.type_detail or '' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>การมีนักเทคนิคการแพทย์</strong></td>
+                        <td>{% if previous_version.has_med_tech %}มีนักเทคนิคการแพทย์{% else %}ไม่มีนักเทคนิคการแพทย์{% endif %}</td>
+                        <td>
+                            <span {% if previous_version.has_med_tech != current_version.has_med_tech %}
+                                    class="has-text-danger" {% endif %}>
+                                {% if current_version.has_med_tech %}มีนักเทคนิคการแพทย์{% else %}ไม่มีนักเทคนิคการแพทย์{% endif %}
                             </span>
                         </td>
                     </tr>

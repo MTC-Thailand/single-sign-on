@@ -24,8 +24,53 @@ from app.members.models import License, Member
 from app.cmte.models import *
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 from flask_mail import Message
-
+from apscheduler.schedulers.blocking import BlockingScheduler
 bangkok = timezone('Asia/Bangkok')
+
+
+# @cmte.route('/sponsor-expiration/notification')
+# def notify_sponsor_expiration():
+#     today = datetime.now().date()
+#     for sponsor in CMTEEventSponsor.query\
+#             .filter(CMTEEventSponsor.expire_date != None).filter(CMTEEventSponsor.disable_at == None):
+#         if (sponsor.expire_date - today).days == 90:
+#             mails = []
+#             all_members = CMTESponsorMember.query.filter_by(sponsor=sponsor).all()
+#             for member in all_members:
+#                 mails.append(member.email)
+#
+#             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+#             message = f'''
+#                           เรียน ผู้ประสานงาน
+#
+#                           {sponsor.name} จะหมดอายุการรับรองในอีก 3 เดือน
+#                           \n
+#                           ท่านสามารถดำเนินการส่งคำขอต่ออายุได้ที่ {url}
+#                           \n\n
+#                           หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+#                           '''
+#             send_mail(mails, 'MTC-CMTE แจ้งเตือนการต่ออายุสถาบัน', message)
+#         elif (sponsor.expire_date - today).days == 30:
+#             mails = []
+#             all_members = CMTESponsorMember.query.filter_by(sponsor=sponsor).all()
+#             for member in all_members:
+#                 mails.append(member.email)
+#
+#             url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+#             message = f'''
+#                                       เรียน ผู้ประสานงาน
+#
+#                                       {sponsor.name} จะหมดอายุการรับรองในอีก 1 เดือน
+#                                       \n
+#                                       ท่านสามารถดำเนินการส่งคำขอต่ออายุได้ที่ {url}
+#                                       \n\n
+#                                       หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+#                                       '''
+#             send_mail(mails, 'MTC-CMTE แจ้งเตือนการต่ออายุสถาบัน', message)
+#
+# scheduler = BlockingScheduler()
+# scheduler.add_job(notify_sponsor_expiration, 'cron', hour=9, minute=0, timezone='Asia/Bangkok')
+# scheduler.start()
 
 
 def active_sponsor_required(f):
@@ -1070,7 +1115,7 @@ def register_sponsor_member(sponsor_id=None):
             member = CMTESponsorMember()
             form.populate_obj(member)
             member.password = form.password.data
-            member.is_valid = False
+            member.is_valid = True
             serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
             token = serializer.dumps({'email': form.email.data})
             url = url_for('cmte.validate_email', token=token, email=form.email.data, _external=True)
@@ -1079,31 +1124,37 @@ def register_sponsor_member(sponsor_id=None):
                 db.session.add(member)
                 db.session.commit()
                 sponsor = CMTEEventSponsor.query.get(sponsor_id)
-                message = f'''
-                เรียนท่านเจ้าของอีเมล
-                
-                บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์ของหน่วยงาน {sponsor.name}
-                \n
-                กรุณาคลิกที่ลิงค์เพื่อยืนยัน {url}
-                \n\n
-                หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
-                '''
-                send_mail([member.email], 'MTC-CMTE Email validation', message)
+                if not current_app.debug:
+                    message = f'''
+                    เรียน ท่านเจ้าของอีเมล
+                    
+                    บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์ของหน่วยงาน {sponsor.name}
+                    \n
+                    กรุณาคลิกที่ลิงค์เพื่อยืนยัน {url}
+                    \n\n
+                    หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                    '''
+                    send_mail([member.email], 'MTC-CMTE Email validation', message)
+                else:
+                    print(member.email)
                 flash(f'เพิ่มผู้ประสานงานเรียบร้อยแล้ว', 'success')
                 return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
             else:
                 db.session.add(member)
                 db.session.commit()
-                message = f'''
-                เรียนท่านเจ้าของอีเมล
-
-                บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานหลักของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์
-                \n
-                กรุณาคลิกที่ลิงค์เพื่อยืนยัน {url}
-                \n\n
-                หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
-                '''
-                send_mail([member.email], 'MTC-CMTE Email validation', message)
+                if not current_app.debug:
+                    message = f'''
+                    เรียน ท่านเจ้าของอีเมล
+    
+                    บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานหลักของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์
+                    \n
+                    กรุณาคลิกที่ลิงค์เพื่อยืนยัน {url}
+                    \n\n
+                    หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                    '''
+                    send_mail([member.email], 'MTC-CMTE Email validation', message)
+                else:
+                    print(member.email)
                 flash(f'ลงทะเบียนเรียบร้อยแล้ว กรุณาลงชื่อเข้าใช้งาน', 'success')
                 return redirect(url_for('cmte.sponsor_member_login'))
         else:
@@ -1123,9 +1174,6 @@ def manage_member(member_id):
         db.session.add(member)
         db.session.commit()
         flash('อัพเดทข้อมูลเรียบร้อยแล้ว', 'success')
-        # is_admin = True if cmte_admin_permission else False
-        # if not is_admin:
-        #     print('send notification to admin of CMTE')
     else:
         for er in form.errors:
             flash("{}:{}".format(er, form.errors[er]), 'danger')
@@ -1178,6 +1226,23 @@ def request_change_coordinator_member(sponsor_id, member_id):
     db.session.add(create_request)
     db.session.commit()
     flash('ส่งคำขอเป็นผู้ประสานงานหลัก เรียบร้อยแล้ว', 'success')
+
+    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+    topic_name = member.sponsor.name[:30]+'...' if len(member.sponsor.name) > 30 else member.sponsor.name
+    topic = 'MTC-CMTE คำขอเปลี่ยนผู้ประสานงานหลักจาก '+topic_name
+    message = f'''
+                 เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                 สถาบัน {member.sponsor.name} ส่งคำขอเปลี่ยนผู้ประสานงานหลัก
+                 \n
+                 สามารถดูรายละเอียดได้ที่ {url}
+                 \n\n
+                 ระบบ MTC-CMTE
+                 '''
+    if not current_app.debug:
+        send_mail(['cmtethailand@gmail.com'], topic, message)
+    else:
+        print(topic, message)
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
@@ -1226,6 +1291,7 @@ def register_sponsor():
                 sponsor = CMTEEventSponsor()
                 form.populate_obj(sponsor)
                 db.session.add(sponsor)
+                sponsor.has_med_tech = form.has_med_tech.data == 'True'
                 db.session.commit()
 
                 s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
@@ -1255,7 +1321,24 @@ def register_sponsor():
                     db.session.add(create_request)
                     db.session.commit()
                     flash(f'ลงทะเบียนเรียบร้อย', 'success')
-                    return redirect(url_for('cmte.cmte_index'))
+
+                    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+                    topic_name = member.sponsor.name[:30] + '...' if len(member.sponsor.name) > 30 else member.sponsor.name
+                    topic = 'MTC-CMTE คำขอขึ้นทะเบียนสถาบันจาก ' + topic_name
+                    message = f'''
+                                     เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                                     สถาบัน {member.sponsor.name} ส่งคำขอขึ้นทะเบียนสถาบัน
+                                     \n
+                                     สามารถดูรายละเอียดได้ที่ {url}
+                                     \n\n
+                                     ระบบ MTC-CMTE
+                                     '''
+                    if not current_app.debug:
+                        send_mail(['cmtethailand@gmail.com'], topic, message)
+                    else:
+                        print(message)
+                    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor.id))
                 else:
                     flash(f'เพิ่มสถาบันใหม่เรียบร้อย', 'success')
                     return redirect(url_for('cmte.all_sponsors'))
@@ -1272,21 +1355,17 @@ def register_sponsor():
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def get_org_type(sponsor_id=None):
     org_type = request.args.get('type', type=str)
-    if org_type == 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชาที่ผลิตบัณฑิตเทคนิคการแพทย์)':
-        detail = 'โปรดระบุจำนวนอาจารย์เทคนิคการแพทย์ในสังกัด(คน)'
-    elif org_type == 'เป็นสถาบันการศึกษา(คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา)':
-        detail = 'โปรดระบุ คณะ/ภาควิชา/หน่วยงานที่มีฐานะเทียบเท่าคณะหรือภาควิชา'
-    elif org_type == 'เป็นสถานพยาบาล':
-        detail = 'โปรดระบุ 1.ประเภทสถานพยาบาล 2.จํานวนเตียงรับผู้ป่วย(เตียง) 3.จํานวนเทคนิคการแพทย์ในสังกัด(คน)'
-    elif org_type == 'เป็นหน่วยงาน/องค์กรตามที่สภาเทคนิคการแพทย์ประกาศกําหนด':
+    if org_type == 'หน่วยงานอื่นๆ':
         detail = 'โปรดระบุ'
-    elif org_type == 'เป็นหน่วยงาน/องค์กรของรัฐหรือเอกชน':
-        detail = 'โปรดระบุ'
+        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
+    else:
+        type_detail = ''
     if sponsor_id:
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
-        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{sponsor.type_detail}</textarea>'''
-    else:
-        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
+        if sponsor.type_detail:
+            type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{sponsor.type_detail}</textarea>'''
+        else:
+            type_detail = ''
     resp = make_response(type_detail)
     resp.headers['HX-Trigger-After-Swap'] = 'initSelect2'
     return resp
@@ -1327,18 +1406,19 @@ def request_edit_sponsor(sponsor_id):
         if form.validate_on_submit():
             form.populate_obj(sponsor)
             db.session.add(sponsor)
-
+            sponsor.has_med_tech = form.has_med_tech.data == 'True'
             s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
                                      aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                                      region_name=os.environ.get('BUCKETEER_AWS_REGION'))
             for field, _file in request.files.items():
                 filename = _file.filename
-                key = uuid.uuid4()
-                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
-                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
-                doc.note = request.form.get(field + '_note')
-                db.session.add(doc)
+                if filename:
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = request.form.get(field + '_note')
+                    db.session.add(doc)
             db.session.commit()
             version_index = sponsor.versions.count() - 1
             create_request = CMTESponsorEditRequest(
@@ -1350,8 +1430,24 @@ def request_edit_sponsor(sponsor_id):
             )
             db.session.add(create_request)
             db.session.commit()
+
+            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+            topic = 'MTC-CMTE คำขอแก้ไขข้อมูลสถาบันจาก ' + topic_name
+            message = f'''
+                         เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                         สถาบัน {sponsor.name} ส่งคำขอแก้ไขแก้ไขมูล
+                         \n
+                         สามารถดูรายละเอียดได้ที่ {url}
+                         \n\n
+                         ระบบ MTC-CMTE
+                         '''
+            if not current_app.debug:
+                send_mail(['cmtethailand@gmail.com'], topic, message)
+            else:
+                print(message)
             flash(f'ส่งขอแก้ไขข้อมูลเรียบร้อย', 'success')
-            # send email to admin
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
             flash(f'Errors: {form.errors}', 'danger')
@@ -1398,6 +1494,8 @@ def manage_sponsor(sponsor_id):
 def sponsor_payment(sponsor_id, request_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
     form = CMTESponsorPaymentForm(obj=sponsor)
+    form.address.data = f"{sponsor.address} {sponsor.zipcode}"
+    form.shipping_address.data = f"{sponsor.address} {sponsor.zipcode}"
     if request.method == 'POST':
         if form.validate_on_submit():
             doc = CMTESponsorDoc.query.filter_by(sponsor_id=sponsor_id, is_payment_slip=True,
@@ -1419,7 +1517,7 @@ def sponsor_payment(sponsor_id, request_id):
                 doc.is_payment_slip = True
                 doc.request_id = request_id
                 db.session.add(doc)
-                flash('ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
+                flash('แนบ slip ชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
             else:
                 flash('ไม่พบ slip ที่อัพโหลด กรุณาดำเนินการใหม่อีกครั้ง', 'danger')
                 return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
@@ -1441,10 +1539,27 @@ def sponsor_payment(sponsor_id, request_id):
                 receipt_item=form.receipt_item.data if form.receipt_item.data else '',
                 tax_id=form.tax_id.data if form.tax_id.data else '',
                 address=form.address.data,
-                zipcode=form.zipcode.data
+                shipping_address=form.shipping_address.data
             )
             db.session.add(create_receipt)
             db.session.commit()
+
+            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+            topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+            topic = 'MTC-CMTE หลักฐานการชำระเงินจาก ' + topic_name
+            message = f'''
+                             เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                             สถาบัน {sponsor.name} แนบหลักฐานการชำระเงินแล้ว
+                             \n
+                             สามารถดูรายละเอียดได้ที่ {url}
+                             \n\n
+                             ระบบ MTC-CMTE
+                             '''
+            if not current_app.debug:
+                send_mail(['cmtethailand@gmail.com'], topic, message)
+            else:
+                print(message)
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
         else:
             flash(f'Error {form.errors}', 'danger')
@@ -1468,6 +1583,23 @@ def request_renew_sponsor(sponsor_id):
         db.session.add(create_request)
         db.session.commit()
         flash('ส่งคำขอต่ออายุสถาบันเรียบร้อยแล้ว', 'success')
+
+        url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+        topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+        topic = 'MTC-CMTE คำขอต่ออายุสถาบันจาก ' + topic_name
+        message = f'''
+                     เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                     สถาบัน {sponsor.name} ส่งคำขอต่ออายุสถาบัน
+                     \n
+                     สามารถดูรายละเอียดได้ที่ {url}
+                     \n\n
+                     ระบบ MTC-CMTE
+                     '''
+        if not current_app.debug:
+            send_mail(['cmtethailand@gmail.com'], topic, message)
+        else:
+            print(message)
     else:
         flash('มีการส่งคำขอต่ออายุสถาบันแล้ว', 'success')
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
@@ -1557,7 +1689,26 @@ def approved_renew_sponsor(request_id):
     db.session.add(renew_request)
     db.session.commit()
     flash('อนุมัติคำขอต่ออายุสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
-    # send email to sponsor member
+
+    mails = []
+    all_members = CMTESponsorMember.query.filter_by(sponsor=renew_request.sponsor).all()
+    for member in all_members:
+        mails.append(member.email)
+
+    url = url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor.id, _external=True)
+    message = f'''
+                    เรียน ผู้ประสานงาน 
+
+                    คำขอต่ออายุสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
+                    \n
+                    และกรุณาดำเนินการแนบ slip ที่ {url}
+                    \n\n
+                    หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                    '''
+    if not current_app.debug:
+        send_mail(mails, 'MTC-CMTE อนุมัติการต่อทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม', message)
+    else:
+        print(mails, message)
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
 
 
@@ -1612,6 +1763,7 @@ def approved_edit_sponsor(request_id):
     status = request.args.get("status")
     edit_request.status = status
     edit_request.updated_at = arrow.now('Asia/Bangkok').datetime
+    edit_request.sponsor.updated_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(edit_request)
 
     if status == 'reject':
@@ -1619,17 +1771,133 @@ def approved_edit_sponsor(request_id):
         current_version = edit_request.sponsor.versions[current_version_index]
         current_version.revert()
         db.session.commit()
+        topic = 'MTC-CMTE สถานะการขอแก้ไขข้อมูลสถาบัน:ไม่อนุมัติการแก้ไข'
         # if previous_version:
         #     for column in edit_request.sponsor.__table__.columns:
         #         field_name = column.name
         #         if hasattr(previous_version, field_name):
         #             setattr(edit_request.sponsor, field_name, getattr(previous_version, field_name))
-
+    elif status == 'approved':
+        topic = 'MTC-CMTE สถานะการขอแก้ไขข้อมูลสถาบัน:อนุมัติการแก้ไข'
     db.session.commit()
-    flash('บันทึกข้อมูลเรียบร้อยแล้ว **อย่าลืมลบเอกสารแนบที่ถูกแก้ไข** สถาบันได้รับการแจ้งเตือนแล้ว',
+    flash('บันทึกข้อมูลเรียบร้อยแล้ว สถาบันได้รับการแจ้งเตือนแล้ว',
           'warning')
-    # send email to sponsor member
+
+    mails = []
+    all_members = CMTESponsorMember.query.filter_by(sponsor=edit_request.sponsor).all()
+    for member in all_members:
+        mails.append(member.email)
+    url = url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor.id, _external=True)
+    message = f'''
+                    เรียน ผู้ประสานงาน 
+
+                    คำขอแก้ไขข้อมูลสถาบัน {edit_request.sponsor.name} ถูกอัพเดทสถานะแล้ว 
+                    \n
+                    สามารถตรวจสอบรายละเอียดได้ที่ {url}
+                    \n\n
+                    หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                    '''
+    if not current_app.debug:
+        send_mail(mails, topic, message)
+    else:
+        print(mails, message)
     return redirect(url_for('cmte.manage_edit_sponsor', request_id=request_id))
+
+
+@cmte.route('/sponsors/additional-request-modal/<int:sponsor_id>/<int:request_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def sponsor_additional_request_modal(sponsor_id, request_id):
+    sponsor_request = CMTESponsorRequest.query.get(request_id)
+    form = CMTESponsorAdditionalRequestForm(obj=sponsor_request)
+    return render_template('cmte/admin/sponsor_additional_request_modal.html', form=form,
+                           request_id=request_id, sponsor_id=sponsor_id)
+
+
+@cmte.route('/sponsors/additional-request-modal/<int:sponsor_id>/<int:request_id>/submit', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def additional_request_sponsor(sponsor_id, request_id):
+    sponsor_request = CMTESponsorRequest.query.get(request_id)
+    form = CMTESponsorRequestForm(obj=sponsor_request)
+    if form.validate_on_submit():
+        sponsor_request.comment = request.form.get('comment')
+        db.session.add(sponsor_request)
+        db.session.commit()
+        sponsor = CMTEEventSponsor.query.get(sponsor_id)
+
+        member = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id).first()
+        url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+        message = f'''
+                      เรียน ท่านเจ้าของอีเมล
+
+                      คำขอของหน่วยงาน {sponsor.name} มีการขอเอกสารเพิ่มเติมเพื่อประกอบการอนุมัติ
+                      \n
+                      กรุณาคลิกที่ลิงค์เพื่อดำเนินการต่อ {url}
+                  '''
+        if not current_app.debug:
+            send_mail([member.email], 'MTC-CMTE Additional Request', message)
+        else:
+            print(url, sponsor.name ,member.email, message)
+        flash('ส่งขอข้อมูลเอกสารเพิ่มเติม ไปยังสถาบันเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+    else:
+        for er in form.errors:
+            flash("{}:{}".format(er, form.errors[er]), 'danger')
+    if request.headers.get('HX-Request') == 'true':
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
+
+
+@cmte.route('/sponsors/additional-request/<int:sponsor_id>/<int:request_id>', methods=['GET', 'POST'])
+@login_required
+@cmte_sponsor_admin_permission.require()
+def sponsor_send_additional_info(sponsor_id, request_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    form = CMTEEventSponsorForm(obj=sponsor)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+
+            s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                     aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                     region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+            for field, _file in request.files.items():
+                filename = _file.filename
+                if filename:
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTESponsorDoc(sponsor=sponsor, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = request.form.get(field + '_note')
+                    db.session.add(doc)
+
+            req = CMTESponsorRequest.query.get(request_id)
+            req.updated_at = arrow.now('Asia/Bangkok').datetime
+            db.session.add(req)
+            db.session.commit()
+            flash(f'ส่งข้อมูลเรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบข้อมูล และรอการอนุมัติ', 'success')
+
+            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
+            topic = 'MTC-CMTE เอกสารเพิ่มเติมจาก ' + topic_name
+            message = f'''
+                         เรียน เจ้าหน้าที่สภาเทคนิคการแพทย์
+
+                         สถาบัน {sponsor.name} ดำเนินการแก้ไขเอกสาร เพื่อขอขึ้นทะเบียนเรียบร้อยแล้ว
+                         \n
+                         สามารถดูรายละเอียดได้ที่ {url}
+                         \n\n
+                         ระบบ MTC-CMTE
+                         '''
+            if not current_app.debug:
+                send_mail(['cmtethailand@gmail.com'], topic, message)
+            else:
+                print(message)
+            return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+        else:
+            flash(f'Errors: {form.errors}', 'danger')
+    return render_template('cmte/sponsor/sponsor_additional_info.html', form=form, sponsor=sponsor)
 
 
 @cmte.route('/sponsors/reject-modal/<int:sponsor_id>/<int:request_id>', methods=['GET', 'POST'])
@@ -1657,7 +1925,26 @@ def reject_sponsor(sponsor_id, request_id):
         sponsor.disable_at = arrow.now('Asia/Bangkok').datetime
         db.session.add(sponsor)
         db.session.commit()
-        # send email to sponsor member
+
+        mails = []
+        all_members = CMTESponsorMember.query.filter_by(sponsor=sponsor).all()
+        for member in all_members:
+            mails.append(member.email)
+
+        url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+        message = f'''
+                        เรียน ผู้ประสานงาน 
+
+                        คำขอขึ้นทะเบียนสถาบัน {sponsor.name} ถูกปฏิเสธ
+                        \n
+                        สามารถตรวจสอบรายละเอียดได้ที่ {url}
+                        \n\n
+                        หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                        '''
+        if not current_app.debug:
+            send_mail(mails, 'MTC-CMTE ปฏิเสธการขึ้นทะเบียน', message)
+        else:
+            print(mails, message)
         return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
     else:
         for er in form.errors:
@@ -1676,7 +1963,6 @@ def admin_delete_doc(sponsor_id, doc_id):
     db.session.delete(doc)
     db.session.commit()
     flash('ลบไฟล์เรียบร้อยแล้ว', 'success')
-    # send email to sponsor member
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
 
 
@@ -1690,21 +1976,50 @@ def verified_payment_sponsor(request_id):
     db.session.commit()
 
     sponsor = CMTEEventSponsor.query.filter_by(id=payment_request.sponsor_id).first()
+    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
     if sponsor.expire_date:
         old_expire_date = sponsor.expire_date + timedelta(days=1)
         sponsor.registered_datetime = old_expire_date
         expire_date = old_expire_date.replace(year=old_expire_date.year + 5)
         sponsor.expire_date = expire_date - timedelta(days=1)
+        topic = 'MTC-CMTE อนุมัติการต่ออายุทะเบียน'
+        message = f'''
+                        เรียน ผู้ประสานงาน 
+
+                        คำขอต่ออายุทะเบียนสถาบัน {sponsor.name} ผ่านการอนุมัติแล้ว 
+                        \n
+                        สามารถตรวจสอบวันขึ้นทะเบียนและวันอายุสถาบันได้ที่ {url}
+                        \n\n
+                        หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                        '''
     else:
         today = arrow.now('Asia/Bangkok').datetime
         sponsor.registered_datetime = today
         expire_date = today.replace(year=today.year + 5)
         sponsor.expire_date = expire_date - timedelta(days=1)
+        topic = 'MTC-CMTE อนุมัติการขึ้นทะเบียน'
+        message = f'''
+                        เรียน ผู้ประสานงาน 
+
+                        คำขอขึ้นทะเบียนสถาบัน {sponsor.name} ผ่านการอนุมัติแล้ว 
+                        \n
+                        สามารถตรวจสอบวันขึ้นทะเบียนและวันอายุสถาบันได้ที่ {url}
+                        \n\n
+                        หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                        '''
     db.session.add(sponsor)
     db.session.commit()
+
+    mails = []
+    all_members = CMTESponsorMember.query.filter_by(sponsor=sponsor).all()
+    for member in all_members:
+        mails.append(member.email)
+    if not current_app.debug:
+        send_mail(mails, topic, message)
+    else:
+        print(mails, message)
     flash('ตรวจสอบการชำระเงินเรียบร้อยแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
-    # send email to sponsor member
-    return redirect(url_for('cmte.manage_sponsor', sponsor_id=payment_request.sponsor_id))
+    return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor.id))
 
 
 @cmte.route('/sponsors/<int:sponsor_id>/<int:request_id>/upload-receipt', methods=['GET', 'POST'])

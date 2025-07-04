@@ -1,0 +1,34 @@
+<div class="modal is-active animate__animated" id="additon-modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">ขอเอกสารเพิ่มเติม จากสถาบัน {{ request.sponsor }}</p>
+            <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+            <form hx-post="{{ url_for('cmte.additional_request_sponsor', sponsor_id=sponsor_id, request_id=request_id) }}">
+                {{ form.hidden_tag() }}
+                <div class="field">
+                    <label class="label">รายละเอียดที่ต้องการเพิ่มเติม</label>
+                    <div class="control">
+                        {{ form.comment(class="input", required=True) }}
+                    </div>
+                </div>
+                <button class="button" id="cancel-btn">ยกเลิก</button>
+                <button class="button is-success" id="save-btn" type="submit">ส่งข้อมูล</button>
+            </form>
+        </section>
+    </div>
+</div>
+<script>
+    window.document.getElementById("cancel-btn").addEventListener("click", function (event) {
+        event.preventDefault()
+        htmx.removeClass(htmx.find('#additon-modal'), 'is-active')
+    })
+    window.document.getElementById("cancelButton").addEventListener("click", function () {
+        htmx.removeClass(htmx.find('#additon-modal'), 'is-active')
+    })
+    window.addEventListener('closeModal', (evt) => {
+        htmx.removeClass(htmx.find('#additon-modal'), 'is-active')
+    })
+</script>

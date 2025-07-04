@@ -23,6 +23,13 @@
                     {% if 'Lead coordinator' in req.comment %}
                         รออนุมัติแก้ไขผู้ประสานงานหลัก
                     {% endif %}
+                    {% if not req.updated_at %}
+                        รอสถาบันแก้ไขเอกสาร
+                    {% else %}
+                        กรุณาเช็คเอกสารใหม่ เพื่ออนุมัติขึ้นทะเบียนสถาบัน
+                    {% endif %}
+                {% else %}
+                        รออนุมัติขึ้นทะเบียนสถาบัน
                 {% endif %}
             {% endif %}
         {% endfor %}
@@ -109,6 +116,10 @@
                         <td>{{ sponsor.type }} {{ sponsor.type_detail or '' }}</td>
                     </tr>
                     <tr>
+                        <td><strong>นักเทคนิคการแพทย์ในองค์กร</strong></td>
+                        <td>{% if sponsor.has_med_tech %}มีนักเทคนิคการแพทย์{% else %}ไม่มีนักเทคนิคการแพทย์{% endif %}</td>
+                    </tr>
+                    <tr>
                         <td><strong>หลักฐานแสดงคุณสมบัติขององค์กร</strong></td>
                         <td>
                             {% for q in sponsor.qualifications %}
@@ -155,7 +166,10 @@
                         <td class="content">
                             <ul>
                             {% for member in sponsor.members|sort(attribute="id") %}
-                                <li>{{ member }} {% if member.is_coordinator %} <span class="tag is-success"><span class="icon"><i class="fas fa-user-check"></i></span> ผู้ประสานงานหลัก{% endif %}</span></li>
+                                <li>{{ member }} {% if member.is_coordinator %} <span class="tag is-success is-light">
+                                    <span class="icon"><i class="fas fa-user-check"></i></span>
+                                    ผู้ประสานงานหลัก{% endif %}</span>
+                                </li>
                             {% endfor %}
                             </ul>
                         </td>
@@ -167,10 +181,9 @@
                                 {{ sponsor.registered_datetime|localdatetime }}
                             {% else %}
                                 {% if not sponsor.disable_at %}
-                                    <span class="icon">
-                                        <i class="fas fa-spinner fa-pulse"></i>
+                                    <span class="tag is-warning is-medium">
+                                        <span>รอการตรวจสอบและอนุมัติ</span>
                                     </span>
-                                    <span>รอการตรวจสอบและอนุมัติ</span>
                                 {% endif %}
                             {% endif %}
                         </td>
@@ -181,10 +194,9 @@
                                 {{ sponsor.expire_date|localdate }}
                             {% else %}
                                 {% if not sponsor.disable_at %}
-                                    <span class="icon">
-                                        <i class="fas fa-spinner fa-pulse"></i>
+                                    <span class="tag is-warning is-medium">
+                                        <span>รอการตรวจสอบและอนุมัติ</span>
                                     </span>
-                                    <span>รอการตรวจสอบและอนุมัติ</span>
                                 {% endif %}
                             {% endif %}
 
@@ -195,7 +207,7 @@
                                             <span class="button is-success is-light">ส่งคำขอต่ออายุเรียบร้อยแล้ว รอการอนุมัติ
                                             </span>
                                         {% elif not pending_request.paid_at %}
-                                            <span class="button is-danger">
+                                            <span class="button is-success">
                                                 อนุมัติคำขอต่ออายุ กรุณาดำเนินการชำระค่าธรรมเนียม และแนบ slip ด้านล่าง
                                             </span>
                                         {% endif %}
@@ -211,7 +223,8 @@
                                 {% elif sponsor.expire_status() == "inactive" %}
                                     {% if pending_request %}
                                         {% if pending_request.approved_at and not pending_request.paid_at %}
-                                            <span class="button is-danger">อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม และแนบ slip ด้านล่าง
+                                            <span class="button is-success">
+                                                อนุมัติคำขอขึ้นทะเบียน กรุณาดำเนินการชำระค่าธรรมเนียม และแนบ slip ด้านล่าง
                                             </span>
                                         {% endif %}
                                     {% endif %}
@@ -223,7 +236,7 @@
                                 <thead>
                                     <th>วันที่ส่งคำขอ</th>
                                     <th>ประเภท</th>
-                                    <th>วันที่อนุมัติคำขอ</th>
+                                    <th>วันที่อนุมัติคำขอ และรายละเอียดเพิ่มเติม</th>
                                     <th>วันที่ชำระเงิน</th>
                                     <th>ใบเสร็จ</th>
                                 </thead>
@@ -234,6 +247,25 @@
                                         <td>{{ req.created_at|localdatetime }}</td>
                                         <td>{% if req.type=='new' %}ขอขึ้นทะเบียน{% else %}ขอต่ออายุ{% endif %}</td>
                                         <td>
+                                            {% if not req.approved_at and req.comment %}
+                                                {% if not req.updated_at %}
+                                                <span class="has-text-warning">ขอเอกสารเพิ่มเติม</span>
+                                                {{ req.comment }}
+                                                <a href="{{ url_for('cmte.sponsor_send_additional_info',
+                                                       sponsor_id=sponsor.id, request_id=req.id) }}"
+                                                       class="button is-success is-outlined">
+                                                        <span class="icon">
+                                                            <i class="fa-solid fa-upload"></i>
+                                                        </span>
+                                                        <span>แนบเอกสาร</span>
+                                                </a>
+                                                {% else %}
+                                                    (<span>เอกสารเพิ่มเติม</span>
+                                                    {{ req.comment }} )
+                                                    <span class="has-text-success">ส่งข้อมูลใหม่แล้ว เมื่อ{{ req.updated_at |localdate }}</span>
+                                                    <span class="tag is-warning">รอตรวจสอบ</span><br>
+                                                {% endif %}
+                                            {% endif %}
                                             {% if req.rejected_at %}
                                                <span class="has-text-danger">ปฏิเสธคำขอขึ้นทะเบียน {{ req.rejected_at|localdatetime }} เนื่องจาก {{ req.comment }}</span>
                                             {% else %}
@@ -245,7 +277,7 @@
                                                         <span class="icon">
                                                             <i class="fa-solid fa-check-square"></i>
                                                         </span>
-                                                        <span>อนุมัติขอ</span>
+                                                        <span>อนุมัติคำขอ</span>
                                                     </a>
                                                     <a hx-get="{{ url_for('cmte.sponsor_reject_modal',
                                                         sponsor_id=sponsor.id, request_id=req.id) }}"
@@ -256,6 +288,17 @@
                                                         </span>
                                                         <span>ไม่อนุมัติ</span>
                                                     </a>
+                                                    {% if not req.comment %}
+                                                    <a hx-get="{{ url_for('cmte.sponsor_additional_request_modal',
+                                                        sponsor_id=sponsor.id, request_id=req.id) }}"
+                                                        hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                                                        class="button is-warning is-outlined">
+                                                        <span class="icon">
+                                                            <i class="fa-solid fa-info-circle"></i>
+                                                        </span>
+                                                        <span>ขอเอกสารเพิ่ม</span>
+                                                    </a>
+                                                    {% endif %}
                                                 {% endif %}
                                             {% endif %}
                                             {{ req.approved_at|localdatetime or '' }}
@@ -277,10 +320,12 @@
                                                     {% endif %}
                                                 {% endfor %}
                                                 {% if not req.verified_at and not is_admin %}
+                                                    <span class="tag is-warning">
                                                     <span class="icon">
-                                                        <i class="fas fa-star has-text-warning fa-pulse"></i>
+                                                        <i class="fas fa-star has-text-sucess fa-pulse"></i>
                                                     </span>
                                                     อยู่ระหว่างการตรวจสอบข้อมูล
+                                                    </span>
                                                 {% endif %}
                                             {% endif %}
                                             {% if is_admin %}
@@ -297,19 +342,30 @@
                                                 {% endif %}
                                             {% endif %}
                                             {% if req.approved_at and not req.verified_at %}
-                                            <a class="button is-medium" href="{{url_for('cmte.sponsor_payment',
-                                                sponsor_id=sponsor.id, request_id=req.id)}}">
-                                                <span class="icon">
-                                                    <i class="fas fa-cloud-upload-alt fa-fade"></i>
-                                                </span>
-                                                <span>แนบ slip การชำระเงิน</span>
-                                            </a>
+                                                {% if not req.paid_at %}
+                                                    <a class="button is-medium is-success is-light" href="{{url_for('cmte.sponsor_payment',
+                                                        sponsor_id=sponsor.id, request_id=req.id)}}">
+                                                        <span class="icon">
+                                                            <i class="fas fa-cloud-upload-alt fa-fade"></i>
+                                                        </span>
+                                                        <span>แนบ slip การชำระเงิน</span>
+                                                    </a>
+                                                {% else %}
+                                                    <a class="button is-success is-light" href="{{url_for('cmte.sponsor_payment',
+                                                        sponsor_id=sponsor.id, request_id=req.id)}}">
+                                                        <span class="icon">
+                                                            <i class="fas fa-cloud-upload-alt"></i>
+                                                        </span>
+                                                        <span>แก้ไข slip การชำระเงิน</span>
+                                                    </a>
+                                                {% endif %}
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if not req.receipt_docs %}
                                                 {% for s in sponsor.receipt_details %}{{ s }}{% endfor %}
                                                 {% if is_admin %}
+                                                    {% if req.verified_at %}
                                                     <a class="button is-small" href="{{url_for('cmte.sponsor_upload_receipt',
                                                         sponsor_id=sponsor.id, request_id=req.id)}}">
                                                         <span class="icon">
@@ -317,6 +373,7 @@
                                                         </span>
                                                         <span class="has-text-danger">แนบใบเสร็จ</span>
                                                     </a>
+                                                    {% endif %}
                                                 {% endif %}
                                             {% else %}
                                                 {% for doc in req.receipt_docs %}
@@ -350,6 +407,17 @@
                                         <td>{{ req.status }}</td>
                                         <td>
                                             {{ req.updated_at|localdatetime or '' }}
+                                            {% if is_admin %}
+                                                {% if not req.updated_at %}
+                                                    <a href="{{ url_for('cmte.manage_edit_sponsor', request_id=req.id) }}"
+                                                       class="button is-success is-outlined">
+                                                        <span class="icon">
+                                                            <i class="fas fa-star has-text-warning fa-pulse"></i>
+                                                        </span>
+                                                        <span>รายละเอียด</span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -364,25 +432,27 @@
         </div>
         {% if not sponsor.disable_at or is_admin %}
         <h1 class="title has-text-centered">รายชื่อผู้ประสานงาน</h1>
-        <div class="has-text-centered">
-            <a href="{{ url_for('cmte.register_sponsor_member', sponsor_id=sponsor.id) }}"
-               class="button is-info">
-                <span class="icon">
-                    <i class="fa-solid fa-user-plus"></i>
-                </span>
-                <span>เพิ่มผู้ประสานงาน</span>
-            </a>
-            {% if not is_admin and not current_user.is_coordinator %}
-            <a onclick="return confirm('แน่ใจหรือไม่ ที่จะส่งคำขอปรับเป็นผู้ประสานงานหลัก')"
-                href="{{ url_for('cmte.request_change_coordinator_member', sponsor_id=sponsor.id, member_id=current_user.id) }}"
-                class="button is-success is-outlined">
-                <span class="icon">
-                    <i class="fa-solid fa-people-carry"></i>
-                </span>
-                <span>ขอเป็นผู้ประสานงานหลัก</span>
-            </a>
-            {% endif %}
-        </div>
+        {% if sponsor.registered_datetime %}
+            <div class="has-text-centered">
+                <a href="{{ url_for('cmte.register_sponsor_member', sponsor_id=sponsor.id) }}"
+                   class="button is-info">
+                    <span class="icon">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </span>
+                    <span>เพิ่มผู้ประสานงาน</span>
+                </a>
+                {% if not is_admin and not current_user.is_coordinator %}
+                <a onclick="return confirm('แน่ใจหรือไม่ ที่จะส่งคำขอปรับเป็นผู้ประสานงานหลัก')"
+                    href="{{ url_for('cmte.request_change_coordinator_member', sponsor_id=sponsor.id, member_id=current_user.id) }}"
+                    class="button is-success is-outlined">
+                    <span class="icon">
+                        <i class="fa-solid fa-people-carry"></i>
+                    </span>
+                    <span>ขอเป็นผู้ประสานงานหลัก</span>
+                </a>
+                {% endif %}
+            </div>
+        {% endif %}
         <div class="columns">
             <div class="column">
                 <table class="table is-fullwidth is-striped is-bordered">
