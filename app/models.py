@@ -63,7 +63,7 @@ class Client(db.Model):
         return self._secret
 
     @client_secret.setter
-    def set_client_secret(self):
+    def client_secret(self, value):
         raise ValueError
 
     def generate_client_secret(self):
