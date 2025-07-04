@@ -717,10 +717,11 @@ def cmte_fee_payment_form():
 @member.route('/api/members/search', methods=['GET', 'POST'])
 def search_member_api():
     query = request.args.get('query')
+    query = query.strip()
     if query:
         template = '''<table class="table is-fullwidth is-striped">'''
         template += '''
-        <thead><th>Name</th><th>License No.</th><th>License Date</th><th>Status</th></thead>
+        <thead><th>ชื่อ</th><th>หมายเลขใบอนุญาตฯ</th><th>วันขึ้นทะเบียน - หมดอายุ</th><th>สถานะใบอนุญาต</th></thead>
         <tbody>
         '''
         licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
