@@ -338,6 +338,50 @@ def view_member_info():
     return render_template('members/member_info.html')
 
 
+@member.route('/login-otp', methods=['GET', 'POST'])
+def login():
+    url = 'https://mtc.thaijobjob.com/api/auth/otp-confirm-login-mobile'
+    form = MemberLoginForm()
+    if form.validate_on_submit():
+        user = Member.query.filter_by(pid=form.pid.data).first()
+        data = {
+            'otp': form.otp.data,
+            'license_no': user.license_number,
+            'action': 'confirm_otp_login',
+            'mobile_number': form.telephone.data,
+            'id_card': form.pid.data
+        }
+        mobile_ref_id = request.form.get('mobile_ref_id')
+        if mobile_ref_id:
+            data['mobile_ref_id'] = mobile_ref_id
+            data['action'] = 'confirm_otp_register'
+
+        print('Confirming OTP..')
+        retry = Retry(
+            total=5,
+            backoff_factor=2,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        s = requests.Session()
+        s.mount('https://', adapter)
+        response = s.post(f'{url}', json=data,
+                          headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
+        print(response.status_code)
+        if response.status_code == 200:
+            session['login_as'] = 'member'
+            login_user(user, remember=True)
+            identity_changed.send(current_app._get_current_object(), identity=Identity(user.unique_id))
+            flash('Logged in successfully', 'success')
+            if request.args.get('next'):
+                return redirect(request.args.get('next'))
+            else:
+                return redirect(url_for('member.index'))
+        else:
+            flash('OTP not matched.', 'danger')
+
+    return render_template('members/login-otp.html', form=form, old_form=old_form)
+
+
 @member.route('/login', methods=['GET', 'POST'])
 def login():
     url = 'https://mtc.thaijobjob.com/api/auth/otp-confirm-login-mobile'
