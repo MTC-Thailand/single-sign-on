@@ -339,9 +339,10 @@ def view_member_info():
 
 
 @member.route('/login-otp', methods=['GET', 'POST'])
-def login():
+def login_otp():
     url = 'https://mtc.thaijobjob.com/api/auth/otp-confirm-login-mobile'
     form = MemberLoginForm()
+    old_form = MemberLoginOldForm()
     if form.validate_on_submit():
         user = Member.query.filter_by(pid=form.pid.data).first()
         data = {
