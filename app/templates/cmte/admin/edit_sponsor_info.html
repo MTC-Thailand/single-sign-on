@@ -27,13 +27,19 @@
                     <div class="field">
                         <div class="select">
                             {{ form.type(**{'hx-get': url_for("cmte.get_org_type", sponsor_id=sponsor.id),
-                            'hx-target': '#related-type', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
+                            'hx-target': '#related-type', 'hx-swap': 'innerHTML', 'hx-trigger': 'change, load'}) }}
                         </div>
                     </div>
                     <div class="field">
                         <label class="label" style="padding-left: 50px">
                             <div id="related-type"></div>
                         </label>
+                    </div>
+                    <div class="field">
+                        <label class="label">นักเทคนิคการแพทย์ในองค์กร</label>
+                        <div class="control">
+                            {{ form.has_med_tech(required=True) }}
+                        </div>
                     </div>
                     <div class="field">
                         <label class="label">ประเภทหน่วยงาน</label>

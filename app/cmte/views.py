@@ -1735,6 +1735,7 @@ def edit_sponsor(sponsor_id):
                     doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                     doc.note = request.form.get(field + '_note')
                     db.session.add(doc)
+            sponsor.has_med_tech = form.has_med_tech.data == 'True'
             db.session.commit()
             flash(f'แก้ไขข้อมูลเรียบร้อย', 'success')
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
