@@ -27,7 +27,7 @@
                     <div class="field">
                         <div class="select">
                             {{ form.type(**{'hx-get': url_for("cmte.get_org_type", sponsor_id=sponsor.id),
-                            'hx-target': '#related-type', 'hx-swap': 'innerHTML', 'hx-trigger': 'change, load'}) }}
+                            'hx-target': '#related-type', 'hx-swap': 'innerHTML', 'hx-trigger': 'change'}) }}
                         </div>
                     </div>
                     <div class="field">

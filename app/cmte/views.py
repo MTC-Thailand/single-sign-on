@@ -1364,6 +1364,9 @@ def get_org_type(sponsor_id=None):
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         if sponsor.type_detail:
             type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{sponsor.type_detail}</textarea>'''
+        elif org_type == 'หน่วยงานอื่นๆ':
+            detail = 'โปรดระบุ'
+            type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
         else:
             type_detail = ''
     resp = make_response(type_detail)
