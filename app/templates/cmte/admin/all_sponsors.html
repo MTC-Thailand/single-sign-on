@@ -51,8 +51,7 @@
                                     </td>
                                     <td>
                                         <div id="sponsor-modal-container"></div>
-                                        <a hx-get="{{ url_for('cmte.sponsor_modal', sponsor_id=sponsor.id) }}"
-                                           hx-target="#sponsor-modal-container" hx-swap="innerHTML"
+                                        <a href="{{ url_for('cmte.edit_sponsor', sponsor_id=sponsor.id) }}"
                                             class="button is-info is-light">
                                             <span class="icon">
                                                 <i class="fa-solid fa-pencil"></i>
