@@ -1691,7 +1691,6 @@ def approved_renew_sponsor(request_id):
     renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(renew_request)
     db.session.commit()
-    flash('อนุมัติคำขอต่ออายุสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
 
     mails = []
     all_members = CMTESponsorMember.query.filter_by(sponsor=renew_request.sponsor).all()
@@ -1699,17 +1698,42 @@ def approved_renew_sponsor(request_id):
         mails.append(member.email)
 
     url = url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor.id, _external=True)
-    message = f'''
-                    เรียน ผู้ประสานงาน 
 
-                    คำขอต่ออายุสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
-                    \n
-                    และกรุณาดำเนินการแนบ slip ที่ {url}
-                    \n\n
-                    หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
-                    '''
+    if renew_request.type == 'new':
+        message = f'''
+                            เรียน ผู้ประสานงาน 
+
+                            คำขอขึ้นทะเบียนสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
+                            \n
+                            และกรุณาดำเนินการแนบ slip ที่ {url}
+                            \n\n
+                            หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                            '''
+        topic = 'MTC-CMTE อนุมัติการขึ้นทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม'
+
+        flash('อนุมัติคำขอขึ้นทะเบียนสถาบันแล้ว', 'success')
+    elif renew_request.type == 'renew':
+        message = f'''
+                            เรียน ผู้ประสานงาน 
+
+                            คำขอต่ออายุสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
+                            \n
+                            และกรุณาดำเนินการแนบ slip ที่ {url}
+                            \n\n
+                            หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                            '''
+        topic = 'MTC-CMTE อนุมัติการต่อทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม'
+
+        flash('อนุมัติคำขอต่ออายุสถาบันแล้ว', 'success')
+    else:
+        flash('เกิดข้อผิดพลาดจากระบบ ไม่สามารถดำเนินการส่งอีเมลไปยังสถาบันได้', 'danger')
+
     if not current_app.debug:
-        send_mail(mails, 'MTC-CMTE อนุมัติการต่อทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม', message)
+        if message:
+            if mails:
+                send_mail(mails, topic, message)
+            else:
+                flash('เกิดข้อผิดพลาด ไม่สามารถส่งอีเมลไปยังสถาบันได้', 'danger')
     else:
         print(mails, message)
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
