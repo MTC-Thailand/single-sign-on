@@ -1316,7 +1316,8 @@ def register_sponsor():
                     create_request = CMTESponsorRequest(
                         sponsor=sponsor,
                         created_at=arrow.now('Asia/Bangkok').datetime,
-                        type='new'
+                        type='new',
+                        member=current_user
                     )
                     db.session.add(create_request)
                     db.session.commit()
