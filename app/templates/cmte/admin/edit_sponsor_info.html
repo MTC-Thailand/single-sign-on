@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 
 {% block title %}Edit Sponsor Form{% endblock %}
-
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
 {% block content %}
     {% include "admin_nav.html" %}
     <section class="section">
@@ -117,6 +120,48 @@
 {% endblock %}
 {% block scripts %}
     {{ super() }}
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+    $(document).ready(function () {
+        $("input[name='registered_datetime']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            autoUpdateInput: false,
+            {% if form.registered_datetime.data %}
+                startDate: {{form.registered_datetime.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            {% endif %}
+        timePicker: true,
+            timePicker24Hour: true,
+            timePickerIncrement: 30,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY HH:mm'
+        }
+        })
+        $('input[name="registered_datetime"]').on('apply.daterangepicker', function (evt, picker) {
+            $(this).val(picker.startDate.format('DD/MM/YYYY HH:mm'))
+        })
+        $("input[name='expire_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            autoUpdateInput: false,
+            {% if form.expire_date.data %}
+                startDate: {{form.expire_date.data.strftime('%d/%m/%Y')|tojson|safe}},
+            {% endif %}
+            timePicker: false,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY'
+        }
+        })
+        $('input[name="expire_date"]').on('apply.daterangepicker', function (evt, picker) {
+            $(this).val(picker.startDate.format('DD/MM/YYYY'))
+        })
+    })
+</script>
     <script>
     $(document).ready(()=>{
         htmx.trigger('#private_sector', 'change')

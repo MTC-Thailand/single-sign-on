@@ -1356,17 +1356,17 @@ def register_sponsor():
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def get_org_type(sponsor_id=None):
     org_type = request.args.get('type', type=str)
-    if org_type == 'หน่วยงานอื่นๆ':
-        detail = 'โปรดระบุ'
-        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
-    else:
-        type_detail = ''
+    detail = 'โปรดระบุ'
     if sponsor_id:
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         if sponsor.type_detail:
             type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{sponsor.type_detail}</textarea>'''
         elif org_type == 'หน่วยงานอื่นๆ':
-            detail = 'โปรดระบุ'
+            type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
+        else:
+            type_detail = ''
+    else:
+        if org_type == 'หน่วยงานอื่นๆ':
             type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
         else:
             type_detail = ''
