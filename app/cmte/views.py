@@ -1316,7 +1316,8 @@ def register_sponsor():
                     create_request = CMTESponsorRequest(
                         sponsor=sponsor,
                         created_at=arrow.now('Asia/Bangkok').datetime,
-                        type='new'
+                        type='new',
+                        member=current_user
                     )
                     db.session.add(create_request)
                     db.session.commit()
@@ -1364,6 +1365,9 @@ def get_org_type(sponsor_id=None):
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         if sponsor.type_detail:
             type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{sponsor.type_detail}</textarea>'''
+        elif org_type == 'หน่วยงานอื่นๆ':
+            detail = 'โปรดระบุ'
+            type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
         else:
             type_detail = ''
     resp = make_response(type_detail)
@@ -1688,7 +1692,6 @@ def approved_renew_sponsor(request_id):
     renew_request.approved_at = arrow.now('Asia/Bangkok').datetime
     db.session.add(renew_request)
     db.session.commit()
-    flash('อนุมัติคำขอต่ออายุสถาบันแล้ว สถาบันได้รับการแจ้งเตือนเรียบร้อยแล้ว', 'success')
 
     mails = []
     all_members = CMTESponsorMember.query.filter_by(sponsor=renew_request.sponsor).all()
@@ -1696,17 +1699,42 @@ def approved_renew_sponsor(request_id):
         mails.append(member.email)
 
     url = url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor.id, _external=True)
-    message = f'''
-                    เรียน ผู้ประสานงาน 
 
-                    คำขอต่ออายุสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
-                    \n
-                    และกรุณาดำเนินการแนบ slip ที่ {url}
-                    \n\n
-                    หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
-                    '''
+    if renew_request.type == 'new':
+        message = f'''
+                            เรียน ผู้ประสานงาน 
+
+                            คำขอขึ้นทะเบียนสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
+                            \n
+                            และกรุณาดำเนินการแนบ slip ที่ {url}
+                            \n\n
+                            หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                            '''
+        topic = 'MTC-CMTE อนุมัติการขึ้นทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม'
+
+        flash('อนุมัติคำขอขึ้นทะเบียนสถาบันแล้ว', 'success')
+    elif renew_request.type == 'renew':
+        message = f'''
+                            เรียน ผู้ประสานงาน 
+
+                            คำขอต่ออายุสถาบันฝึกอบรมการศึกษาต่อเนื่องของ {renew_request.sponsor.name} ผ่านการอนุมัติแล้ว กรุณาดำเนินการชำระค่าธรรมเนียม
+                            \n
+                            และกรุณาดำเนินการแนบ slip ที่ {url}
+                            \n\n
+                            หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                            '''
+        topic = 'MTC-CMTE อนุมัติการต่อทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม'
+
+        flash('อนุมัติคำขอต่ออายุสถาบันแล้ว', 'success')
+    else:
+        flash('เกิดข้อผิดพลาดจากระบบ ไม่สามารถดำเนินการส่งอีเมลไปยังสถาบันได้', 'danger')
+
     if not current_app.debug:
-        send_mail(mails, 'MTC-CMTE อนุมัติการต่อทะเบียนสถาบัน กรุณาชำระค่าธรรมเนียม', message)
+        if message:
+            if mails:
+                send_mail(mails, topic, message)
+            else:
+                flash('เกิดข้อผิดพลาด ไม่สามารถส่งอีเมลไปยังสถาบันได้', 'danger')
     else:
         print(mails, message)
     return redirect(url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor_id))
@@ -1735,6 +1763,7 @@ def edit_sponsor(sponsor_id):
                     doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                     doc.note = request.form.get(field + '_note')
                     db.session.add(doc)
+            sponsor.has_med_tech = form.has_med_tech.data == 'True'
             db.session.commit()
             flash(f'แก้ไขข้อมูลเรียบร้อย', 'success')
             return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
