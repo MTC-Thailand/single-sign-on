@@ -168,7 +168,13 @@
                                     <i class="fa-solid fa-file-arrow-down"></i>
                                 </span>
                                 <span>Download Slip</span>
-                            </a>
+                            </a><br>
+                            <span>{% for doc in event.docs %}
+                                รายละเอียดบนใบเสร็จ ออกในนาม: {{ doc.bill_name }} รายการที่แสดงในใบเสร็จ(ถ้ามี): {{ doc.receipt_item or "" }} <br>
+                                เลขที่ผู้เสียภาษี(ถ้ามี): {{ doc.tax_id or "" }}<br>
+                                ที่อยู่: {{ doc.address }} ที่อยู่จัดส่ง: {{ doc.shipping_address }}
+
+                            {% endfor %}</span>
                             {% endif %}
                         </td>
                         <td>
