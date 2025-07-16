@@ -216,7 +216,7 @@ def search_member():
         for lic, member in licenses:
             url = url_for('webadmin.edit_member_info', member_id=member.id)
             status_tag = '<span class="tag {}">{}</span>'
-            if lic.end_date <= datetime.today().date():
+            if lic.is_expired:
                 lic_status = status_tag.format('is-danger', 'หมดอายุ')
             elif lic.status:
                 if lic.status == 'ปกติ':

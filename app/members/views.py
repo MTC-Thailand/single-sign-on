@@ -740,7 +740,7 @@ def search_member_api():
             licenses = [(member.license, member) for member in members]
         for lic, member in licenses:
             status_tag = '<span class="tag {}">{}</span>'
-            if lic.end_date <= datetime.today().date():
+            if lic.is_expired:
                 lic_status = status_tag.format('is-danger', 'หมดอายุ')
             elif lic.status:
                 if lic.status == 'ปกติ':

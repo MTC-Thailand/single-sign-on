@@ -112,7 +112,7 @@ class License(db.Model):
 
     @property
     def is_expired(self):
-        return self.end_date <= date.today()
+        return self.end_date < date.today()
 
 
 # class MemberAddress(db.Model):
