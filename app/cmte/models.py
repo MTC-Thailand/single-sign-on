@@ -508,6 +508,11 @@ class CMTEEventDoc(db.Model):
     record = db.relationship(CMTEEventParticipationRecord,
                              backref=db.backref('docs', cascade='all, delete-orphan'))
     is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
+    bill_name = db.Column('bill_name', db.String())
+    receipt_item = db.Column('receipt_item', db.Text())
+    tax_id = db.Column('tax_id', db.String())
+    address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
+    shipping_address = db.Column('shipping_address', db.Text(), info={'label': 'ที่อยู่สำหรับจัดส่งใบเสร็จ'})
 
 
 class CMTEFeePaymentRecord(db.Model):
