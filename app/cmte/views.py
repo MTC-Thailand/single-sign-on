@@ -1575,7 +1575,7 @@ def sponsor_payment(sponsor_id, request_id):
 @cmte_sponsor_admin_permission.require()
 def request_renew_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
-    is_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, paid_at=None).first()
+    is_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, type='renew',paid_at=None).first()
     if not is_request:
         create_request = CMTESponsorRequest(
             sponsor_id=sponsor_id,
