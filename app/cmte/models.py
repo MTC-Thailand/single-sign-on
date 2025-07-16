@@ -524,11 +524,6 @@ class CMTEFeePaymentRecord(db.Model):
     doc_id = db.Column('doc_id', db.ForeignKey('cmte_event_docs.id'))
     doc = db.relationship(CMTEEventDoc, uselist=False)
     note = db.Column('note', db.Text, info={'label': 'หมายเหตุ'})
-    bill_name = db.Column('bill_name', db.String())
-    receipt_item = db.Column('receipt_item', db.Text())
-    tax_id = db.Column('tax_id', db.String())
-    address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
-    shipping_address = db.Column('shipping_address', db.Text(), info={'label': 'ที่อยู่สำหรับจัดส่งใบเสร็จ'})
 
     def to_dict(self):
         return {'end_date': self.end_date.strftime('%Y-%m-%d') if self.end_date else None,
