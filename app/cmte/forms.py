@@ -213,6 +213,14 @@ class CMTESponsorReceiptForm(FlaskForm):
 
 
 class CMTEPaymentForm(FlaskForm):
+    class Meta:
+        model = CMTEEventSponsor
+
+    name = TextAreaField('name', render_kw={'class': 'textarea'})
+    receipt_item = TextAreaField('receipt_item', render_kw={'class': 'textarea'})
+    tax_id = TextAreaField('tax_id', render_kw={'class': 'textarea'})
+    address = TextAreaField('address', render_kw={'class': 'textarea'})
+    shipping_address = TextAreaField('shipping_address', render_kw={'class': 'textarea'})
     upload_file = FormField(CMTEEventDocForm, default=CMTEEventDoc)
 
 
