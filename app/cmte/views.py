@@ -609,8 +609,10 @@ def submit_event(event_id):
 @cmte_sponsor_admin_permission.require()
 def process_payment(event_id):
     pay_amount = request.args.get('pay_amount', None)
-    form = CMTEPaymentForm()
     event = CMTEEvent.query.get(event_id)
+    form = CMTEPaymentForm(obj=event.sponsor)
+    form.address.data = f"{event.sponsor.address} {event.sponsor.zipcode}"
+    form.shipping_address.data = f"{event.sponsor.address} {event.sponsor.zipcode}"
     if request.method == 'POST':
         if form.validate_on_submit():
             doc = CMTEEventDoc.query.filter_by(event_id=event_id, is_payment_slip=True).first()
@@ -629,6 +631,11 @@ def process_payment(event_id):
                 doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                 doc.note = form.upload_file.note.data
                 doc.is_payment_slip = True
+                doc.bill_name = request.form.get('name')
+                doc.receipt_item = request.form.get('receipt_item')
+                doc.tax_id = request.form.get('tax_id')
+                doc.address = request.form.get('address')
+                doc.shipping_address = request.form.get('shipping_address')
                 db.session.add(doc)
                 event.payment_datetime = arrow.now('Asia/Bangkok').datetime
                 db.session.add(event)
@@ -1356,17 +1363,17 @@ def register_sponsor():
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def get_org_type(sponsor_id=None):
     org_type = request.args.get('type', type=str)
-    if org_type == 'หน่วยงานอื่นๆ':
-        detail = 'โปรดระบุ'
-        type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
-    else:
-        type_detail = ''
+    detail = 'โปรดระบุ'
     if sponsor_id:
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
         if sponsor.type_detail:
             type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1">{sponsor.type_detail}</textarea>'''
         elif org_type == 'หน่วยงานอื่นๆ':
-            detail = 'โปรดระบุ'
+            type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
+        else:
+            type_detail = ''
+    else:
+        if org_type == 'หน่วยงานอื่นๆ':
             type_detail = f'''{detail}<textarea name="type_detail" class="textarea" rows="1"></textarea>'''
         else:
             type_detail = ''
@@ -1575,7 +1582,7 @@ def sponsor_payment(sponsor_id, request_id):
 @cmte_sponsor_admin_permission.require()
 def request_renew_sponsor(sponsor_id):
     sponsor = CMTEEventSponsor.query.get(sponsor_id)
-    is_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, paid_at=None).first()
+    is_request = CMTESponsorRequest.query.filter_by(sponsor_id=sponsor_id, type='renew',paid_at=None).first()
     if not is_request:
         create_request = CMTESponsorRequest(
             sponsor_id=sponsor_id,

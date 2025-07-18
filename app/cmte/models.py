@@ -225,7 +225,7 @@ class CMTEReceiptDetail(db.Model):
 
 
     def __str__(self):
-        return f'รายละเอียดบนใบเสร็จ ออกใบนาม: {self.name} รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} ที่อยู่จัดส่ง: {self.shipping_address}'
+        return f'รายละเอียดบนใบเสร็จ ออกในนาม: {self.name} รายการที่แสดงในใบเสร็จ(ถ้ามี): {self.receipt_item or ""} เลขที่ผู้เสียภาษี(ถ้ามี): {self.tax_id or ""} ที่อยู่: {self.address} ที่อยู่จัดส่ง: {self.shipping_address}'
 
 
 class CMTEEventCategory(db.Model):
@@ -508,6 +508,11 @@ class CMTEEventDoc(db.Model):
     record = db.relationship(CMTEEventParticipationRecord,
                              backref=db.backref('docs', cascade='all, delete-orphan'))
     is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
+    bill_name = db.Column('bill_name', db.String())
+    receipt_item = db.Column('receipt_item', db.Text())
+    tax_id = db.Column('tax_id', db.String())
+    address = db.Column('address', db.Text(), info={'label': 'ที่อยู่'})
+    shipping_address = db.Column('shipping_address', db.Text(), info={'label': 'ที่อยู่สำหรับจัดส่งใบเสร็จ'})
 
 
 class CMTEFeePaymentRecord(db.Model):
