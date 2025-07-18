@@ -7,7 +7,7 @@
 <section class="section">
     {% include "messages.html" %}
     <div class="columns">
-        <div class="column is-one-third is-offset-2">
+        <div class="column is-one-third is-offset-1">
             <h1 class="title is-size-6">Log In ด้วยระบบ One Platform</h1>
             <form method="post" class="notification is-light">
                 {{form.hidden_tag()}}
@@ -47,7 +47,7 @@
                 </div>
             </form>
         </div>
-        <div class="column is-one-third is-offset-3">
+        <div class="column is-one-third">
             <h1 class="title is-size-6">Log In ด้วย username และ password</h1>
             <form class="notification is-warning is-light" method="post" action="{{url_for('member.old_form_login')}}">
                 {{old_form.hidden_tag()}}
