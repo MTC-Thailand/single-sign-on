@@ -8,7 +8,28 @@
         <div class="columns">
             <div class="column">
                 <h1 class="title is-size-4">รายการกิจกรรมรออนุมัติคะแนน</h1>
-                {{pending_participants|safe}}
+                <table class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อกิจกรรม</th>
+                    <th>สถาบัน</th>
+                    <th>วันที่ยื่นรายชื่อ</th>
+                    <th>รออนุมัติ</th>
+                    </thead>
+                    {% for idx, row in pending_participants.iterrows() %}
+                    <tr>
+                        <td>{{row.title}}</td>
+                        <td>{{row.sponsor}}</td>
+                        <td>{{row.participant_updated_at|localdatetime}}</td>
+                        <td>
+                            <a href="{{url_for('cmte.admin_preview_event', event_id=row.event_id)}}">
+                              <span class="tag is-rounded is-danger">
+                                {{row.number}}
+                              </span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
             </div>
             <div class="column">
                 <article class="panel is-info">

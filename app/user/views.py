@@ -103,15 +103,15 @@ def cmte_admin_index():
                                                                               approved_date=None,
                                                                               closed_date=None).count()
     pending_events = CMTEEvent.query.filter_by(approved_datetime=None, cancelled_datetime=None).count()
-    query = '''SELECT e.title, s.name, e.participant_updated_at, count(*) FROM cmte_event_participation_records AS r
+    query = '''SELECT e.id as event_id, e.title as title, e.participant_updated_at as participant_updated_at, s.name as sponsor, count(*) as number FROM cmte_event_participation_records AS r
     INNER JOIN cmte_events AS e ON r.event_id = e.id
     INNER JOIN cmte_event_sponsors AS s ON e.sponsor_id = s.id
-    WHERE e.participant_updated_at is not null
-    GROUP BY e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC LIMIT 10
+    WHERE e.participant_updated_at is not null AND e.approved_datetime is not null AND r.approved_date is null
+    GROUP BY e.id, e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC
     '''
     df = pd.read_sql_query(query, con=db.engine)
     return render_template('cmte/admin/index.html',
-                           pending_participants=df.to_html(classes='table is-striped'),
+                           pending_participants=df,
                            pending_payments=pending_payments,
                            pending_events=pending_events,
                            pending_individual_records=pending_individual_records,
