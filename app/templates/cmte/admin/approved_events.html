@@ -8,6 +8,33 @@
     {% include "messages.html" %}
     <div class="columns">
       <div class="column">
+        <h1 class="title is-size-4">รออนุมัติคะแนนเพิ่มเติม</h1>
+        <table class="table is-fullwidth">
+          <thead>
+          <th>ชื่อกิจกรรม</th>
+          <th>สถาบัน</th>
+          <th>วันที่ยื่นรายชื่อ</th>
+          <th>รออนุมัติ</th>
+          </thead>
+        {% for idx, row in pendings.iterrows() %}
+        <tr>
+          <td>{{row.title}}</td>
+          <td>{{row.sponsor}}</td>
+          <td>{{row.participant_updated_at|localdatetime}}</td>
+          <td>
+            <a href="{{url_for('cmte.admin_preview_event', event_id=row.event_id)}}">
+              <span class="tag is-rounded is-danger">
+                {{row.number}}
+              </span>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+        </table>
+      </div>
+    </div>
+    <div class="columns">
+      <div class="column">
         <div class="tabs is-boxed">
           <ul>
             <li {% if _type=='pending' %} class="is-active" {% endif %}><a href="{{url_for('cmte.admin_pending_events', _type='pending')}}">รออนุมัติ</a></li>

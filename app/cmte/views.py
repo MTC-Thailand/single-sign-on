@@ -362,6 +362,9 @@ def add_participants(event_id):
                 rec.submitted_name = row['name']
                 db.session.add(rec)
                 db.session.commit()
+            event.participant_updated_at = arrow.now('Asia/Bangkok').datetime
+            db.session.add(event)
+            db.session.commit()
             flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
 
             evidence_file = form.evidence_file.data
@@ -785,14 +788,32 @@ def approve_event_participation_records(event_id):
 @login_required
 @cmte_admin_permission.require()
 def admin_pending_events():
-    return render_template('cmte/admin/approved_events.html', _type='pending')
+    query = '''SELECT e.id as event_id, e.title as title, e.participant_updated_at as participant_updated_at, s.name as sponsor, count(*) as number FROM cmte_event_participation_records AS r
+    INNER JOIN cmte_events AS e ON r.event_id = e.id
+    INNER JOIN cmte_event_sponsors AS s ON e.sponsor_id = s.id
+    WHERE e.participant_updated_at is not null AND e.approved_datetime is not null AND r.approved_date is null
+    GROUP BY e.id, e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC
+    '''
+    df = pd.read_sql_query(query, con=db.engine)
+    return render_template('cmte/admin/approved_events.html',
+                           _type='pending',
+                           pendings=df)
 
 
 @cmte.get('/admin/events/approved')
 @login_required
 @cmte_admin_permission.require()
 def admin_approved_events():
-    return render_template('cmte/admin/approved_events.html', _type='approved')
+    query = '''SELECT e.id as event_id, e.title as title, e.participant_updated_at as participant_updated_at, s.name as sponsor, count(*) as number FROM cmte_event_participation_records AS r
+    INNER JOIN cmte_events AS e ON r.event_id = e.id
+    INNER JOIN cmte_event_sponsors AS s ON e.sponsor_id = s.id
+    WHERE e.participant_updated_at is not null AND e.approved_datetime is not null AND r.approved_date is null
+    GROUP BY e.id, e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC
+    '''
+    df = pd.read_sql_query(query, con=db.engine)
+    return render_template('cmte/admin/approved_events.html',
+                           _type='approved',
+                           pendings=df)
 
 
 @cmte.get('/api/events')
