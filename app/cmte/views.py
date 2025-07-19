@@ -23,8 +23,6 @@ from app.cmte.forms import *
 from app.members.models import License, Member
 from app.cmte.models import *
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
-from flask_mail import Message
-from apscheduler.schedulers.blocking import BlockingScheduler
 bangkok = timezone('Asia/Bangkok')
 
 
@@ -325,48 +323,71 @@ def preview_event(event_id):
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def add_participants(event_id):
     errors = []
-    form = CMTEParticipantFileUploadForm()
-    event = CMTEEvent.query.get(event_id)
-    _file = form.upload_file.data
-    if _file:
-        df = pd.read_excel(_file, sheet_name='Sheet1')
-        for idx, row in df.iterrows():
-            if not pd.isna(row['license_number']):
-                license_number = str(int(row['license_number']))
-                score = float(row['score'])
-                license = License.query.filter_by(number=license_number).first()
-            else:
-                license = None
-
-            if not license:
-                errors.append({
-                    'name': row['name'],
-                    'license_number': row['license_number'],
-                    'score': row['score'],
-                    'note': 'License not found.'
-                })
-                continue
-
-            rec = CMTEEventParticipationRecord.query.filter_by(
-                license_number=license_number,
-                event_id=event_id).first()
-            if not rec:
-                rec = CMTEEventParticipationRecord()
-                rec.license_number = license_number
-                rec.event_id = event_id
-            rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-            rec.score = event.cmte_points if score > event.cmte_points else score
-            rec.submitted_name = row['name']
-            db.session.add(rec)
-            db.session.commit()
-        flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
-    else:
-        flash('ไม่พบ file ข้อมูล', 'danger')
-    if errors:
-        df_ = pd.DataFrame(errors)
-        return render_template('cmte/sponsor/score_upload_errors.html', errors=df_.to_html(classes=['table is-striped']),
-                               event=event)
+    source = request.args.get('source')
     if request.args.get('source') == 'admin':
+        form = CMTEAdminParticipantFileUploadForm()
+    else:
+        form = CMTEParticipantFileUploadForm()
+    event = CMTEEvent.query.get(event_id)
+    if form.validate_on_submit():
+        score_file = form.upload_file.data
+        if score_file:
+            df = pd.read_excel(score_file, sheet_name='Sheet1')
+            for idx, row in df.iterrows():
+                if not pd.isna(row['license_number']):
+                    license_number = str(int(row['license_number']))
+                    score = float(row['score'])
+                    license = License.query.filter_by(number=license_number).first()
+                else:
+                    license = None
+
+                if not license:
+                    errors.append({
+                        'name': row['name'],
+                        'license_number': row['license_number'],
+                        'score': row['score'],
+                        'note': 'License not found.'
+                    })
+                    continue
+
+                rec = CMTEEventParticipationRecord.query.filter_by(
+                    license_number=license_number,
+                    event_id=event_id).first()
+                if not rec:
+                    rec = CMTEEventParticipationRecord()
+                    rec.license_number = license_number
+                    rec.event_id = event_id
+                rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+                rec.score = event.cmte_points if score > event.cmte_points else score
+                rec.submitted_name = row['name']
+                db.session.add(rec)
+                db.session.commit()
+            flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
+
+            evidence_file = form.evidence_file.data
+            if evidence_file:
+                s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                         aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                         region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+                filename = evidence_file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(evidence_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTEEventDoc(event=event, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = 'ไฟล์หลักฐานการเข้าร่วมกิจกรรม'
+                db.session.add(doc)
+                event.payment_datetime = arrow.now('Asia/Bangkok').datetime
+                db.session.add(event)
+                db.session.commit()
+        if errors:
+            df_ = pd.DataFrame(errors)
+            return render_template('cmte/sponsor/score_upload_errors.html',
+                                   errors=df_.to_html(classes=['table is-fullwidth is-striped']),
+                                   event=event,
+                                   source=source)
+    else:
+        flash(f'{form.errors}', 'danger')
+    if source == 'admin':
         return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
     return redirect(url_for('cmte.preview_event', event_id=event_id))
 
@@ -432,7 +453,7 @@ def admin_preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
     next_url = request.args.get('next_url')
     form = CMTEEventCodeForm()
-    participant_form = CMTEParticipantFileUploadForm()
+    participant_form = CMTEAdminParticipantFileUploadForm()
     return render_template('cmte/admin/event_preview.html',
                            event=event,
                            next_url=next_url,
@@ -2250,6 +2271,8 @@ def admin_confirm_payment(event_id):
     template = f'''
     <span class='tag is-rounded is-small is-success'>{event.payment_approved_at.strftime('%d/%m/%Y %H:%M')}</span>
     '''
+    resp = make_response(template)
+    resp.headers['HX-Refresh'] = 'true'
     return template
 
 

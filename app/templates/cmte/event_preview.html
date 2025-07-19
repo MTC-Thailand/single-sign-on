@@ -124,7 +124,7 @@
                     <tr>
                         <td><strong>เอกสารประกอบ</strong></td>
                         <td class="content">
-                            <ol>
+                            <ul>
                                 {% for doc in event.docs %}
                                 {% if not doc.is_payment_slip %}
                                 <li>
@@ -136,10 +136,11 @@
                                         <i class="fa-solid fa-file-arrow-down"></i>
                                     </span>
                                     </a>
+                                    {{doc.note or ''}}
                                 </li>
                                 {% endif %}
                                 {% endfor %}
-                            </ol>
+                            </ul>
                         </td>
                         <td>
                             {% if event.is_editable %}
@@ -255,21 +256,30 @@
                         <div class="field">
                             <label class="label">Upload รายชื่อ</label>
                             <div class="control">
-                                {{form.upload_file()}}
+                                {{form.upload_file(accept=".xlsx")}}
                                 <p class="help is-danger">กรุณาใช้ template file ในการส่งข้อมูล</p>
                             </div>
                         </div>
                         <div class="field is-grouped">
                             <div class="control">
-                                <input type="submit" value="Upload" class="button is-small is-success">
-                            </div>
-                            <div class="control">
-                                <a class="button is-small is-light" href="{{url_for('cmte.get_participants_template_file')}}">
+                                <a class="button is-link" href="{{url_for('cmte.get_participants_template_file')}}">
                                     <span class="icon">
                                         <i class="fas fa-file-download"></i>
                                     </span>
-                                    <span>template file</span>
+                                    <span>Template File</span>
                                 </a>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">Upload ไฟล์หลักฐานการเข้าร่วม</label>
+                            <div class="control">
+                                {{form.evidence_file(accept=".pdf")}}
+                                <p class="help is-danger">ส่ง PDF file เท่านั้น</p>
+                            </div>
+                        </div>
+                        <div class="field is-grouped">
+                            <div class="control">
+                                <input type="submit" value="Upload" class="button is-small is-success">
                             </div>
                         </div>
                     </form>

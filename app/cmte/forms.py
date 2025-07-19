@@ -1,9 +1,10 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
+from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import NumberRange, EqualTo, Email, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
-from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField, RadioField
+from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField, \
+    RadioField
 from wtforms_components import DateField, DateTimeField, TimeField
 
 from app.cmte.models import *
@@ -171,8 +172,7 @@ class CMTEEventSponsorForm(ModelForm):
                                               option_widget=CheckboxInput())
     private_sector = SelectField(choices=[('', 'องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
     has_med_tech = RadioField(choices=[('True', 'มีนักเทคนิคการแพทย์'), ('False', 'ไม่มีนักเทคนิคการแพทย์')],
-                            validators=[DataRequired()])
-
+                              validators=[DataRequired()])
 
 
 class CMTESponsorEditForm(ModelForm):
@@ -225,7 +225,13 @@ class CMTEPaymentForm(FlaskForm):
 
 
 class CMTEParticipantFileUploadForm(FlaskForm):
-    upload_file = FileField('Participants')
+    upload_file = FileField('ไฟล์รายชื่อผู้เข้าร่วม', validators=[DataRequired(), FileAllowed(['xlsx'])])
+    evidence_file = FileField('ไฟล์หลักฐาน', validators=[FileAllowed(['pdf']), DataRequired()])
+
+
+class CMTEAdminParticipantFileUploadForm(FlaskForm):
+    upload_file = FileField('ไฟล์รายชื่อผู้เข้าร่วม', validators=[DataRequired(), FileAllowed(['xlsx'])])
+    evidence_file = FileField('ไฟล์หลักฐาน', validators=[FileAllowed(['pdf'])])
 
 
 class CMTEAdminEventTypeForm(ModelForm):
