@@ -331,9 +331,13 @@ def add_participants(event_id):
     if _file:
         df = pd.read_excel(_file, sheet_name='Sheet1')
         for idx, row in df.iterrows():
-            license_number = str(row['license_number'])
-            score = float(row['score'])
-            license = License.query.filter_by(number=license_number).first()
+            if not pd.isna(row['license_number']):
+                license_number = str(int(row['license_number']))
+                score = float(row['score'])
+                license = License.query.filter_by(number=license_number).first()
+            else:
+                license = None
+
             if not license:
                 errors.append({
                     'name': row['name'],
@@ -360,7 +364,7 @@ def add_participants(event_id):
         flash('ไม่พบ file ข้อมูล', 'danger')
     if errors:
         df_ = pd.DataFrame(errors)
-        return render_template('cmte/admin/upload_errors.html', errors=df_.to_html(classes=['table is-striped']),
+        return render_template('cmte/sponsor/score_upload_errors.html', errors=df_.to_html(classes=['table is-striped']),
                                event=event)
     if request.args.get('source') == 'admin':
         return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
@@ -857,7 +861,7 @@ def load_pending_events():
 def approve_event(event_id):
     event = CMTEEvent.query.get(event_id)
     event.approved_datetime = arrow.now('Asia/Bangkok').datetime
-    event.submission_due_date = event.approved_datetime + timedelta(days=event.event_type.submission_due)
+    event.submission_due_date = event.end_date + timedelta(days=event.event_type.submission_due)
     cmte_points = request.form.get('cmte_points', type=float)
     event.cmte_points = cmte_points
     event.is_pending = False
