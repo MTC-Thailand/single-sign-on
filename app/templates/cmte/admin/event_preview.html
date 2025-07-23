@@ -87,7 +87,12 @@
                                 <span class="icon">
                                     <i class="fa-solid fa-file-arrow-down"></i>
                                 </span>
-                            </a>
+                            </a><br>
+                            <span>{% for doc in event.docs %}
+                                รายละเอียดบนใบเสร็จ ออกในนาม: {{ doc.bill_name }} รายการที่แสดงในใบเสร็จ(ถ้ามี): {{ doc.receipt_item or "" }} <br>
+                                เลขที่ผู้เสียภาษี(ถ้ามี): {{ doc.tax_id or "" }}<br>
+                                ที่อยู่: {{ doc.address }}<br> ที่อยู่จัดส่ง: {{ doc.shipping_address }}<br>
+                            {% endfor %}</span>
                             {% if not event.payment_approved_at %}
                             <div id="confirm_payment">
                                 <a class="button is-success" hx-post="{{url_for('cmte.admin_confirm_payment', event_id=event.id)}}"
