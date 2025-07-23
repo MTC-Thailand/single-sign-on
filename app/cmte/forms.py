@@ -127,6 +127,17 @@ class CMTESponsorMemberForm(ModelForm):
     confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
 
 
+class CMTESponsorMemberPasswordForm(ModelForm):
+    password = PasswordField('รหัสผ่าน',
+                             validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
+    confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
+
+
+class CMTEAdminSponsorMemberForm(ModelForm):
+    class Meta:
+        model = CMTESponsorMember
+
+
 class CMTESponsorMemberEditForm(ModelForm):
     class Meta:
         model = CMTESponsorMember

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Sponsor Member Form{% endblock %}
+
+{% block content %}
+{% include "cmte/nav.html" %}
+<section class="section">
+  <h1 class="title has-text-centered">Admin</h1>
+  {% include "messages.html" %}
+  <div class="columns">
+    <div class="column is-two-thirds is-offset-2 box">
+      <h1 class="title is-size-4 has-text-centered">แก้ไขข้อมูลผู้ประสานงานสถาบัน</h1>
+      <form method="post">
+        {{form.hidden_tag()}}
+        <div class="field">
+          <label class="label">{{form.title.label}}</label>
+          <div class="control">
+            {{form.title(class="input")}}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">{{form.firstname.label}}</label>
+          <div class="control">
+            {{form.firstname(class="input is-danger")}}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">{{form.lastname.label}}</label>
+          <div class="control">
+            {{form.lastname(class="input is-danger")}}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">{{form.email.label}}</label>
+          <div class="control">
+            {{form.email(class="input is-danger")}}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">{{form.mobile_phone.label}}</label>
+          <div class="control">
+            {{form.mobile_phone(class="input")}}
+          </div>
+          <p class="help is-info">กรอกเฉพาะหมายเลข เช่น 09099045xx</p>
+        </div>
+        <div class="field">
+          <div class="control">
+            <input type="submit" value="Save" class="button is-success">
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

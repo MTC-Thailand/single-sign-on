@@ -1124,6 +1124,56 @@ def sponsor_member_login():
     return render_template('cmte/sponsor/login_form.html', form=form)
 
 
+@cmte.route('/members/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    token = request.args.get('token')
+    email = request.args.get('email')
+    serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+    try:
+        token_data = serializer.loads(token)
+    except Exception as e:
+        return '<h1>Bad JSON Web token. You need a valid token.</h1>' + str(e)
+    else:
+        if token_data.get('email') != email:
+            return '<h1>Invalid JSON Web token.</h1>'
+
+        member = CMTESponsorMember.query.filter_by(email=email).first()
+        if not member:
+            return '<h1>Account not found.</h1>'
+        else:
+            form = CMTESponsorMemberPasswordForm()
+            if form.validate_on_submit():
+                member.password = request.form.get('password')
+                db.session.add(member)
+                db.session.commit()
+                return redirect(url_for('cmte.sponsor_member_login'))
+            return render_template('cmte/sponsor/reset_password_form.html', form=form)
+
+
+@cmte.route('/members/forget-password', methods=['GET', 'POST'])
+def forget_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        print(email)
+        member = CMTESponsorMember.query.filter_by(email=email).first()
+        if member:
+            serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+            token = serializer.dumps({'email': email})
+            url = url_for('cmte.reset_password', token=token, email=email, _external=True)
+            if not current_app.debug:
+                message = f'''
+                เรียน ท่านเจ้าของอีเมล
+                \n
+                กรุณาคลิกที่ลิงค์เพื่อยืนยันการแก้ไขรหัสผ่าน {url}
+                \n\n
+                หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                '''
+                send_mail([email], 'MTC-CMTE Email validation', message)
+                return redirect(url_for('cmte.sponsor_member_login'))
+
+    return render_template('cmte/sponsor/forget_password_form.html')
+
+
 @cmte.route('/validate-email', methods=['GET'])
 def validate_email():
     token = request.args.get('token')
@@ -1164,7 +1214,7 @@ def register_sponsor_member(sponsor_id=None):
             member = CMTESponsorMember()
             form.populate_obj(member)
             member.password = form.password.data
-            member.is_valid = True
+            member.is_valid = False
             serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
             token = serializer.dumps({'email': form.email.data})
             url = url_for('cmte.validate_email', token=token, email=form.email.data, _external=True)
@@ -2367,3 +2417,56 @@ def admin_edit_event_activity(event_type_id, event_activity_id=None):
         return redirect(url_for('cmte.admin_manage_event_activity', event_type_id=event_type_id))
     return render_template('cmte/admin/event_activity_form.html',
                            form=form, event_type_id=event_type_id)
+
+
+@login_required
+@cmte_admin_permission.require()
+@cmte.route('/admin/sponsors/members')
+def admin_list_sponsor_members():
+    members = CMTESponsorMember.query.all()
+    return render_template('cmte/admin/sponsor_members.html', members=members)
+
+
+@login_required
+@cmte_admin_permission.require()
+@cmte.route('/admin/sponsors/members/<int:member_id>/edit', methods=['GET', 'POST'])
+def admin_edit_sponsor_member(member_id):
+    member = CMTESponsorMember.query.get(member_id)
+    form = CMTEAdminSponsorMemberForm(obj=member)
+    if form.validate_on_submit():
+        email = form.email.data
+        _member = CMTESponsorMember.query.filter_by(email=email).first()
+        if _member and _member.id == member.id:
+            flash(f'Email นี้มีการลงทะเบียนใช้งานแล้ว', 'danger')
+            return render_template('cmte/admin/sponsor_member_form.html', form=form)
+        form.populate_obj(member)
+        db.session.add(member)
+        db.session.commit()
+        flash(f'แก้ไขข้อมูลผู้ประสานงานแล้ว', 'success')
+        return redirect(url_for('cmte.admin_list_sponsor_members'))
+    else:
+        if form.errors:
+            flash(f'{form.errors}', 'danger')
+    return render_template('cmte/admin/sponsor_member_form.html', form=form)
+
+
+@login_required
+@cmte_admin_permission.require()
+@cmte.route('/admin/sponsors/members/<int:member_id>/send-verification', methods=['GET', 'POST'])
+def admin_send_email_verification(member_id):
+    member = CMTESponsorMember.query.get(member_id)
+    serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+    token = serializer.dumps({'email': member.email})
+    url = url_for('cmte.validate_email', token=token, email=member.email, _external=True)
+    message = f'''
+    เรียน ท่านเจ้าของอีเมล
+
+    บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์ของหน่วยงาน {member.sponsor.name}
+    \n
+    กรุณาคลิกที่ลิงค์เพื่อยืนยัน {url}
+    \n\n
+    หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+    '''
+    send_mail([member.email], 'MTC-CMTE Email validation', message)
+    resp = make_response()
+    return resp
