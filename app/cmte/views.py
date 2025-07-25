@@ -2528,7 +2528,7 @@ def confirm_add_sponsor_members(req_id):
 
 
 @login_required
-@cmte_admin_permission.require()
+@cmte_admin_permission.union(cmte_sponsor_admin_permission).require()
 @cmte.route('/api/sponsors/members/')
 def get_sponsor_members():
     search_term = request.args.get('term', '')
@@ -2542,3 +2542,45 @@ def get_sponsor_members():
             })
     return jsonify({'results': results})
 
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/scores/')
+def admin_search_members():
+    return render_template('cmte/admin/member_cmte_scores.html')
+
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/<int:member_id>/scores/')
+def admin_check_member_cmte_scores(member_id):
+    member = Member.query.get(member_id)
+    records = CMTEEventParticipationRecord.query.filter_by(license_number=member.license.number)\
+        .filter(CMTEEventParticipationRecord.score.isnot(None))\
+        .order_by(CMTEEventParticipationRecord.score_valid_until.desc())
+    return render_template('cmte/admin/member_cmte_score_records.html',
+                           records=records, member=member)
+
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/scores/<int:record_id>', methods=['POST'])
+def admin_update_cmte_score_valid_date(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    record.set_score_valid_date()
+    db.session.add(record)
+    db.session.commit()
+    resp = make_response()
+    resp.headers['HX-Refresh'] = 'true'
+    return resp
+
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/scores/<int:record_id>/delete', methods=['DELETE'])
+def admin_delete_cmte_score_record(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    db.session.delete(record)
+    db.session.commit()
+    resp = make_response()
+    return resp

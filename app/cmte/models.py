@@ -1,5 +1,6 @@
 import datetime
 
+from dateutil.relativedelta import relativedelta
 from flask_login import UserMixin
 from sqlalchemy_utils import EmailType
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -491,6 +492,9 @@ class CMTEEventParticipationRecord(db.Model):
         if self.event:
             if self.event.end_date.date() <= self.license.end_date:
                 self.score_valid_until = self.license.end_date
+            else:
+                next_license_end_date = self.license.end_date + relativedelta(years=5)
+                self.score_valid_until = next_license_end_date
         else:
             self.score_valid_until = self.license.end_date
 

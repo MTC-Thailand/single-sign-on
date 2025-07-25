@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "admin_nav.html" %}
+<section class="section">
+    <div class="container">
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column">
+                <h1 class="title">รายการกิจกรรม</h1>
+                <h1 class="subtitle is-size-4">{{member}} ท.น.{{member.license}} ใบอนุญาตหมอายุวันที่ {{member.license.end_date|localdate}}</h1>
+                <table class="table is-striped is-fullwidth">
+                    <thead>
+                    <th>ชื่อ/รายละเอียด</th>
+                    <th>ประเภทกิจกรรม</th>
+                    <th>วันเริ่มต้น</th>
+                    <th>วันสิ้นสุด</th>
+                    <th>คะแนนที่ได้รับ</th>
+                    <th>วันที่อนุมัติ</th>
+                    <th>คะแนนหมดอายุวันที่</th>
+                    <th></th>
+                    </thead>
+                    <tbody>
+                    {% for rec in records %}
+                    <tr>
+                        <td>{{rec.event.title or rec.desc}}</td>
+                        <td>{{rec.individual}}</td>
+                        <td>{{rec.event.start_date|localdatetime or rec.start_date|localdate}}</td>
+                        <td>{{rec.event.end_date|localdatetime or rec.end_date|localdate}}</td>
+                        <td>{{rec.score}}</td>
+                        <td>{{rec.approved_date|localdate}}</td>
+                        <td>
+                            {% if rec.score_valid_until > rec.license.end_date %}
+                            <span class="has-text-warning">
+                                {{rec.score_valid_until|localdate}}
+                            </span>
+                            {% elif rec.score_valid_until == rec.license.end_date %}
+                            <span class="has-text-success">
+                                {{rec.score_valid_until|localdate}}
+                            </span>
+                            {% else %}
+                            <span class="has-text-danger">
+                                {{rec.score_valid_until|localdate}}
+                            </span>
+                            {% endif %}
+                            <a hx-post="{{url_for('cmte.admin_update_cmte_score_valid_date', record_id=rec.id)}}"
+                               hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                               hx-swap="none"
+                               hx-indicator="this"
+                               class="button is-rounded is-small is-warning">
+                                <span class="icon">
+                                    <i class="fas fa-retweet"></i>
+                                </span>
+                                <span>update</span>
+                            </a>
+                        </td>
+                        <td>
+                            <a hx-delete="{{url_for('cmte.admin_delete_cmte_score_record', record_id=rec.id)}}"
+                               hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                               hx-target="closest tr"
+                               hx-swap="outerHTML"
+                               hx-indicator="this"
+                               hx-confirm="คุณแน่ใจว่าต้องการลบรายการนี้จากระบบ"
+                               class="delete"
+                               >
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
