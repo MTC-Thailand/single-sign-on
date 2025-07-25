@@ -2557,7 +2557,7 @@ def admin_check_member_cmte_scores(member_id):
     member = Member.query.get(member_id)
     records = CMTEEventParticipationRecord.query.filter_by(license_number=member.license.number)\
         .filter(CMTEEventParticipationRecord.score.isnot(None))\
-        .order_by(CMTEEventParticipationRecord.score_valid_until.desc())
+        .order_by(CMTEEventParticipationRecord.approved_date.desc())
     return render_template('cmte/admin/member_cmte_score_records.html',
                            records=records, member=member)
 
