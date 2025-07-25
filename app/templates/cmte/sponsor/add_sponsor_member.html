@@ -1,10 +1,70 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link href="https://fastly.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block title %}Sponsor Members Management{% endblock %}
+
+{% block content %}
+{% include "cmte/nav.html" %}
+<section class="section">
+  <div class="columns">
+    <div class="column is-two-thirds is-offset-2 box">
+      {% include "messages.html" %}
+      <h1 class="title has-text-centered">
+        เพิ่มรายชื่อผู้ประสานงานเข้าสถาบัน
+      </h1>
+      <h1 class="subtitle has-text-centered">
+        {{sponsor}}
+      </h1>
+      <form method="post">
+        <input type="hidden" value="{{ csrf_token() }}" name="csrf_token">
+        <div class="field is-horizontal">
+          <div class="field-label is-normal">
+            <label class="label">
+              ค้นหาผู้ประสานงานที่ลงทะเบียนไว้แล้วด้วยชื่อหรืออีเมล
+            </label>
+          </div>
+          <div class="field-body">
+            <div class="field is-grouped">
+              <div class="control">
+                <select class="js-example-basic-multiple" name="sponsor_members" multiple="multiple">
+                </select>
+                <p class="help is-danger has-text-centered">ระบบจะส่งอีเมลเพื่อแจ้งให้แต่ละคนทราบและรายชื่อที่เพิ่มจะต้องได้รับการยืนยันก่อน</p>
+              </div>
+              <div class="control">
+                <input type="submit" value="Add" class="button is-success">
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+      <div class="has-text-centered">
+        <a href="{{ url_for('cmte.register_sponsor_member', sponsor_id=sponsor.id) }}" class="button is-info">
+          <span class="icon">
+              <i class="fa-solid fa-user-plus"></i>
+          </span>
+          <span>เพิ่มผู้ประสานงานที่ยังไม่ได้ลงทะเบียน</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://fastly.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(()=> {
+    $('.js-example-basic-multiple').select2({
+        width: '400px',
+        ajax: {
+            url: "{{ url_for('cmte.get_sponsor_members') }}",
+            dataType: "json"
+        }
+    });
+});
+</script>
+{% endblock %}
