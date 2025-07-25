@@ -8,7 +8,7 @@
         <div class="columns">
             <div class="column">
                 <h1 class="title">รายการกิจกรรม</h1>
-                <h1 class="subtitle is-size-4">{{member}} ท.น.{{member.license}} ใบอนุญาตหมอายุวันที่ {{member.license.end_date|localdate}}</h1>
+                <h1 class="subtitle is-size-4">{{member}} ท.น.{{member.license}} วันที่ใบอนุญาต {{member.license.start_date|localdate}} - {{member.license.end_date|localdate}}</h1>
                 <table class="table is-striped is-fullwidth">
                     <thead>
                     <th>ชื่อ/รายละเอียด</th>
