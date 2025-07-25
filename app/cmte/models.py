@@ -490,9 +490,9 @@ class CMTEEventParticipationRecord(db.Model):
 
     def set_score_valid_date(self):
         if self.event:
-            if self.event.end_date.date() <= self.license.end_date:
+            if self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() <= self.license.end_date:
                 self.score_valid_until = self.license.end_date
-            else:
+            elif self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() > self.license.end_date:
                 next_license_end_date = self.license.end_date + relativedelta(years=5)
                 self.score_valid_until = next_license_end_date
         else:
