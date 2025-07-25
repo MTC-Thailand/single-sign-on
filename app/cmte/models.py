@@ -11,6 +11,7 @@ from sqlalchemy_continuum import make_versioned
 import sqlalchemy as sa
 
 from app import db
+from app.members.models import License
 
 make_versioned(user_cls=None)
 
@@ -495,6 +496,11 @@ class CMTEEventParticipationRecord(db.Model):
             elif self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() > self.license.end_date:
                 next_license_end_date = self.license.end_date + relativedelta(years=5)
                 self.score_valid_until = next_license_end_date
+            else:
+                for lic in License.query.filter_by(number=self.license.number):
+                    if lic.end_date.year == self.event.end_date.year:
+                        self.score_valid_until = lic.end_date
+                        break
         else:
             self.score_valid_until = self.license.end_date
 
