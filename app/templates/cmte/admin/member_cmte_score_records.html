@@ -12,7 +12,7 @@
                 <table class="table is-striped is-fullwidth">
                     <thead>
                     <th>ชื่อ/รายละเอียด</th>
-                    <th>ประเภทกิจกรรม</th>
+                    <th>กิจกรรมส่วนบุคคล</th>
                     <th>วันเริ่มต้น</th>
                     <th>วันสิ้นสุด</th>
                     <th>คะแนนที่ได้รับ</th>
@@ -24,7 +24,13 @@
                     {% for rec in records %}
                     <tr>
                         <td>{{rec.event.title or rec.desc}}</td>
-                        <td>{{rec.individual}}</td>
+                        <td>
+                            <span class="icon">
+                            {% if rec.individual %}
+                                <i class="fa-solid fa-user-check has-text-success"></i>
+                            {% endif %}
+                            </span>
+                        </td>
                         <td>{{rec.event.start_date|localdatetime or rec.start_date|localdate}}</td>
                         <td>{{rec.event.end_date|localdatetime or rec.end_date|localdate}}</td>
                         <td>{{rec.score}}</td>
