@@ -9,8 +9,9 @@ import pandas as pd
 
 import arrow
 import boto3
-from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app, session, \
-    jsonify, abort
+from flask import (render_template, flash, redirect,
+                   url_for, make_response, request, send_file,
+                   current_app, session, jsonify, abort)
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
@@ -95,6 +96,9 @@ def download_file(key):
 @login_required
 @cmte_sponsor_admin_permission.require()
 def cmte_index():
+    sponsor_member_add_pending_requests = CMTESponsorMemberAddRequest.query.filter_by(member=current_user).\
+        filter(CMTESponsorMemberAddRequest.accepted_at != None).\
+        filter(CMTESponsorMemberAddRequest.cancelled_at != None)
     warning_msg = ''
     if cmte_admin_permission:
         return render_template('cmte/index.html', warning_msg=warning_msg)
@@ -109,7 +113,8 @@ def cmte_index():
                     warning_msg = 'กรุณาดำเนินการชำระค่าธรรมเนียม'
             else:
                 warning_msg = 'กรุณาดำเนินการต่ออายุใบรับรองสถาบัน'
-    return render_template('cmte/index.html', warning_msg=warning_msg)
+    return render_template('cmte/index.html', warning_msg=warning_msg,
+                           sponsor_member_add_pending_requests=sponsor_member_add_pending_requests)
 
 
 @cmte.get('/events/registration')
@@ -2470,3 +2475,70 @@ def admin_send_email_verification(member_id):
     send_mail([member.email], 'MTC-CMTE Email validation', message)
     resp = make_response()
     return resp
+
+
+@login_required
+@cmte_admin_permission.union(cmte_sponsor_admin_permission).require()
+@cmte.route('/sponsors/<int:sponsor_id>/members/add', methods=['GET', 'POST'])
+def add_sponsor_members(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    if request.method == 'POST':
+        members = request.form.getlist('sponsor_members')
+        for member_id in members:
+            member = CMTESponsorMember.query.get(member_id)
+            req = CMTESponsorMemberAddRequest(to_sponsor_id=int(sponsor_id),
+                                              member=member,
+                                              requested_at=arrow.now('Asia/Bangkok').datetime,
+                                              )
+            db.session.add(req)
+            db.session.commit()
+            if not current_app.debug:
+                message = f'''
+                เรียน ท่านเจ้าของอีเมล
+                \n
+                กรุณาเข้าสู่ระบบสารสนเทศของสภาเทคนิคการแพทย์และดำเนินการเพื่อยืนยันการเข้าร่วมเป็นผู้ประสานงานของ {member.sponsor}
+                '''
+                send_mail([member.email], 'MTC-CMTE แจ้งการขอเพิ่มชื่อผู้ประสานงาน', message)
+        flash(f'ดำเนินการแจ้งเจ้าของบัญชีเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+    return render_template('cmte/sponsor/add_sponsor_member.html', sponsor=sponsor)
+
+
+@login_required
+@cmte_admin_permission.union(cmte_sponsor_admin_permission).require()
+@cmte.route('/sponsors/members/add/<int:req_id>/confirm', methods=['DELETE', 'POST'])
+def confirm_add_sponsor_members(req_id):
+    req = CMTESponsorMemberAddRequest.query.get(req_id)
+    if request.method == 'POST':
+        req.accepted_at = arrow.now('Asia/Bangkok').datetime
+        req.member.sponsor = req.to_sponsor
+        db.session.add(req)
+        db.session.commit()
+        flash(f'ดำเนินการเรียบร้อย', 'success')
+    if request.method == 'DELETE':
+        req.cancelled_at = arrow.now('Asia/Bangkok').datetime
+        db.session.add(req)
+        db.session.commit()
+        flash(f'ยกเลิกการดำเนินการเรียบร้อย', 'success')
+
+    resp = make_response()
+    resp.headers['HX-Refresh'] = 'true'
+    return resp
+
+
+@login_required
+@cmte_admin_permission.require()
+@cmte.route('/api/sponsors/members/')
+def get_sponsor_members():
+    search_term = request.args.get('term', '')
+    results = []
+    for member in CMTESponsorMember.query:
+        if search_term in str(member) or search_term in (member.email if member.email else ''):
+            index_ = member.id
+            results.append({
+                "id": index_,
+                "text": f'{str(member)}, {member.email}'
+            })
+    return jsonify({'results': results})
+

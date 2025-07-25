@@ -132,6 +132,20 @@ class CMTESponsorMember(UserMixin, db.Model):
         return f'sponsor-member-{self.id}'
 
 
+class CMTESponsorMemberAddRequest(UserMixin, db.Model):
+    __versioned__ = {}
+    __tablename__ = 'cmte_sponsor_member_add_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    to_sponsor_id = db.Column('to_sponsor_id', db.Integer, db.ForeignKey('cmte_event_sponsors.id'))
+    member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
+    requested_at = db.Column('requested_at', db.DateTime(timezone=True))
+    member = db.relationship(CMTESponsorMember, backref=db.backref('sponsor_requests',
+                                                                     cascade="all, delete-orphan"))
+    to_sponsor = db.relationship(CMTEEventSponsor)
+    accepted_at = db.Column('accepted_at', db.DateTime(timezone=True))
+    cancelled_at = db.Column('cancalled_at', db.DateTime(timezone=True))
+
+
 class CMTESponsorQualification(db.Model):
     __tablename__ = 'cmte_sponsor_qualification'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
