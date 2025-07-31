@@ -134,7 +134,7 @@ class CMTESponsorMember(UserMixin, db.Model):
         return f'sponsor-member-{self.id}'
 
 
-class CMTESponsorMemberAddRequest(UserMixin, db.Model):
+class CMTESponsorMemberAddRequest(db.Model):
     __versioned__ = {}
     __tablename__ = 'cmte_sponsor_member_add_requests'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
