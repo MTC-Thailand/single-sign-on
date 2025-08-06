@@ -355,7 +355,10 @@ def view_member_info(member_id):
         except:
             image_base64 = None
         else:
-            image_base64 = base64.b64encode(img_response.content).decode('utf-8')
+            if img_response.status_code == 200:
+                image_base64 = base64.b64encode(img_response.content).decode('utf-8')
+            else:
+                image_base64 = None
     return render_template('members/member_info.html',
                            member=member,
                            image_base64=image_base64,
@@ -778,7 +781,8 @@ def search_member_api():
                              f'<td><a class="button is-link is-small is-rounded" href={url_for("member.view_member_info", member_id=member.id)}>ดูข้อมูล</td></tr>')
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td></tr>'
+                template += (f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td></tr>'
+                            f'<td><a class="button is-link is-small is-rounded" href={url_for("member.view_member_info", member_id=member.id)}>ดูข้อมูล</td></tr>')
         template += '</tbody></table>'
         return make_response(template)
     return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
