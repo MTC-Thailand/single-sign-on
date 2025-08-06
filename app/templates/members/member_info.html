@@ -4,19 +4,51 @@
 {% block content %}
 <section class="section">
   <div class="container">
+    <div class="block has-text-centered">
+      <figure class="image is-64x64 is-inline-block">
+        <img src="{{url_for('static', filename='logo.png')}}">
+      </figure>
+    </div>
+    <h1 class="title is-size-4 has-text-centered">ระบบแสดงข้อมูลผู้ประกอบวิชาชีพเทคนิคการแพทย์</h1>
+    <h1 class="subtitle is-size-5 has-text-centered">สำนักงานเลขาธิการ สภาเทคนิคการแพทย์</h1>
     <div class="columns">
-      <div class="column">
-        <div class="block has-text-centered">
-          <figure class="image is-64x64 is-inline-block">
-            <img src="{{url_for('static', filename='logo.png')}}">
+      <div class="column is-one-third">
+        <div class="block">
+          <figure class="image is-128x128 is-inline-block">
+            {% if image_base64 %}
+            <img src="data:image/jpeg;base64, {{image_base64}}">
+            {% else %}
+            <img src="{{url_for('static', filename='doctor.png')}}">
+            {% endif %}
           </figure>
         </div>
-        <p class="notification has-text-centered is-light is-warning">กรุณา log in เข้าใช้งานระบบใหม่เพื่อตรวจสอบคะแนน</p>
-        <div class="buttons is-centered">
-          <a href="{{url_for('member.index')}}" class="button is-link">Log In</a>
-        </div>
+      </div>
+      <div class="column">
+        <table class="table is-striped is-fullwidth">
+          <tr>
+            <td><strong>ชื่อ</strong></td>
+            <td>{{member.th_fullname}}</td>
+          </tr>
+          <tr>
+            <td><strong>หมายเลขใบอนุญาต</strong></td>
+            <td>{{member.license.number}}</td>
+          </tr>
+          <tr>
+            <td><strong>วันที่ใบอนุญาต</strong></td>
+            <td>{{member.license.dates}}</td>
+          </tr>
+          <tr>
+            <td><strong>สถานะใบอนุญาต</strong></td>
+            <td>{{lic_status|safe}}</td>
+          </tr>
+        </table>
       </div>
     </div>
+    <div class="columns">
+      <div class="column has-text-centered">
+        <a href="{{url_for('member.search_member')}}" class="button is-light">ค้นหาผู้ประกอบวิชาชีพ</a>
+      </div>
     </div>
+  </div>
 </section>
 {% endblock %}

@@ -1,3 +1,4 @@
+import base64
 import json
 from datetime import datetime
 
@@ -24,7 +25,7 @@ from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, Membe
 
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm
-from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord
+from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, CMTEEvent
 from app import admin_permission
 
 from requests.adapters import HTTPAdapter
@@ -32,6 +33,7 @@ from urllib3.util import Retry
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
+IMG_BASE_URL = 'https://mtc.thaijobjob.com'
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
 MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
@@ -116,7 +118,7 @@ def load_from_mtc(firstname=None, lastname=None, license_id=None):
 
 
 def check_license_status(delta, status):
-    if status == 'ปกติ' and delta.days > 0:
+    if status == 'ปกติ' and delta.days >= 0:
         return 'ปกติ'
     elif status == 'ปกติ' and delta.days < 0:
         return 'หมดอายุ'
@@ -258,7 +260,7 @@ def search_member():
                                                    rec.get('firstnameEN'),
                                                    rec.get('lastnameEN'),
                                                    int(rec.get('license_no')),
-                                                   'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                                   'has-text-success' if delta.days >= 0 else 'has-text-danger',
                                                    exp_date.format('DD MMMM YYYY', locale='th'),
                                                    exp_date.humanize(granularity=['year', 'day'], locale='th'),
                                                    'is-success' if license_status == 'ปกติ' else 'is-danger',
@@ -333,9 +335,31 @@ def search_member():
     return render_template('members/search_form.html', form=form)
 
 
-@member.route('/info')
-def view_member_info():
-    return render_template('members/member_info.html')
+@member.route('/info/<int:member_id>')
+def view_member_info(member_id):
+    member = Member.query.get(member_id)
+    if member and member.license:
+        status_tag = '<span class="tag {}">{}</span>'
+        if member.license.is_expired:
+            lic_status = status_tag.format('is-danger', 'หมดอายุ')
+        elif member.license.status:
+            if member.license.status == 'ปกติ':
+                lic_status = status_tag.format('is-success', member.license.status)
+            else:
+                lic_status = status_tag.format('is-warning', member.license.status)
+        else:
+            lic_status = status_tag.format('is-success', 'ปกติ')
+        try:
+            img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
+                                        params={'license_no': member.license.number})
+        except:
+            image_base64 = None
+        else:
+            image_base64 = base64.b64encode(img_response.content).decode('utf-8')
+    return render_template('members/member_info.html',
+                           member=member,
+                           image_base64=image_base64,
+                           lic_status=lic_status)
 
 
 @member.route('/login-otp', methods=['GET', 'POST'])
@@ -732,7 +756,7 @@ def search_member_api():
                 pass
             else:
                 members = Member.query.filter(and_(Member.th_firstname.like(f'%{firstname}%'),
-                                                  Member.th_lastname.like(f'%{lastname}%')))
+                                                   Member.th_lastname.like(f'%{lastname}%')))
                 licenses = [(member.license, member) for member in members]
         if not licenses:
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
@@ -750,10 +774,19 @@ def search_member_api():
             else:
                 lic_status = status_tag.format('is-success', 'ปกติ')
             if lic:
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
+                template += (f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td>'
+                             f'<td><a class="button is-link is-small is-rounded" href={url_for("member.view_member_info", member_id=member.id)}>ดูข้อมูล</td></tr>')
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
+                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td></tr>'
         template += '</tbody></table>'
         return make_response(template)
     return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
+
+
+@member.route('/members/cmte-overdue-events')
+@login_required
+def cmte_overdue_events():
+    query = CMTEEvent.query.filter(CMTEEvent.submission_due_date >= arrow.now('Asia/Bangkok').datetime)
+    df = pd.read_sql_query(query, con=db.engine)
+    return render_template('members/cmte_overdue_events.html', events=df.to_html())
