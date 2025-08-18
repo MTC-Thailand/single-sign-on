@@ -67,6 +67,13 @@ class AdminParticipantForm(FlaskForm):
     approved_date = DateField('Approved Date', validators=[Optional()])
 
 
+class AdminParticipantRecordForm(ModelForm):
+    class Meta:
+        model = CMTEEventParticipationRecord
+        only = ['score', 'score_valid_until', 'approved_date']
+        date_format = '%d/%m/%Y'
+
+
 class ParticipantForm(FlaskForm):
     license_number = StringField('License Number')
     score = DecimalField('Score', validators=[NumberRange(min=0),

@@ -52,16 +52,29 @@
                                 {{rec.score_valid_until|localdate}}
                             </span>
                             {% endif %}
-                            <a hx-post="{{url_for('cmte.admin_update_cmte_score_valid_date', record_id=rec.id)}}"
-                               hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
-                               hx-swap="none"
-                               hx-indicator="this"
-                               class="button is-rounded is-small is-warning">
-                                <span class="icon">
-                                    <i class="fas fa-retweet"></i>
-                                </span>
-                                <span>update</span>
-                            </a>
+                            <div class="field has-addons">
+                                <div class="control">
+                                    <a hx-post="{{url_for('cmte.admin_update_cmte_score_valid_date', record_id=rec.id)}}"
+                                       hx-headers='{"X-CSRF-Token": {{csrf_token()|tojson|safe}} }'
+                                       hx-swap="none"
+                                       hx-indicator="this"
+                                       class="button is-rounded is-small">
+                                    <span class="icon">
+                                        <i class="fas fa-retweet"></i>
+                                    </span>
+                                        <span>auto update</span>
+                                    </a>
+                                </div>
+                                <div class="control">
+                                    <a class="button is-small is-rounded"
+                                       href="{{url_for('cmte.admin_update_cmte_score_valid_date', record_id=rec.id)}}">
+                                    <span class="icon">
+                                        <i class="fas fa-pencil"></i>
+                                    </span>
+                                        <span>edit</span>
+                                    </a>
+                                </div>
+                            </div>
                         </td>
                         <td>
                             <a hx-delete="{{url_for('cmte.admin_delete_cmte_score_record', record_id=rec.id)}}"

@@ -2564,15 +2564,28 @@ def admin_check_member_cmte_scores(member_id):
 
 @cmte_admin_permission.require()
 @login_required
-@cmte.route('/admin/members/scores/<int:record_id>', methods=['POST'])
+@cmte.route('/admin/members/scores/<int:record_id>', methods=['POST', 'GET'])
 def admin_update_cmte_score_valid_date(record_id):
     record = CMTEEventParticipationRecord.query.get(record_id)
-    record.set_score_valid_date()
-    db.session.add(record)
-    db.session.commit()
-    resp = make_response()
-    resp.headers['HX-Refresh'] = 'true'
-    return resp
+    if request.headers.get('HX-Request') == 'true':
+        record.set_score_valid_date()
+        db.session.add(record)
+        db.session.commit()
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
+    form = AdminParticipantRecordForm(obj=record)
+    if request.method == 'GET':
+        return render_template('cmte/admin/edit_participant_record_form.html',
+                               form=form, record=record)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(record)
+            db.session.add(record)
+            db.session.commit()
+        else:
+            flash(f'{form.errors}', 'danger')
+        return redirect(url_for('cmte.admin_check_member_cmte_scores', member_id=record.license.member_id))
 
 
 @cmte_admin_permission.require()
