@@ -16,7 +16,7 @@
         <div class="block">
           <figure class="image is-128x128 is-inline-block">
             {% if image_base64 %}
-            <img src="data:image/jpeg;base64, {{image_base64}}">
+              <img src="data:image/jpeg;base64, {{image_base64}}">
             {% else %}
             <img src="{{url_for('static', filename='doctor.png')}}">
             {% endif %}

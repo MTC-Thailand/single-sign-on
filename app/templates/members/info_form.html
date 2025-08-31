@@ -2,70 +2,75 @@
 
 {% block content %}
 {% include "members/nav.html" %}
+{% from "members/address_macro.html" import render_address_form %}
 <section class="section">
-  <div class="container">
-    <div class="columns">
-      <div class="column is-one-third is-offset-4">
-        <h1 class="title has-text-centered">ข้อมูลส่วนตัว</h1>
-        <form method="post" class="box">
-          {{form.hidden_tag()}}
-          <div class="notification is-danger is-light">
-          <div class="field">
-            <label class="label">ชื่อ</label>
-            <div class="control">
-              <input class="input" value="{{current_user.th_firstname}}" readonly>
-            </div>
-          </div>
-          <div class="field">
-            <label class="label">สกุล</label>
-            <div class="control">
-              <input class="input" value="{{current_user.th_lastname}}" readonly>
-            </div>
-          </div>
-          <div class="field">
-            <label class="label">หมายเลขบัตรประชาชน</label>
-            <div class="control">
-              <input class="input" value="{{current_user.pid}}" readonly>
-            </div>
-          </div>
-            <p>หากต้องการแก้ไขข้อมูลส่วนนี้กรุณาติดต่อเจ้าหน้าที่</p>
-          </div>
-          <div class="field">
-            <label class="label">{{form.tel.label}}</label>
-            <div class="control">
-              {{form.tel(class="input is-success")}}
-              <p class="help is-success">
-                โปรดแก้ไขข้อมูลให้เป็นปัจจุบันเพื่อความสะดวกในการติดต่อ
-              </p>
-            </div>
-          </div>
-          <div class="field">
-            <label class="label">{{form.email.label}}</label>
-            <div class="control">
-              {{form.email(class="input is-success")}}
-              <p class="help is-success">
-                โปรดแก้ไขข้อมูลให้เป็นปัจจุบันเพื่อความสะดวกในการติดต่อ
-              </p>
-            </div>
-          </div>
-          <div class="field is-grouped">
-            <div class="control">
-              <a href="{{url_for('member.index')}}" class="button is-light">
-                <span>ยกเลิก</span>
-              </a>
-            </div>
-            <div class="control">
-              <button class="button is-success" type="submit">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <h1 class="title has-text-centered">ข้อมูลส่วนตัว</h1>
+                <form method="post">
+                    {{form.hidden_tag()}}
+                    <div class="notification is-light">
+                        <div class="field">
+                            <label class="label">ชื่อ</label>
+                            <div class="control">
+                                <input class="input" value="{{current_user.th_firstname}}" readonly>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">สกุล</label>
+                            <div class="control">
+                                <input class="input" value="{{current_user.th_lastname}}" readonly>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">หมายเลขบัตรประชาชน</label>
+                            <div class="control">
+                                <input class="input" value="{{current_user.pid}}" readonly>
+                            </div>
+                        </div>
+                        <p>หากต้องการแก้ไขข้อมูลส่วนนี้กรุณาติดต่อเจ้าหน้าที่</p>
+                    </div>
+                    <h1 class="title is-size-4">
+                        <span class="icon"><i class="fa-solid fa-phone"></i></span>
+                        ข้อมูลติดต่อ</h1>
+                    <div class="field">
+                        <label class="label">{{form.tel.label}}</label>
+                        <div class="control">
+                            {{form.tel(class="input is-success")}}
+                            <p class="help is-success">
+                                โปรดแก้ไขข้อมูลให้เป็นปัจจุบันเพื่อความสะดวกในการติดต่อ
+                            </p>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{form.email.label}}</label>
+                        <div class="control">
+                            {{form.email(class="input is-success")}}
+                            <p class="help is-success">
+                                โปรดแก้ไขข้อมูลให้เป็นปัจจุบันเพื่อความสะดวกในการติดต่อ
+                            </p>
+                        </div>
+                    </div>
+                    {{render_address_form(form.addresses[0], "ที่อยู่สำหรับส่งเอกสาร")}}
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <a href="{{url_for('member.index')}}" class="button is-light">
+                                <span>ยกเลิก</span>
+                            </a>
+                        </div>
+                        <div class="control">
+                            <button class="button is-success" type="submit">
                 <span class="icon">
                   <i class="fa-solid fa-floppy-disk"></i>
                 </span>
-                <span>บันทึก</span>
-              </button>
+                                <span>บันทึก</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
-          </div>
-        </form>
-      </div>
+        </div>
     </div>
-  </div>
 </section>
 {% endblock %}

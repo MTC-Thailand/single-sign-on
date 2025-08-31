@@ -1,0 +1,42 @@
+{% macro render_address_form(form, addr_type) -%}
+<hr>
+<h1 class="title is-size-4">
+    <span class="icon">
+        <i class="fa-solid fa-envelopes-bulk"></i>
+    </span>
+    {{addr_type}}</h1>
+<div class="field">
+    <label class="label">{{form.street_number.label}}</label>
+    <div class="control">
+        {{form.street_number(class="input")}}
+    </div>
+    <label class="label">{{form.alley.label}}</label>
+    <div class="control">
+        {{form.alley(class="input")}}
+    </div>
+    <label class="label">{{form.street.label}}</label>
+    <div class="control">
+        {{form.street(class="input")}}
+    </div>
+    <label class="label">{{form.village.label}}</label>
+    <div class="control">
+        {{form.village(class="input")}}
+    </div>
+    <label class="label">{{form.district.label}}</label>
+    <div class="control">
+        {{form.district(class="input")}}
+    </div>
+    <label class="label">{{form.city.label}}</label>
+    <div class="control">
+        {{form.city(class="input")}}
+    </div>
+    <label class="label">{{form.province.label}}</label>
+    <div class="control">
+        {{form.province(class="input")}}
+    </div>
+    <label class="label">{{form.zipcode.label}}</label>
+    <div class="control">
+        {{form.zipcode(class="input")}}
+    </div>
+</div>
+{% endmacro %}

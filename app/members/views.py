@@ -474,11 +474,21 @@ def logout():
 @login_required
 def index():
     license = current_user.license
+    try:
+        img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
+                                    params={'license_no': current_user.license.number})
+    except:
+        image_base64 = None
+    else:
+        if img_response.status_code == 200:
+            image_base64 = base64.b64encode(img_response.content).decode('utf-8')
+        else:
+            image_base64 = None
     valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score)) \
         .filter(
         CMTEEventParticipationRecord.license == license,
         CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date).scalar()
-    return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores)
+    return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores, image_base64=image_base64)
 
 
 @member.route('/cmte/individual-scores/index', methods=['GET'])
@@ -690,12 +700,56 @@ def old_form_login():
     return redirect(url_for('member.login'))
 
 
+@member.post('/members/info/update')
+@login_required
+def update_member_info():
+    if not current_user.addresses:
+        client_id = os.environ.get('MTC_CLIENT_ID')
+        client_secret = os.environ.get('MTC_CLIENT_SECRET')
+        base_url = 'https://mtc-webservices.herokuapp.com'
+        resp = requests.post(f'{base_url}/api/auth/login',
+                             json={'client_id': client_id, 'client_secret': client_secret})
+        token = resp.json().get('access_token')
+        try:
+            response = requests.get(f'{base_url}/api/members/{current_user.pid}/info',
+                                headers={'Authorization': f'Bearer {token}'})
+            if response.status_code == 200:
+                pprint(response.json())
+        except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
+            pass
+        else:
+            try:
+                data_ = response.json().get('data', {})
+            except requests.exceptions.JSONDecodeError as e:
+                pass
+            else:
+                address = MemberAddress(member=current_user)
+                home_addr = data_.get('home_addr')
+                if home_addr:
+                    address.street_number = home_addr.get('add1')
+                    address.district = home_addr.get('DISTRICT_NAME')
+                    address.city = home_addr.get('AMPHUR_NAME')
+                    address.province = home_addr.get('PROVINCE_NAME')
+                    address.village = home_addr.get('moo')
+                    address.alley = home_addr.get('soi')
+                    address.road = home_addr.get('road')
+                    address.zipcode = home_addr.get('zipcode')
+                    db.session.add(address)
+                    db.session.commit()
+    resp = make_response()
+    resp.headers['HX-Redirect'] = url_for('member.edit_member_info')
+    return resp
+
+
 @member.route('/members/info', methods=['GET', 'POST'])
 @login_required
 def edit_member_info():
     form = MemberInfoForm(obj=current_user)
     if request.method == 'POST':
         if form.validate_on_submit():
+            # set a mail address.
+            #TODO : add a work address
+            form.addresses[0].address_type.data = 1
             form.populate_obj(current_user)
             db.session.add(current_user)
             db.session.commit()

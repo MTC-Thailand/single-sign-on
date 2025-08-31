@@ -1,6 +1,7 @@
 from datetime import date
 
 from flask_login import UserMixin
+from sqlalchemy import func
 
 from app import db
 
@@ -27,6 +28,7 @@ class Member(db.Model, UserMixin):
                                           'choices': [(c, c) for c in ('ปกติ', 'ลาออก', 'พ้นสมาชิกภาพ', 'ตาย')]})
     end_date = db.Column(db.Date(), info={'label': 'วันสิ้นอายุสมาชิกภาพ'})
     begin_date = db.Column(db.Date(), info={'label': 'วันเริ่มต้นสมาชิกภาพ'})
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     # TODO: import begin date from the legacy database.
 
     def __str__(self):
@@ -110,12 +112,23 @@ class License(db.Model):
         return self.end_date < date.today()
 
 
-# class MemberAddress(db.Model):
-#     __tablename__ = 'member_addresses'
-#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     street_number = db.Column(db.Text())
-#     add_id = db.Column(db.Integer, info={'label': 'ชนิด',
-#                                          'choices': [('1', 'ที่อยู่'),
-#                                                      ('2', 'ที่ทำงาน'),
-#                                                      ('3', 'ที่อยู่ตามทะเบียนบ้าน')]})
-#     zipcode = db.Column('zipcode', db.Integer, info={'label': 'รหัสไปรษณีย์'})
+class MemberAddress(db.Model):
+    __tablename__ = 'member_addresses'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    street_number = db.Column(db.String(), info={'label': 'บ้านเลขที่'})
+    alley = db.Column(db.String(), info={'label': 'ซอย'})
+    street = db.Column(db.String(), info={'label': 'ถนน'})
+    village = db.Column(db.String(), info={'label': 'หมู่'})
+    district = db.Column(db.String(), info={'label': 'ตำบล/แขวง'})
+    city = db.Column(db.String(), info={'label': 'อำเภอ/เขต'})
+    province = db.Column(db.String(), info={'label': 'จังหวัด'})
+    address_type = db.Column(db.Integer, info={'label': 'ชนิด',
+                                               'choices': [(1, 'ที่อยู่สำหรับส่งเอกสาร'),
+                                                           (2, 'ที่ทำงาน')]})
+    zipcode = db.Column('zipcode', db.Integer, info={'label': 'รหัสไปรษณีย์'})
+    member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
+    member = db.relationship(Member, backref=db.backref('addresses', cascade='all, delete-orphan'))
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def __str__(self):
+        return f'{self.street_number} ม.{self.village or " -"} ซอย{self.alley or " -"} ถนน{self.street or " -"} ตำบล{self.district or " -"} อำเภอ{self.city or " -"} จังหวัด{self.province or " -"} รหัสไปรษณีย์{self.zipcode or " -"}'

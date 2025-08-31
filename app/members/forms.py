@@ -1,11 +1,12 @@
+from email.policy import default
+
 from flask_wtf import FlaskForm
-from wtforms import StringField, DateField
+from wtforms import StringField, DateField, FormField, FieldList
 from wtforms.fields.simple import PasswordField
 from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy import model_form_factory
 
-from app import db
-from app.members.models import Member
+from app.members.models import *
 
 BaseModelForm = model_form_factory(FlaskForm)
 
@@ -54,7 +55,16 @@ class MemberUsernamePasswordForm(ModelForm):
         only = ['username', 'password']
 
 
+class MemberAddressForm(ModelForm):
+    class Meta:
+        model = MemberAddress
+        exclude = ['updated_at']
+
+
 class MemberInfoForm(ModelForm):
     class Meta:
         model = Member
         only = ['tel', 'email']
+    addresses = FieldList(FormField(MemberAddressForm, default=MemberAddress),
+                          min_entries=1, max_entries=1)
+
