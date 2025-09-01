@@ -660,19 +660,25 @@ def get_login_otp():
                              headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
     if response.status_code == 200:
         resp_data = response.json().get('results')
-        refcode = resp_data.get('refcode')
-        message = resp_data.get('message')
-        if message == 'confirm_otp_login':
-            return f'<p class="help is-warning">ระบบได้ทำการส่งรหัส OTP แล้วกรุณากรอกรหัสที่ได้รับโดยทันที รหัสอ้างอิง OTP <strong>{refcode}</strong>"<p/>'
-        elif message == 'confirm_otp_register':
-            mobile_ref_id = resp_data.get('mobile_ref_id')
-            return f'''<p class="help is-warning">
-            ระบบได้ทำการส่งรหัส OTP แล้ว รหัสอ้างอิง OTP <strong>{refcode}</strong>
-            <p/>
-            <input type="hidden" name="mobile_ref_id" value="{mobile_ref_id}">
-            '''
+        if resp_data:
+            refcode = resp_data.get('refcode')
+            message = resp_data.get('message')
+            if message == 'confirm_otp_login':
+                return f'<p class="help is-warning">ระบบได้ทำการส่งรหัส OTP แล้วกรุณากรอกรหัสที่ได้รับโดยทันที รหัสอ้างอิง OTP <strong>{refcode}</strong>"<p/>'
+            elif message == 'confirm_otp_register':
+                mobile_ref_id = resp_data.get('mobile_ref_id')
+                return f'''<p class="help is-warning">
+                ระบบได้ทำการส่งรหัส OTP แล้ว รหัสอ้างอิง OTP <strong>{refcode}</strong>
+                <p/>
+                <input type="hidden" name="mobile_ref_id" value="{mobile_ref_id}">
+                '''
+        else:
+            message = response.json().get('message')
+            if message == 'Data Medtech Not Found':
+                return f'<p id="otp-message" class="tag mb-2 is-danger">ไม่พบข้อมูลในระบบ</p>'
+            return f'<p id="otp-message" class="tag mb-2 is-danger">หมายเลขโทรศัพท์ไม่ถูกต้อง</p>'
     else:
-        return f'<p class="help is-danger">{response.json()}!</p>'
+        return f'<p id="otp-message" class="tag mb-2 is-danger">{response.json()}!</p>'
 
 
 @member.post('/login/old-form')
