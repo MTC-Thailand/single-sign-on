@@ -7,6 +7,9 @@
         <div class="columns">
             <div class="column">
                 <h1 class="title has-text-centered">สรุปการอนุมัติคะแนนการศึกษาต่อเนื่อง</h1>
+                <div class="has-text-centered">
+                    <a href="{{url_for('member.cmte_overdue_events')}}" class="has-text-danger">ตรวจสอบกิจกรรมที่เกินกำหนดเวลายื่นขอคะแนนที่นี่</a>
+                </div>
                 {% include "messages.html" %}
                 <div class="tabs is-boxed">
                     <ul>

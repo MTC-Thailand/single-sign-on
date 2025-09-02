@@ -477,6 +477,7 @@ class CMTEEventParticipationRecord(db.Model):
     activity = db.relationship(CMTEEventActivity, backref=db.backref('records',
                                                                      lazy='dynamic',
                                                                      cascade='all, delete-orphan'))
+    # TODO: add member ID to link to a member because scores should belong to a member not a license holder.
 
     @property
     def is_valid(self):
