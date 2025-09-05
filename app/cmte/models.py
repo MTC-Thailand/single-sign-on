@@ -470,6 +470,7 @@ class CMTEEventParticipationRecord(db.Model):
     desc = db.Column('description', db.Text(), info={'label': 'รายละเอียดกิจกรรม'})
     individual = db.Column('individual', db.Boolean(), default=False)
     event_type_id = db.Column('event_type_id', db.ForeignKey('cmte_event_types.id'))
+    event_type = db.relationship(CMTEEventType)
     score_valid_until = db.Column('score_valid_until', db.Date(), info={'label': 'วันหมดอายุคะแนน'})
     closed_date = db.Column('closed_date', db.Date())
     reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})

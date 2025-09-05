@@ -27,6 +27,15 @@
                         </div>
                     </div>
                     <div class="field">
+                        <label class="label">{{ form.event_type.label }}</label>
+                        <div class="select">
+                            {{ form.event_type(**{'hx-get': url_for('member.get_activity_field'), 'hx-trigger': 'change', 'hx-swap': 'outerHTML', 'hx-target': '#activity_field'}) }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div id="activity_field"></div>
+                    </div>
+                    <div class="field">
                         <label class="label">{{form.desc.label}}</label>
                         <div class="control">
                             {{form.desc(class="textarea is-danger")}}
@@ -79,6 +88,8 @@
             format: 'DD/MM/YYYY'
         }
     })
-
+    $(document).ready(()=>{
+        htmx.trigger('#event_type', 'change')
+    })
 </script>
 {% endblock %}

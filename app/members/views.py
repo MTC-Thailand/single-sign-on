@@ -25,7 +25,8 @@ from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, Membe
 
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm
-from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, CMTEEvent
+from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, CMTEEvent, \
+    CMTEEventActivity
 from app import admin_permission
 
 from requests.adapters import HTTPAdapter
@@ -503,6 +504,19 @@ def individual_score_group_index():
     event_types = CMTEEventType.query \
         .filter_by(for_group=True, is_sponsored=False).all()
     return render_template('members/cmte/individual_score_group_index.html', event_types=event_types)
+
+
+@member.route('/cmte/api/activity-field', methods=['GET'])
+@login_required
+def get_activity_field():
+    event_type_id = request.args.get('event_type')
+    event_type = CMTEEventType.query.get(event_type_id)
+    template = '<div id="activity_field" class="select">'
+    template += '<select id="event_activity" name="event_activity">"'
+    for activity in event_type.activities.all():
+        template += f'<option value="{activity.id}">{activity.name}</option>'
+    template += f'</select></div>'
+    return template
 
 
 @member.route('/cmte/individual-scores/form', methods=['GET', 'POST'])

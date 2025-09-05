@@ -86,6 +86,14 @@ class IndividualScoreForm(ModelForm):
         only = ['start_date', 'end_date', 'desc']
         date_format = '%d/%m/%Y'
 
+    event_type = QuerySelectField('ประเภทกิจกรรม',
+                                  get_label='name',
+                                  query_factory=lambda: CMTEEventType.query.filter_by(is_sponsored=False,
+                                                                                      deprecated=False).all())
+    event_activity = QuerySelectField('ชนิดกิจกรรม',
+                                      get_label='name',
+                                      query_factory=lambda: CMTEEventActivity.query.all())
+
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
 
