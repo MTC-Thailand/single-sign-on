@@ -119,18 +119,36 @@
                         </tr>
                         </tbody>
                     </table>
-                    <small>
-                        Last update {{current_user.updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
-                    </small>
-                    <a class="button is-rounded is-primary is-small"
-                       hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                       hx-indicator="this"
-                       hx-post="{{url_for('member.update_member_info')}}">
-                        <span class="icon">
-                            <i class="fa-solid fa-pencil"></i>
-                        </span>
-                        <span>แก้ไข</span>
-                    </a>
+                    <div id="info-update-datetime" class="mb-2">
+                        <small class="tag is-rounded">
+                            Last update {{current_user.updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
+                        </small>
+                    </div>
+                    <div class="field has-addons">
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.update_member_info')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </span>
+                                <span>แก้ไข</span>
+                            </a>
+                        </p>
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-target="#info-update-datetime"
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.verify_member_info')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </span>
+                                <span>รับรองข้อมูล</span>
+                            </a>
+                        </p>
+                    </div>
                 </div>
                 {% if current_user.addresses %}
                 <div class="box">
@@ -147,18 +165,36 @@
                         </tr>
                         </tbody>
                     </table>
-                    <small>
-                        Last update {{current_user.addresses[0].updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
-                    </small>
-                    <a class="button is-rounded is-primary is-small"
-                       hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                       hx-indicator="this"
-                       hx-post="{{url_for('member.update_member_info')}}">
-                        <span class="icon">
-                            <i class="fa-solid fa-pencil"></i>
-                        </span>
-                        <span>แก้ไข</span>
-                    </a>
+                    <div id="mailing-address-update-datetime" class="mb-2">
+                        <small class="tag is-rounded">
+                            Last update {{current_user.addresses[0].updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
+                        </small>
+                    </div>
+                    <div class="field has-addons">
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.update_member_info')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </span>
+                                <span>แก้ไข</span>
+                            </a>
+                        </p>
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-target="#mailing-address-update-datetime"
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.verify_member_mailing_address')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </span>
+                                <span>รับรองข้อมูล</span>
+                            </a>
+                        </p>
+                    </div>
                 </div>
                 {% endif %}
             </div>

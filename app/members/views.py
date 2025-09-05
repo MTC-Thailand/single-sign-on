@@ -1,6 +1,7 @@
 import base64
 import json
 from datetime import datetime
+from multiprocessing.connection import address_type
 
 import arrow
 
@@ -19,6 +20,7 @@ from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine, or_, func, and_
 
+from app.cmte.views import bangkok
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm, \
     MemberInfoForm
@@ -718,6 +720,28 @@ def old_form_login():
             else:
                 flash('Username not found.', 'danger')
     return redirect(url_for('member.login'))
+
+
+@member.post('/members/mailing-address/verify')
+@login_required
+def verify_member_mailing_address():
+    mailing_address = MemberAddress.query.filter_by(member=current_user, address_type=1).first()
+    if mailing_address:
+        mailing_address.updated_at = arrow.now('Asia/Bangkok').datetime
+        db.session.add(mailing_address)
+        db.session.commit()
+    humanized_dt = arrow.get(mailing_address.updated_at).to('Asia/Bangkok').humanize(locale='th', granularity=['year', 'day'])
+    return f'<small class="tag is-rounded is-primary">Verified at {mailing_address.updated_at.astimezone(bangkok).strftime("%d/%m/%Y %H:%M:%S")} {humanized_dt}</small>'
+
+
+@member.post('/members/info/verify')
+@login_required
+def verify_member_info():
+    current_user.updated_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(current_user)
+    db.session.commit()
+    humanized_dt = arrow.get(current_user.updated_at).to('Asia/Bangkok').humanize(locale='th', granularity=['year', 'day'])
+    return f'<small class="tag is-rounded is-primary">Verified at {current_user.updated_at.astimezone(bangkok).strftime("%d/%m/%Y %H:%M:%S")} {humanized_dt}</small>'
 
 
 @member.post('/members/info/update')
