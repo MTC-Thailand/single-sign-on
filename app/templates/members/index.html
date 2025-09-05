@@ -8,7 +8,7 @@
         <div class="columns">
             <div class="column is-one-fifth">
                 <aside class="menu">
-                    <p class="menu-label">Administration</p>
+                    <p class="menu-label">Profile</p>
                     <ul class="menu-list">
                         <li>
                             <a href="{{url_for('member.edit_member_info')}}"
@@ -16,20 +16,23 @@
                                hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
                                hx-indicator="this"
                                hx-post="{{url_for('member.update_member_info')}}">
-                                ข้อมูลส่วนตัว
+                                <span class="icon">
+                                    <i class="fa-solid fa-user"></i>
+                                </span>
+                                <span>
+                                    แก้ไขข้อมูลส่วนตัว
+                                </span>
                             </a>
                         </li>
-                        <li>
-                            <a>การศึกษาต่อเนื่อง (CMTE)</a>
-                            <ul>
-                                <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
-                                <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
-                                <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
-                                <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
-                                <li><a href="{{url_for('cmte.upcoming_events')}}">รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></a></li>
-                                <li><a href="https://mtc-cmte.one.th">ระบบ e-learning (ทำข้อสอบออนไลน์) <span class="tag is-rounded is-success">new</span></a></li>
-                            </ul>
-                        </li>
+                    </ul>
+                    <p class="menu-label">CMTE</p>
+                    <ul class="menu-list">
+                        <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
+                        <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
+                        <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
+                        <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
+                        <li><a href="{{url_for('cmte.upcoming_events')}}">รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></a></li>
+                        <li><a href="https://mtc-cmte.one.th">ระบบ e-learning (ทำข้อสอบออนไลน์) <span class="tag is-rounded is-success">new</span></a></li>
                     </ul>
                 </aside>
 

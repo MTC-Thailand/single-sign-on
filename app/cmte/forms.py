@@ -90,9 +90,9 @@ class IndividualScoreForm(ModelForm):
                                   get_label='name',
                                   query_factory=lambda: CMTEEventType.query.filter_by(is_sponsored=False,
                                                                                       deprecated=False).all())
-    event_activity = QuerySelectField('ชนิดกิจกรรม',
-                                      get_label='name',
-                                      query_factory=lambda: CMTEEventActivity.query.all())
+    activity = QuerySelectField('ชนิดกิจกรรม',
+                                get_label='name',
+                                query_factory=lambda: CMTEEventActivity.query.all())
 
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
@@ -103,11 +103,15 @@ class IndividualScoreAdminForm(ModelForm):
         only = ['start_date', 'end_date', 'desc', 'score', 'reason']
         date_format = '%d/%m/%Y'
 
-    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
+    event_type = QuerySelectField('ประเภทกิจกรรม',
+                                  get_label='name',
+                                  query_factory=lambda: CMTEEventType.query.filter_by(is_sponsored=False,
+                                                                                      deprecated=False).all())
     activity = QuerySelectField('ชนิดกิจกรรม',
-                                query_factory=lambda: CMTEEventActivity.query.all(),
-                                allow_blank=True,
-                                blank_text='กรุณาเลือกชนิดกิจกรรม')
+                                get_label='name',
+                                query_factory=lambda: CMTEEventActivity.query.all())
+
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
 
 class CMTEEventCodeForm(FlaskForm):

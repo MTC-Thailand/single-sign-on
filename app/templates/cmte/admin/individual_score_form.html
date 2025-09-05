@@ -5,15 +5,24 @@
 {% endblock %}
 
 {% block content %}
-{% include "members/cmte/nav.html" %}
+{% include "cmte/admin_nav.html" %}
 <section class="section">
     <div class="container">
         <div class="columns">
             <div class="column is-two-thirds is-offset-2">
-                <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคล</h1>
+                <h1 class="title has-text-centered">แก้ไขการยื่นขออนุมัติคะแนนส่วนบุคคล</h1>
                 {% include "messages.html" %}
                 <form method="post" enctype="multipart/form-data">
                     {{form.hidden_tag()}}
+                    <div class="field">
+                        <label class="label">{{ form.event_type.label }}</label>
+                        <div class="select">
+                            {{ form.event_type(**{'hx-get': url_for('member.get_activity_field'), 'hx-trigger': 'change', 'hx-swap': 'outerHTML', 'hx-target': '#activity_field'}) }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div id="activity_field"></div>
+                    </div>
                     <div class="field">
                         <label class="label">{{form.start_date.label}}</label>
                         <div class="control">
@@ -66,6 +75,7 @@
                         </div>
                     {% endfor %}
                     <div class="field is-grouped">
+                        <a class="button is-light" href="{{ url_for('cmte.admin_individual_score_detail', record_id=record.id) }}">Back</a>
                         <div class="control">
                             <button type="submit" class="button is-success">Submit</button>
                         </div>
@@ -103,6 +113,9 @@
         locale: {
             format: 'DD/MM/YYYY'
         }
+    })
+    $(document).ready(()=>{
+        htmx.trigger('#event_type', 'change')
     })
 
 </script>

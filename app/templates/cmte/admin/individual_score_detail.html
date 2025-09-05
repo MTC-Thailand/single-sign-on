@@ -4,28 +4,32 @@
 {% include "cmte/admin_nav.html" %}
 <section class="section">
   <div class="container">
-    <h1 class="title">Welcome to CMTE.</h1>
+    <h1 class="title">อนุมัติคะแนนส่วนบุคคล</h1>
+    <h1 class="subtitle">{{ record.license.member }} ท.น. {{ record.license_number }}</h1>
     {% include "messages.html" %}
     <div class="columns">
       <div class="column">
         <table id="events-table" class="table is-fullwidth">
-          <thead>
-          <th>ชื่อ</th>
-          <th>ท.น.</th>
-          <th>รายละเอียด</th>
-          <th>เริ่ม</th>
-          <th>สิ้นสุด</th>
-          <th>วันที่ยื่น</th>
-          <th>เอกสารประกอบ</th>
-          </thead>
           <tbody>
           <tr>
-            <td>{{record.license.member}}</td>
-            <td>{{record.license_number}}</td>
+              <td>ประเภทกิจกรรม</td>
+              <td>{{ record.event_type.name }}</td>
+          </tr>
+          <tr>
+              <td>ชนิดกิจกรรม</td>
+              <td>{{ record.activity }}</td>
+          </tr>
+          <tr>
+              <td>วันที่</td>
+              <td>{{record.start_date|localdate}} - {{ record.end_date|localdate }}</td>
+          </tr>
+            <td>รายละเอียด</td>
             <td>{{record.desc}}</td>
-            <td>{{record.start_date}}</td>
-            <td>{{record.end_date}}</td>
-            <td>{{record.create_datetime|localdatetime}}</td>
+          <tr>
+              <td>วันที่ยื่น</td>
+              <td>{{record.create_datetime|localdatetime}}</td>
+          </tr>
+            <td>เอกสารประกอบ</td>
             <td>
               <table class="table is-bordered">
                 <thead>

@@ -512,7 +512,7 @@ def get_activity_field():
     event_type_id = request.args.get('event_type')
     event_type = CMTEEventType.query.get(event_type_id)
     template = '<div id="activity_field" class="select">'
-    template += '<select id="event_activity" name="event_activity">"'
+    template += '<select id="event_activity" name="activity">"'
     for activity in event_type.activities.all():
         template += f'<option value="{activity.id}">{activity.name}</option>'
     template += f'</select></div>'

@@ -2322,6 +2322,8 @@ def admin_individual_score_edit(record_id):
             db.session.commit()
             flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
             return redirect(url_for('cmte.admin_individual_score_detail', record_id=record_id))
+        else:
+            flash(f'{form.errors}', 'danger')
     return render_template('cmte/admin/individual_score_form.html', form=form, record=record)
 
 
