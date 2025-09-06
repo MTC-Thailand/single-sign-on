@@ -5,6 +5,7 @@ import os
 import uuid
 from functools import wraps
 from io import BytesIO
+
 import pandas as pd
 
 import arrow
@@ -2599,3 +2600,10 @@ def admin_delete_cmte_score_record(record_id):
     db.session.commit()
     resp = make_response()
     return resp
+
+
+@cmte.route('/members/events')
+@login_required
+def list_event_types():
+    event_types = CMTEEventType.query.filter_by(deprecated=False).order_by(CMTEEventType.number)
+    return render_template('cmte/event_list.html', event_types=event_types)

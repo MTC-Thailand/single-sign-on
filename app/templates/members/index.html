@@ -27,6 +27,7 @@
                     </ul>
                     <p class="menu-label">CMTE</p>
                     <ul class="menu-list">
+                        <li><a href="{{ url_for('cmte.list_event_types') }}">รายการกิจกรรม</a></li>
                         <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
                         <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
                         <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
@@ -83,7 +84,9 @@
                             </td>
                         </tr>
                         <tr>
-                            <td><strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong></td>
+                            <td>
+                                <strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong>
+                            </td>
                             <td>
                                 {% set fee_payment = current_user.license.get_active_cmte_fee_payment() %}
                                 {% if fee_payment and fee_payment.payment_datetime %}
@@ -91,6 +94,13 @@
                                 {% else %}
                                 ไม่มีรายการ <a href="{{url_for('member.cmte_fee_payment_form')}}">ทำรายการที่นี่</a>
                                 {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <div class="notification">
+                                    <p class="help">ค่าธรรมเนียมสำหรับการยื่นขออนุมัติคะแนนรายบุคคล 500 บาทต่อรอบใบอนุญาต 5 ปี ไม่ใช่ค่าทำข้อสอบออนไลน์เท่านั้นแต่ยังสามารถยื่นขอกิจกรรมส่วนบุคคลอื่น ๆ ได้อีกมากมาย <strong>และไม่ใช่ค่าธรรมเนียมการต่อใบอนุญาต</strong></p>
+                                </div>
                             </td>
                         </tr>
                     </table>
