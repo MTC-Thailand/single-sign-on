@@ -2216,7 +2216,7 @@ def admin_event_edit(event_id=None):
                 event = CMTEEvent()
             form.populate_obj(event)
             if event.approved_datetime:
-                event.submission_due_date = event.approved_datetime + timedelta(days=30)
+                event.submission_due_date = event.end_date + timedelta(days=30)
             db.session.add(event)
             db.session.commit()
             flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
