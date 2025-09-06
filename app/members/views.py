@@ -891,6 +891,7 @@ def get_overdue_events():
     query = ((CMTEEvent.query.filter(CMTEEvent.submission_due_date <= datetime.today())
               .filter_by(participant_updated_at=None))
              .filter(CMTEEvent.event_type.has(CMTEEventType.is_sponsored==True))
+             .filter_by(cancelled_datetime=None).filter(CMTEEvent.approved_datetime.isnot(None))
              .order_by(CMTEEvent.submission_due_date.desc()))
 
     records_total = query.count()
