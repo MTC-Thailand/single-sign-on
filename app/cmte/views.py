@@ -2223,7 +2223,8 @@ def admin_event_edit(event_id=None):
             return redirect(url_for('cmte.admin_preview_event', event_id=event.id))
         else:
             flash(f'Error {form.errors}', 'danger')
-    return render_template('cmte/admin/admin_event_form.html', form=form, event=event)
+    return render_template('cmte/admin/admin_event_form.html',
+                           form=form, event=event, bangkok=bangkok)
 
 
 @cmte.route('/upcoming-events')

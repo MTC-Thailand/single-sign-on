@@ -1,12 +1,65 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="section">
-  <div class="container">
-    <div class="columns">
-      <div class="column">
-        {{events|safe}}
-      </div>
-    </div>
-  </div>
-</section>
+    {% include "cmte/nav.html" %}
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column">
+                    <table id="overdue-events" class="table is-fullwidth is-striped">
+                        <thead>
+                        <th>ชื่อโครงการ</th>
+                        <th>สถานที่</th>
+                        <th>วันที่เริ่ม</th>
+                        <th>วันที่จบ</th>
+                        <th>ผู้จัด</th>
+                        <th>กำหนดวันที่ต้องส่งขอคะแนน</th>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                    <div class="buttons is-centered">
+                        <a href="{{ url_for('member.index') }}" class="button is-light">Back</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $.fn.dataTable.moment('LL');
+    $(document).ready(function () {
+            $('#overdue-events').DataTable({
+                searchDelay: 350,
+                ajax: '{{ url_for("member.get_overdue_events") }}',
+                serverSide: true,
+                columns: [
+                    {data: 'title'},
+                    {data: 'venue'},
+                    {
+                        data: 'start_date',
+                        render: function(data, type) {
+                            return moment(data).format('LL')
+                        }
+                    },
+                    {
+                        data: 'end_date',
+                        render: function(data, type) {
+                            return moment(data).format('LL')
+                        }
+                    },
+                    {data: 'sponsor'},
+                    {
+                        data: 'submission_due_date',
+                        render: function(data, type) {
+                            return moment(data).fromNow()
+                        }
+                    }
+                ],
+            });
+        });
+    </script>
+{% endblock %}

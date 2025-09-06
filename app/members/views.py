@@ -1,7 +1,6 @@
 import base64
 import json
 from datetime import datetime
-from multiprocessing.connection import address_type
 
 import arrow
 
@@ -28,7 +27,7 @@ from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, Membe
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm
 from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, CMTEEvent, \
-    CMTEEventActivity
+    CMTEEventActivity, CMTEEventCategory
 from app import admin_permission
 
 from requests.adapters import HTTPAdapter
@@ -886,9 +885,53 @@ def search_member_api():
     return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
 
 
+@member.route('/api/members/cmte-overdue-events', methods=['GET'])
+@login_required
+def get_overdue_events():
+    query = ((CMTEEvent.query.filter(CMTEEvent.submission_due_date <= datetime.today())
+              .filter_by(participant_updated_at=None))
+             .filter(CMTEEvent.event_type.has(CMTEEventType.is_sponsored==True))
+             .order_by(CMTEEvent.submission_due_date.desc()))
+
+    records_total = query.count()
+    search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    if col_name:
+        try:
+            column = getattr(CMTEEvent, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
+    if search:
+        query = query.filter(CMTEEvent.title.contains(search))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for event in query:
+        data.append({
+            'id': event.id,
+            'title': event.title,
+            'start_date': event.start_date.isoformat(),
+            'end_date': event.end_date.isoformat(),
+            'sponsor': event.sponsor.name,
+            'venue': event.venue,
+            'submission_due_date': event.submission_due_date.isoformat(),
+        })
+    return jsonify({'data': data,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
+
+
 @member.route('/members/cmte-overdue-events')
 @login_required
 def cmte_overdue_events():
-    query = CMTEEvent.query.filter(CMTEEvent.submission_due_date >= arrow.now('Asia/Bangkok').datetime)
-    df = pd.read_sql_query(query, con=db.engine)
-    return render_template('members/cmte_overdue_events.html', events=df.to_html())
+    return render_template('members/cmte_overdue_events.html')
