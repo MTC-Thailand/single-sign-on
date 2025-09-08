@@ -1,4 +1,4 @@
-from wtforms import PasswordField, StringField
+from wtforms import PasswordField, StringField, FieldList
 from flask_wtf import FlaskForm
 from wtforms.validators import DataRequired, EqualTo
 from wtforms_alchemy import model_form_factory
@@ -40,5 +40,7 @@ class CandidateProfileForm(FlaskForm):
     title = StringField('คำนำหน้า', validators=[DataRequired()])
     firstname = StringField('ชื่อ', validators=[DataRequired()])
     lastname  = StringField('นามสกุล', validators=[DataRequired()])
-    policy = StringField('นโยบาย', validators=[DataRequired()])
+    degrees = FieldList(StringField('วุฒิการศึกษา'), validators=[DataRequired()], min_entries=3)
+    visions = FieldList(StringField('นโยบาย', validators=[DataRequired()]), min_entries=3)
+    job_positions = FieldList(StringField('ตำแหน่งงาน', validators=[DataRequired()]), min_entries=3)
 

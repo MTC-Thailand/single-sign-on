@@ -10,6 +10,10 @@
             <h1 class="subtitle has-text-centered">สำหรับผู้สมัครรับเลือกตั้งกรรมการสภาเทคนิคการแพทย์วาระที่ 8</h1>
             <form method="post" class="box">
                 {{ form.hidden_tag() }}
+                <div class="notification">
+                    <h1 class="title is-size-4 has-text-centered">
+                        ข้อมูลส่วนตัว
+                    </h1>
                 <div class="field is-horizontal">
                     <div class="field-label is-normal">
                         <label class="label">{{ form.firstname.label }}</label>
@@ -17,7 +21,7 @@
                     <div class="field-body">
                         <div class="field">
                             <p class="control is-expanded">
-                                {{ form.firstname(class="input is-danger") }}
+                                {{ form.firstname(class="input") }}
                             </p>
                         </div>
                     </div>
@@ -29,33 +33,74 @@
                     <div class="field-body">
                         <div class="field">
                             <p class="control is-expanded">
-                                {{ form.lastname(class="input is-danger") }}
+                                {{ form.lastname(class="input") }}
                             </p>
                         </div>
                     </div>
                 </div>
+                {% for f in form.job_positions %}
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{ f.label }} {{ loop.index }}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <p class="control is-expanded">
+                                    {{ f(class="input") }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                </div>
+                <div class="notification is-light is-info">
+                <h1 class="title is-size-4 has-text-centered">
+                    ประวัติการศึกษา
+                </h1>
+                {% for f in form.degrees %}
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">{{ f.label }} {{ loop.index }}</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <p class="control is-expanded">
+                                    {{ f(class="input") }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                </div>
+                <div class="notification is-light is-success">
+                <h1 class="title is-size-4 has-text-centered">
+                    วิสัยทัศน์
+                </h1>
+                {% for f in form.visions %}
                 <div class="field is-horizontal">
                     <div class="field-label is-normal">
-                        <label class="label">{{ form.policy.label }}</label>
+                        <label class="label">{{ f.label }} {{ loop.index }}</label>
                     </div>
                     <div class="field-body">
                         <div class="field">
                             <p class="control is-expanded">
-                                {{ form.policy(class="textarea is-danger") }}
+                                {{ f(class="input") }}
                             </p>
                         </div>
                     </div>
                 </div>
-                <div class="field is-horizontal">
-                    <div class="field-label">
-
+                {% endfor %}
+                </div>
+                <div class="field is-grouped is-grouped-centered">
+                    <div class="field">
+                        <p class="control">
+                            <button type="reset" class="button is-light">Reset</button>
+                        </p>
                     </div>
-                    <div class="field-body">
-                        <div class="field">
-                            <p class="control">
-                                <input type="submit" value="Submit" class="button is-success"/>
-                            </p>
-                        </div>
+                    <div class="field">
+                        <p class="control">
+                            <input type="submit" value="Submit" class="button is-success"/>
+                        </p>
                     </div>
                 </div>
             </form>
