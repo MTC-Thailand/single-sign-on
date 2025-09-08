@@ -8,7 +8,7 @@ from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent, CMTEEventParticipat
     CMTESponsorRequest, CMTESponsorEditRequest
 from app.models import User, Client
 from app.user import user_bp as user
-from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm
+from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm, CandidateProfileForm
 import pandas as pd
 
 
@@ -116,3 +116,15 @@ def cmte_admin_index():
                            pending_events=pending_events,
                            pending_individual_records=pending_individual_records,
                            pending_requests=pending_requests)
+
+
+@user.route('/candidates', methods=['GET', 'POST'])
+def submit_candidate_profile():
+    form = CandidateProfileForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            flash(f'ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว', 'success')
+        else:
+            flash(f'{form.errors}', 'danger')
+    return render_template('user/candidate_profile_form.html', form=form)
+

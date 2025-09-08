@@ -34,3 +34,11 @@ class ClientRegisterForm(ModelForm):
     class Meta:
         model = Client
         only = ['name', 'email', 'company']
+
+
+class CandidateProfileForm(FlaskForm):
+    title = StringField('คำนำหน้า', validators=[DataRequired()])
+    firstname = StringField('ชื่อ', validators=[DataRequired()])
+    lastname  = StringField('นามสกุล', validators=[DataRequired()])
+    policy = StringField('นโยบาย', validators=[DataRequired()])
+
