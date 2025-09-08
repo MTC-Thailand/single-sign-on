@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 
-
 {% block content %}
 <section class="section">
 <div class="container">
     <div class="columns">
-        <div class="column is-two-thirds is-offset-2">
+        <div class="column is-two-thirds is-offset-2" x-data="{degree1: '', degree2: '', degree3: '', job1: '', job2: '', job3: '', vision1: '', vision2: '', vision3: '', experience1: '', experience2: '', experience3: ''}">
             <h1 class="title has-text-centered">ฟอร์มข้อมูลสำหรับแนะนำตนเอง</h1>
             <h1 class="subtitle has-text-centered">สำหรับผู้สมัครรับเลือกตั้งกรรมการสภาเทคนิคการแพทย์วาระที่ 8</h1>
-            <form method="post" class="box">
+            <hr>
+            <h1 class="title is-size-6 has-text-centered has-text-danger">
+                ด้วยข้อจำกัดของขนาดเอกสารแนะนำตัว กรุณาป้อนข้อมูลไม่เกิน 750 ตัวอักษร
+            </h1>
+            <form method="post">
                 {{ form.hidden_tag() }}
                 <div class="notification">
                     <h1 class="title is-size-4 has-text-centered">
@@ -46,7 +49,7 @@
                         <div class="field-body">
                             <div class="field">
                                 <p class="control is-expanded">
-                                    {{ f(class="input") }}
+                                    {{ f(class="input", **{'x-model': 'job' ~ loop.index}) }}
                                 </p>
                             </div>
                         </div>
@@ -65,16 +68,35 @@
                         <div class="field-body">
                             <div class="field">
                                 <p class="control is-expanded">
-                                    {{ f(class="input") }}
+                                    {{ f(class="input", **{"x-model": "degree" ~ loop.index}) }}
                                 </p>
                             </div>
                         </div>
                     </div>
                 {% endfor %}
                 </div>
+                <div class="notification">
+                    <h1 class="title is-size-4 has-text-centered">
+                        ประสบการณ์ทำงาน
+                    </h1>
+                    {% for f in form.experiences %}
+                        <div class="field is-horizontal">
+                            <div class="field-label is-normal">
+                                <label class="label">{{ f.label }} {{ loop.index }}</label>
+                            </div>
+                            <div class="field-body">
+                                <div class="field">
+                                    <p class="control is-expanded">
+                                        {{ f(class="input", **{'x-model': 'experience' ~ loop.index}) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
                 <div class="notification is-light is-success">
                 <h1 class="title is-size-4 has-text-centered">
-                    วิสัยทัศน์
+                    วิสัยทัศน์ต่อการพัฒนาวิชาชีพเทคนิคการแพทย์
                 </h1>
                 {% for f in form.visions %}
                 <div class="field is-horizontal">
@@ -84,13 +106,16 @@
                     <div class="field-body">
                         <div class="field">
                             <p class="control is-expanded">
-                                {{ f(class="input") }}
+                                {{ f(class="textarea", **{'x-model': 'vision' ~ loop.index}) }}
                             </p>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
                 </div>
+                <p class="notification" :class="degree1.length+degree2.length+degree3.length+job1.length+job2.length+job3.length > 750 ? 'is-danger': 'is-success'">
+                    Total characters: <span x-text="degree1.length + degree2.length + degree3.length + job1.length + job2.length + job3.length + vision1.length + vision2.length + vision3.length + experience1.length + experience2.length + experience3.length"></span>
+                </p>
                 <div class="field is-grouped is-grouped-centered">
                     <div class="field">
                         <p class="control">
@@ -99,7 +124,7 @@
                     </div>
                     <div class="field">
                         <p class="control">
-                            <input type="submit" value="Submit" class="button is-success"/>
+                            <input type="submit" :disabled="degree1.length+degree2.length+degree3.length+job1.length+job2.length+job3.length+vision1.length+vision2.length+vision3.length+experience1.length+experience2.length+experience3.length > 750" value="Submit" class="button is-success"/>
                         </p>
                     </div>
                 </div>
@@ -108,4 +133,9 @@
     </div>
 </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="//unpkg.com/alpinejs" defer></script>
 {% endblock %}
