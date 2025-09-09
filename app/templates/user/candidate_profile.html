@@ -31,7 +31,9 @@
                     <td>
                         <ol>
                         {% for degree in record.degrees %}
+                            {% if degree.degree %}
                             <li>{{ degree.degree }}</li>
+                            {% endif %}
                         {% endfor %}
                         </ol>
                     </td>
@@ -41,7 +43,9 @@
                     <td>
                         <ol>
                         {% for exp in record.experiences %}
+                            {% if exp.experience %}
                             <li>{{ exp.experience }}</li>
+                            {% endif %}
                         {% endfor %}
                         </ol>
                     </td>
@@ -52,7 +56,9 @@
                     <td>
                         <ol>
                             {% for vision in record.visions %}
+                                {% if vision.vision %}
                                 <li>{{ vision.vision }}</li>
+                                {% endif %}
                             {% endfor %}
                         </ol>
                     </td>
