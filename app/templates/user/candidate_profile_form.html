@@ -21,6 +21,18 @@
                             <p class="help has-text-link has-text-centered">ข้อมูลส่วนนี้ไม่นับรวมในจำนวนตัวอักษรที่กำหนด</p>
                             <div class="field is-horizontal">
                                 <div class="field-label is-normal">
+                                    <label class="label">{{ form.title.label }}</label>
+                                </div>
+                                <div class="field-body">
+                                    <div class="field">
+                                        <p class="control is-expanded">
+                                            {{ form.title(class="input") }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="field is-horizontal">
+                                <div class="field-label is-normal">
                                     <label class="label">{{ form.firstname.label }}</label>
                                 </div>
                                 <div class="field-body">
