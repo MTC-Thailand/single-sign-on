@@ -9,7 +9,7 @@
             <h1 class="subtitle has-text-centered">สำหรับผู้สมัครรับเลือกตั้งกรรมการสภาเทคนิคการแพทย์วาระที่ 8</h1>
             <hr>
             <h1 class="title is-size-6 has-text-centered has-text-danger">
-                ด้วยข้อจำกัดของขนาดเอกสารแนะนำตัว กรุณาป้อนข้อมูลไม่เกิน 750 ตัวอักษร
+                ด้วยข้อจำกัดของขนาดเอกสารแนะนำตัว กรุณาป้อนข้อมูลไม่เกิน 720 ตัวอักษร
             </h1>
             <form method="post">
                 {{ form.hidden_tag() }}
@@ -113,7 +113,7 @@
                 </div>
                 {% endfor %}
                 </div>
-                <p class="notification" :class="degree1.length+degree2.length+degree3.length+job1.length+job2.length+job3.length > 750 ? 'is-danger': 'is-success'">
+                <p class="notification" :class="degree1.length+degree2.length+degree3.length+job1.length+job2.length+job3.length > 720 ? 'is-danger': 'is-success'">
                     Total characters: <span x-text="degree1.length + degree2.length + degree3.length + job1.length + job2.length + job3.length + vision1.length + vision2.length + vision3.length + experience1.length + experience2.length + experience3.length"></span>
                 </p>
                 <div class="field is-grouped is-grouped-centered">
@@ -124,7 +124,7 @@
                     </div>
                     <div class="field">
                         <p class="control">
-                            <input type="submit" :disabled="degree1.length+degree2.length+degree3.length+job1.length+job2.length+job3.length+vision1.length+vision2.length+vision3.length+experience1.length+experience2.length+experience3.length > 750" value="Submit" class="button is-success"/>
+                            <input type="submit" :disabled="degree1.length+degree2.length+degree3.length+job1.length+job2.length+job3.length+vision1.length+vision2.length+vision3.length+experience1.length+experience2.length+experience3.length > 720" value="Submit" class="button is-success"/>
                         </p>
                     </div>
                 </div>
