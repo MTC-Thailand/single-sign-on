@@ -61,6 +61,7 @@
                                 ตำแหน่งงานปัจจุบัน
                             </h1>
                             {% for job_form in form.job_positions %}
+                                {{ job_form.number(type="hidden", value=loop.index) }}
                                 <div class="field is-horizontal">
                                     <div class="field-label is-normal">
                                         <label class="label">{{ job_form.job_position.label }} {{ loop.index }}</label>
@@ -80,6 +81,7 @@
                                 ประวัติการศึกษา
                             </h1>
                             {% for degree_form in form.degrees %}
+                                {{ degree_form.number(type="hidden", value=loop.index) }}
                                 <div class="field is-horizontal">
                                     <div class="field-label is-normal">
                                         <label class="label">{{ degree_form.degree.label }} {{ loop.index }}</label>
@@ -99,6 +101,7 @@
                                 ประสบการณ์ทำงาน
                             </h1>
                             {% for exp_form in form.experiences %}
+                                {{ exp_form.number(type="hidden", value=loop.index) }}
                                 <div class="field is-horizontal">
                                     <div class="field-label is-normal">
                                         <label class="label">{{ exp_form.experience.label }} {{ loop.index }}</label>
@@ -118,6 +121,7 @@
                                 วิสัยทัศน์ต่อการพัฒนาวิชาชีพเทคนิคการแพทย์
                             </h1>
                             {% for vision_form in form.visions %}
+                                {{ vision_form.number(type="hidden", value=loop.index) }}
                                 <div class="field is-horizontal">
                                     <div class="field-label is-normal">
                                         <label class="label">{{ vision_form.vision.label }} {{ loop.index }}</label>

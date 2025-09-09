@@ -1,3 +1,4 @@
+import arrow
 from flask import render_template, flash, redirect, url_for, current_app, session, request
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_principal import identity_changed, Identity, AnonymousIdentity
@@ -132,6 +133,10 @@ def submit_candidate_profile(record_id=None):
     if request.method == 'POST':
         if form.validate_on_submit():
             form.populate_obj(record)
+            if not record_id:
+                record.created_at = arrow.now('Asia/Bangkok').datetime
+            else:
+                record.updated_at = arrow.now('Asia/Bangkok').datetime
             db.session.add(record)
             db.session.commit()
             flash(f'ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว', 'success')

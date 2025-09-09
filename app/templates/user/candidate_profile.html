@@ -9,6 +9,9 @@
             <h1 class="title has-text-centered">ข้อมูลสำหรับแนะนำตนเอง</h1>
             <h1 class="subtitle has-text-centered">สำหรับผู้สมัครรับเลือกตั้งกรรมการสภาเทคนิคการแพทย์วาระที่ 8</h1>
             <hr>
+            <p class="has-text-centered notification">
+                แก้ไขล่าสุดเมื่อ {{ record.updated_at|localdatetime or record.created_at|localdatetime }}
+            </p>
             <table class="table is-striped is-fullwidth">
                 <tr>
                     <td><strong>ชื่อ นามสกุลผู้สมัคร</strong></td>
