@@ -11,6 +11,8 @@ from app.user import user_bp as user
 from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm, CandidateProfileForm
 import pandas as pd
 
+from app.user.models import CandidateProfile
+
 
 @user.route('/login', methods=['GET', 'POST'])
 def login():
@@ -118,12 +120,22 @@ def cmte_admin_index():
                            pending_requests=pending_requests)
 
 
+@user.route('/candidates/<int:record_id>', methods=['GET', 'POST'])
 @user.route('/candidates', methods=['GET', 'POST'])
-def submit_candidate_profile():
-    form = CandidateProfileForm()
+def submit_candidate_profile(record_id=None):
+    if not record_id:
+        form = CandidateProfileForm()
+        record = CandidateProfile()
+    else:
+        record = CandidateProfile.query.get(record_id)
+        form = CandidateProfileForm(obj=record)
     if request.method == 'POST':
         if form.validate_on_submit():
+            form.populate_obj(record)
+            db.session.add(record)
+            db.session.commit()
             flash(f'ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว', 'success')
+            return render_template('user/candidate_profile.html', record=record)
         else:
             flash(f'{form.errors}', 'danger')
     return render_template('user/candidate_profile_form.html', form=form)

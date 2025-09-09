@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+<div class="container">
+    <div class="columns">
+        <div class="column is-two-thirds is-offset-2" x-data="{degree1: '', degree2: '', degree3: '', job1: '', job2: '', job3: '', vision1: '', vision2: '', vision3: '', experience1: '', experience2: '', experience3: ''}">
+            {% include "messages.html" %}
+            <h1 class="title has-text-centered">ข้อมูลสำหรับแนะนำตนเอง</h1>
+            <h1 class="subtitle has-text-centered">สำหรับผู้สมัครรับเลือกตั้งกรรมการสภาเทคนิคการแพทย์วาระที่ 8</h1>
+            <hr>
+            <table class="table is-striped is-fullwidth">
+                <tr>
+                    <td><strong>ชื่อ นามสกุลผู้สมัคร</strong></td>
+                    <td>{{ record.title }}{{ record.firstname }} {{ record.lastname }}</td>
+                </tr>
+                <tr>
+                    <td><strong>ตำแหน่งงานปัจจุบัน</strong></td>
+                    <td>
+                        <ol>
+                        {% for job in record.job_positions %}
+                                {% if job.job_position %}
+                                <li>{{ job.job_position }}</li>
+                                {% endif %}
+                        {% endfor %}
+                        </ol>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>ประวัติการศึกษา</strong></td>
+                    <td>
+                        <ol>
+                        {% for degree in record.degrees %}
+                            <li>{{ degree.degree }}</li>
+                        {% endfor %}
+                        </ol>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>ประสบการณ์ทำงาน</strong></td>
+                    <td>
+                        <ol>
+                        {% for exp in record.experiences %}
+                            <li>{{ exp.experience }}</li>
+                        {% endfor %}
+                        </ol>
+                    </td>
+
+                </tr>
+                <tr>
+                    <td><strong>วิสัยทัศน์ต่อการพัฒนาวิชาชีพ</strong></td>
+                    <td>
+                        <ol>
+                            {% for vision in record.visions %}
+                                <li>{{ vision.vision }}</li>
+                            {% endfor %}
+                        </ol>
+                    </td>
+                </tr>
+            </table>
+        <div class="buttons is-centered">
+            <a href="{{ url_for('users.submit_candidate_profile', record_id=record.id) }}"
+                class="button is-light">
+                <span class="icon">
+                    <i class="fa-solid fa-pencil"></i>
+                </span>
+                <span>แก้ไข</span>
+            </a>
+        </div>
+        <p class="notification is-light is-success">
+            หากไม่มีการแก้ไข ท่านสามารถปิดหน้าเว็บนี้ได้ทันที
+        </p>
+        </div>
+    </div>
+</div>
+</section>
+{% endblock %}

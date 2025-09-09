@@ -1,4 +1,4 @@
-from wtforms import PasswordField, StringField, FieldList, TextAreaField
+from wtforms import PasswordField, StringField, FieldList, TextAreaField, FormField
 from flask_wtf import FlaskForm
 from wtforms.validators import DataRequired, EqualTo
 from wtforms_alchemy import model_form_factory
@@ -6,6 +6,8 @@ from wtforms_alchemy import model_form_factory
 
 from app import db
 from app.models import Client, User
+from app.user.models import CandidateProfile, CandidateDegree, CandidateExperience, CandidateVision, \
+    CandidateJobPosition
 
 BaseModelForm = model_form_factory(FlaskForm)
 
@@ -36,12 +38,32 @@ class ClientRegisterForm(ModelForm):
         only = ['name', 'email', 'company']
 
 
-class CandidateProfileForm(FlaskForm):
-    title = StringField('คำนำหน้า', validators=[DataRequired()])
-    firstname = StringField('ชื่อ', validators=[DataRequired()])
-    lastname  = StringField('นามสกุล', validators=[DataRequired()])
-    degrees = FieldList(StringField('วุฒิการศึกษา'), validators=[DataRequired()], min_entries=3)
-    visions = FieldList(TextAreaField('นโยบาย', validators=[DataRequired()]), min_entries=3)
-    job_positions = FieldList(StringField('ตำแหน่งงาน', validators=[DataRequired()]), min_entries=3)
-    experiences = FieldList(StringField('ประสบการณ์ทำงาน', validators=[DataRequired()]), min_entries=3)
+class CandidateJobPositionForm(ModelForm):
+    class Meta:
+        model = CandidateJobPosition
+
+
+class CandidateDegreeForm(ModelForm):
+    class Meta:
+        model = CandidateDegree
+
+
+class CandidateExperienceForm(ModelForm):
+    class Meta:
+        model = CandidateExperience
+
+
+class CandidateVisionForm(ModelForm):
+    class Meta:
+        model = CandidateVision
+
+
+class CandidateProfileForm(ModelForm):
+    class Meta:
+        model = CandidateProfile
+
+    job_positions = FieldList(FormField(CandidateJobPositionForm, default=CandidateJobPosition), min_entries=3)
+    degrees = FieldList(FormField(CandidateDegreeForm, default=CandidateDegree), min_entries=3)
+    experiences = FieldList(FormField(CandidateExperienceForm, default=CandidateExperience), min_entries=3)
+    visions = FieldList(FormField(CandidateVisionForm, default=CandidateVision), min_entries=3)
 
