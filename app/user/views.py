@@ -1,3 +1,4 @@
+import arrow
 from flask import render_template, flash, redirect, url_for, current_app, session, request
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_principal import identity_changed, Identity, AnonymousIdentity
@@ -8,8 +9,10 @@ from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent, CMTEEventParticipat
     CMTESponsorRequest, CMTESponsorEditRequest
 from app.models import User, Client
 from app.user import user_bp as user
-from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm
+from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm, CandidateProfileForm
 import pandas as pd
+
+from app.user.models import CandidateProfile
 
 
 @user.route('/login', methods=['GET', 'POST'])
@@ -103,16 +106,42 @@ def cmte_admin_index():
                                                                               approved_date=None,
                                                                               closed_date=None).count()
     pending_events = CMTEEvent.query.filter_by(approved_datetime=None, cancelled_datetime=None).count()
-    query = '''SELECT e.title, s.name, e.participant_updated_at, count(*) FROM cmte_event_participation_records AS r
+    query = '''SELECT e.id as event_id, e.title as title, e.participant_updated_at as participant_updated_at, s.name as sponsor, count(*) as number FROM cmte_event_participation_records AS r
     INNER JOIN cmte_events AS e ON r.event_id = e.id
     INNER JOIN cmte_event_sponsors AS s ON e.sponsor_id = s.id
-    WHERE e.participant_updated_at is not null
-    GROUP BY e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC LIMIT 10
+    WHERE e.participant_updated_at is not null AND e.approved_datetime is not null AND r.approved_date is null
+    GROUP BY e.id, e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC
     '''
     df = pd.read_sql_query(query, con=db.engine)
     return render_template('cmte/admin/index.html',
-                           pending_participants=df.to_html(classes='table is-striped'),
+                           pending_participants=df,
                            pending_payments=pending_payments,
                            pending_events=pending_events,
                            pending_individual_records=pending_individual_records,
                            pending_requests=pending_requests)
+
+
+@user.route('/candidates/<int:record_id>', methods=['GET', 'POST'])
+@user.route('/candidates', methods=['GET', 'POST'])
+def submit_candidate_profile(record_id=None):
+    if not record_id:
+        form = CandidateProfileForm()
+        record = CandidateProfile()
+    else:
+        record = CandidateProfile.query.get(record_id)
+        form = CandidateProfileForm(obj=record)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(record)
+            if not record_id:
+                record.created_at = arrow.now('Asia/Bangkok').datetime
+            else:
+                record.updated_at = arrow.now('Asia/Bangkok').datetime
+            db.session.add(record)
+            db.session.commit()
+            flash(f'ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว', 'success')
+            return render_template('user/candidate_profile.html', record=record)
+        else:
+            flash(f'{form.errors}', 'danger')
+    return render_template('user/candidate_profile_form.html', form=form)
+

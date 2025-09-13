@@ -187,7 +187,7 @@
             {% if not form.start_date.data %}
             startDate: moment().startOf('hour'),
             {% else %}
-            startDate: {{form.start_date.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            startDate: {{form.start_date.data.astimezone(bangkok).strftime('%d/%m/%Y %H:%M')|tojson|safe}},
             {% endif %}
             timePicker: true,
             timePicker24Hour: true,
@@ -204,7 +204,7 @@
             {% if not form.end_date.data %}
             startDate: moment().startOf('hour').add(6, 'hours'),
             {% else %}
-            startDate: {{form.end_date.data.strftime('%d/%m/%Y %H:%M')|tojson|safe}},
+            startDate: {{form.end_date.data.astimezone(bangkok).strftime('%d/%m/%Y %H:%M')|tojson|safe}},
             {% endif %}
             timePicker: true,
             timePicker24Hour: true,

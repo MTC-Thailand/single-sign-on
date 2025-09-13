@@ -6,6 +6,28 @@
     <div class="container">
         {% include "messages.html" %}
         <div class="columns">
+            <div class="column">
+                {% for req in sponsor_member_add_pending_requests %}
+                <p class="notification is-light is-warning">
+                    <span class="icon">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                มีการขอเพิ่มท่านเป็นผู้ประสานงานหน่วยงาน {{req.to_sponsor}} เมื่อเวลา {{req.requested_at|localdatetime}}
+                    <a hx-post="{{url_for('cmte.confirm_add_sponsor_members', req_id=req.id)}}"
+                       hx-indicator="this"
+                       hx-swap="none"
+                       hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                       class="button is-small is-success">ยืนยัน</a>
+                    <a hx-delete="{{url_for('cmte.confirm_add_sponsor_members', req_id=req.id)}}"
+                       hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                       hx-indicator="this"
+                       hx-swap="none"
+                       class="button is-small is-danger">ปฏิเสธ</a>
+                </p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="columns">
             <div class="column is-one-third is-offset-4">
                 {% if warning_msg %}
                     <div class="notification is-warning">

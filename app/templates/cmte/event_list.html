@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block head %}
+    {{super()}}
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+{% include "members/cmte/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <table class="table is-striped">
+                <thead>
+                <th>ประเภทกิจกรรม</th>
+                <th>ชนิดกิจกรรม</th>
+                <th>ยื่นขอคะแนนเป็นส่วนบุคคลด้วยตนเอง</th>
+                </thead>
+                <tbody>
+                {% for event_type in event_types %}
+                    <tr>
+                        <td>{{ event_type.name }}</td>
+                        <td>
+                            <ul>
+                                {% for activity in event_type.activities %}
+                                        <li>{{ activity.name }}</li>
+                                    <p class="help notification">
+                                    {{ activity.detail }}
+                                    </p>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>
+                            {% if not event_type.is_sponsored %}
+                                <span class="icon">
+                                    <i class="fa-solid fa-check"></i>
+                                </span>
+                            {% else %}
+                                <span class="icon">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </span>
+                                <small>ผู้จัดงานเป็นผู้ยื่นขอคะแนนให้ผู้เข้าร่วม</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                </table>
+            <div class="buttons is-centered">
+                <a class="button is-light" href="{{ url_for('member.index') }}">
+                    Back
+                </a>
+                <a class="button is-success" href="{{ url_for('member.individual_score_index') }}">
+                    <span class="icon">
+                        <i class="fa-solid fa-user-check"></i>
+                    </span>
+                    <span>
+                        ยื่นขออนุมัติคะแนนส่วนบุคคล
+                    </span>
+                </a>
+                <a class="button is-link" href="{{ url_for('cmte.upcoming_events') }}">
+                    <span class="icon">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </span>
+                    <span>
+                        ปฏิทินกิจกรรม
+                    </span>
+                </a>
+            </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

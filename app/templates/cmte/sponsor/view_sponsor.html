@@ -434,7 +434,7 @@
         <h1 class="title has-text-centered">รายชื่อผู้ประสานงาน</h1>
         {% if sponsor.registered_datetime %}
             <div class="has-text-centered">
-                <a href="{{ url_for('cmte.register_sponsor_member', sponsor_id=sponsor.id) }}"
+                <a href="{{ url_for('cmte.add_sponsor_members', sponsor_id=sponsor.id) }}"
                    class="button is-info">
                     <span class="icon">
                         <i class="fa-solid fa-user-plus"></i>

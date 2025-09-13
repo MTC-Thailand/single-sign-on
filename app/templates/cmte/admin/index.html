@@ -8,11 +8,32 @@
         <div class="columns">
             <div class="column">
                 <h1 class="title is-size-4">รายการกิจกรรมรออนุมัติคะแนน</h1>
-                {{pending_participants|safe}}
+                <table class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อกิจกรรม</th>
+                    <th>สถาบัน</th>
+                    <th>วันที่ยื่นรายชื่อ</th>
+                    <th>รออนุมัติ</th>
+                    </thead>
+                    {% for idx, row in pending_participants.iterrows() %}
+                    <tr>
+                        <td>{{row.title}}</td>
+                        <td>{{row.sponsor}}</td>
+                        <td>{{row.participant_updated_at|localdatetime}}</td>
+                        <td>
+                            <a href="{{url_for('cmte.admin_preview_event', event_id=row.event_id)}}">
+                              <span class="tag is-rounded is-danger">
+                                {{row.number}}
+                              </span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
             </div>
             <div class="column">
                 <article class="panel is-info">
-                    <p class="panel-heading">Admin</p>
+                    <p class="panel-heading">สถาบันฝึกอบรม</p>
                     <a class="panel-block" href="{{url_for('cmte.all_requests', tab='new')}}">
                         <span class="panel-icon">
                             <i class="fas fa-university"></i>
@@ -26,6 +47,15 @@
                         </span>
                         ข้อมูลสถาบัน
                     </a>
+                    <a class="panel-block" href="{{url_for('cmte.admin_list_sponsor_members')}}">
+                        <span class="panel-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </span>
+                        ข้อมูลผู้ประสานงานสถาบัน
+                    </a>
+                </article>
+                <article class="panel is-info">
+                    <p class="panel-heading">กิจกรรม</p>
                     <a class="panel-block" href="{{url_for('cmte.admin_pending_events')}}">
                         <span class="panel-icon">
                             <i class="fas fa-hourglass-half"></i>
@@ -40,6 +70,9 @@
                         อนุมัติคะแนนส่วนบุคคล
                         <span class="tag is-success is-rounded">{{pending_individual_records or 0}}</span>
                     </a>
+                </article>
+                <article class="panel is-info">
+                    <p class="panel-heading">สมาชิก</p>
                     <a class="panel-block" href="{{url_for('cmte.admin_edit_fee_payment_record')}}">
                         <span class="panel-icon">
                             <i class="fas fa-user-tag"></i>
@@ -47,6 +80,15 @@
                         รายการชำระค่าธรรมเนียมกิจกรรมรายบุคคล
                         <span class="tag is-success is-rounded">{{pending_payments or 0}}</span>
                     </a>
+                    <a class="panel-block" href="{{url_for('cmte.admin_search_members')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        ตรวจสอบคะแนนสมาชิก
+                    </a>
+                </article>
+                <article class="panel is-info">
+                    <p class="panel-heading">ตั้งค่า</p>
                     <a class="panel-block" href="{{url_for('cmte.admin_event_edit')}}">
                         <span class="panel-icon">
                             <i class="fas fa-plus"></i>

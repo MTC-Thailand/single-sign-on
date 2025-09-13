@@ -116,21 +116,19 @@
                     </tr>
                     <tr>
                         <td><strong>เอกสารประกอบ</strong></td>
-                        <td class="content">
-                            <ol>
+                        <td>
+                            <ul>
                                 {% for doc in event.docs %}
                                 {% if not doc.is_payment_slip %}
                                 <li>
-                                    {{doc.filename}}
                                     <a href="{{url_for('cmte.download_file', key=doc.key, download_filename=doc.filename)}}">
-                                    <span class="icon">
-                                        <i class="fa-solid fa-file-arrow-down"></i>
-                                    </span>
+                                    {{doc.filename}}
                                     </a>
+                                    {{doc.note or ''}}
                                 </li>
                                 {% endif %}
                                 {% endfor %}
-                            </ol>
+                            </ul>
                         </td>
                         <td></td>
                     </tr>
@@ -344,16 +342,23 @@
                                 <p class="help is-danger">กรุณาใช้ template file ในการส่งข้อมูล</p>
                             </div>
                         </div>
+                        <div class="field">
+                            <label class="label">Upload ไฟล์หลักฐานการเข้าร่วม</label>
+                            <div class="control">
+                                {{participant_form.evidence_file(accept=".pdf")}}
+                                <p class="help is-danger">ส่ง PDF file เท่านั้น</p>
+                            </div>
+                        </div>
                         <div class="field is-grouped">
                             <div class="control">
-                                <input id="upload-btn" type="submit" value="Upload" class="button is-small is-success">
+                                <input id="upload-btn" type="submit" value="Upload" class="button is-success">
                             </div>
                             <div class="control">
-                                <a class="button is-small is-light" href="{{url_for('cmte.get_participants_template_file')}}">
+                                <a class="button is-link" href="{{url_for('cmte.get_participants_template_file')}}">
                                     <span class="icon">
                                         <i class="fas fa-file-download"></i>
                                     </span>
-                                    <span>template file</span>
+                                    <span>Template File</span>
                                 </a>
                             </div>
                         </div>

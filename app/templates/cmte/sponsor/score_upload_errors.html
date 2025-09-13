@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+<section class="section">
+    <div class="container">
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column">
+                <h2 class="title has-text-centered">ไม่สามารถบันทึกคะแนนได้</h2>
+                <h2 class="subtitle has-text-centered">กรุณาตรวจสอบข้อมูลให้ถูกต้องอีกครั้ง</h2>
+                {{errors|safe}}
+                {% if source == 'admin' %}
+                <a class="button is-light" href="{{url_for('cmte.admin_preview_event', event_id=event.id)}}">
+                    Back
+                </a>
+                {% else %}
+                <a class="button is-light" href="{{url_for('cmte.preview_event', event_id=event.id)}}">
+                    Back
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

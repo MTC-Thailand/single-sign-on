@@ -8,20 +8,32 @@
         <div class="columns">
             <div class="column is-one-fifth">
                 <aside class="menu">
-                    <p class="menu-label">Administration</p>
+                    <p class="menu-label">Profile</p>
                     <ul class="menu-list">
-                        <li><a href="{{url_for('member.edit_member_info')}}">ข้อมูลส่วนตัว</a></li>
                         <li>
-                            <a>การศึกษาต่อเนื่อง (CMTE)</a>
-                            <ul>
-                                <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
-                                <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
-                                <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
-                                <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
-                                <li><a href="{{url_for('cmte.upcoming_events')}}">รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></a></li>
-                                <li><a href="https://mtc-cmte.one.th">ระบบ e-learning (ทำข้อสอบออนไลน์) <span class="tag is-rounded is-success">new</span></a></li>
-                            </ul>
+                            <a href="{{url_for('member.edit_member_info')}}"
+                               class="button is-danger"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.update_member_info')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-user"></i>
+                                </span>
+                                <span>
+                                    แก้ไขข้อมูลส่วนตัว
+                                </span>
+                            </a>
                         </li>
+                    </ul>
+                    <p class="menu-label">CMTE</p>
+                    <ul class="menu-list">
+                        <li><a href="{{ url_for('cmte.list_event_types') }}">รายการกิจกรรม</a></li>
+                        <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
+                        <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
+                        <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
+                        <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
+                        <li><a href="{{url_for('cmte.upcoming_events')}}">รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></a></li>
+                        <li><a href="https://mtc-cmte.one.th">ระบบ e-learning (ทำข้อสอบออนไลน์) <span class="tag is-rounded is-success">new</span></a></li>
                     </ul>
                 </aside>
 
@@ -30,15 +42,23 @@
                 <div class="box">
                     <div class="has-text-centered">
                         <figure class="image is-128x128 is-inline-block">
-                            <img src="{{url_for('static', filename='doctor.png')}}">
+                            {% if not image_base64 %}
+                            <img class="is-rounded" src="{{url_for('static', filename='doctor.png')}}">
+                            {% else %}
+                            <img src="data:image/jpeg;base64, {{image_base64}}">
+                            {% endif %}
                         </figure>
-                        <h1 class="title">{{current_user.th_fullname}}</h1>
-                        <h1 class="subtitle">ท.น.{{current_user.license.number}}</h1>
-                        <p class="has-text-danger">
-                            หากท่านได้ดำเนินการต่ออายุในระบบ OnePlatform ทางเจ้าหน้าที่กำลังดำเนินการอัพเดตวันหมดอายุให้เป็นปัจจุบันขออภัยในความไม่สะดวก
-                        </p>
                     </div>
+                    <br><br>
                     <table class="table is-fullwidth mt-4">
+                        <tr>
+                            <td><strong>ชื่อ</strong></td>
+                            <td>{{current_user.th_fullname}}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>หมายเลขใบอนุญาต</strong></td>
+                            <td>{{current_user.license.number}}</td>
+                        </tr>
                         <tr>
                             <td><strong>วันเริ่มใบอนุญาต</strong></td>
                             <td>{{current_user.license.start_date|localdate}} ({{current_user.license.start_date|humanizedate}})</td>
@@ -64,7 +84,9 @@
                             </td>
                         </tr>
                         <tr>
-                            <td><strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong></td>
+                            <td>
+                                <strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong>
+                            </td>
                             <td>
                                 {% set fee_payment = current_user.license.get_active_cmte_fee_payment() %}
                                 {% if fee_payment and fee_payment.payment_datetime %}
@@ -74,8 +96,117 @@
                                 {% endif %}
                             </td>
                         </tr>
+                        <tr>
+                            <td colspan="2">
+                                <div class="notification">
+                                    <p class="help">ค่าธรรมเนียมสำหรับการยื่นขออนุมัติคะแนนรายบุคคล 500 บาทต่อรอบใบอนุญาต 5 ปี ไม่ใช่ค่าทำข้อสอบออนไลน์เท่านั้นแต่ยังสามารถยื่นขอกิจกรรมส่วนบุคคลอื่น ๆ ได้อีกมากมาย <strong>และไม่ใช่ค่าธรรมเนียมการต่อใบอนุญาต</strong></p>
+                                </div>
+                            </td>
+                        </tr>
                     </table>
                 </div>
+            </div>
+            <div class="column">
+                <div class="box">
+                    <h1 class="title is-size-4">ข้อมูลติดต่อ</h1>
+                    <table class="table">
+                        <tbody>
+                        <tr>
+                            <td>
+                                <span class="icon">
+                                    <i class="fa-solid fa-phone"></i>
+                                </span>
+                            </td>
+                            <td>{{current_user.tel}}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span class="icon">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </span>
+                            </td>
+                            <td>{{current_user.email}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div id="info-update-datetime" class="mb-2">
+                        <small class="tag is-rounded">
+                            Last update {{current_user.updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
+                        </small>
+                    </div>
+                    <div class="field has-addons">
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.update_member_info')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </span>
+                                <span>แก้ไข</span>
+                            </a>
+                        </p>
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-target="#info-update-datetime"
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.verify_member_info')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </span>
+                                <span>รับรองข้อมูล</span>
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                {% if current_user.addresses %}
+                <div class="box">
+                    <h1 class="title is-size-4">ที่อยู่จัดส่งเอกสาร</h1>
+                    <table class="table">
+                        <tbody>
+                        <tr>
+                            <td>
+                                <span class="icon">
+                                    <i class="fa-solid fa-envelopes-bulk"></i>
+                                </span>
+                            </td>
+                            <td>{{current_user.addresses[0]}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div id="mailing-address-update-datetime" class="mb-2">
+                        <small class="tag is-rounded">
+                            Last update {{current_user.addresses[0].updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
+                        </small>
+                    </div>
+                    <div class="field has-addons">
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.update_member_info')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </span>
+                                <span>แก้ไข</span>
+                            </a>
+                        </p>
+                        <p class="control">
+                            <a class="button is-rounded is-small"
+                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                               hx-target="#mailing-address-update-datetime"
+                               hx-indicator="this"
+                               hx-post="{{url_for('member.verify_member_mailing_address')}}">
+                                <span class="icon">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </span>
+                                <span>รับรองข้อมูล</span>
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

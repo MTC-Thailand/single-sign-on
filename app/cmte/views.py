@@ -5,12 +5,14 @@ import os
 import uuid
 from functools import wraps
 from io import BytesIO
+
 import pandas as pd
 
 import arrow
 import boto3
-from flask import render_template, flash, redirect, url_for, make_response, request, send_file, current_app, session, \
-    jsonify, abort
+from flask import (render_template, flash, redirect,
+                   url_for, make_response, request, send_file,
+                   current_app, session, jsonify, abort)
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
@@ -23,8 +25,6 @@ from app.cmte.forms import *
 from app.members.models import License, Member
 from app.cmte.models import *
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
-from flask_mail import Message
-from apscheduler.schedulers.blocking import BlockingScheduler
 bangkok = timezone('Asia/Bangkok')
 
 
@@ -101,6 +101,9 @@ def download_file(key):
 @login_required
 @cmte_sponsor_admin_permission.require()
 def cmte_index():
+    sponsor_member_add_pending_requests = CMTESponsorMemberAddRequest.query.filter_by(member=current_user).\
+        filter(CMTESponsorMemberAddRequest.accepted_at != None).\
+        filter(CMTESponsorMemberAddRequest.cancelled_at != None)
     warning_msg = ''
     if cmte_admin_permission:
         return render_template('cmte/index.html', warning_msg=warning_msg)
@@ -115,7 +118,8 @@ def cmte_index():
                     warning_msg = 'กรุณาดำเนินการชำระค่าธรรมเนียม'
             else:
                 warning_msg = 'กรุณาดำเนินการต่ออายุใบรับรองสถาบัน'
-    return render_template('cmte/index.html', warning_msg=warning_msg)
+    return render_template('cmte/index.html', warning_msg=warning_msg,
+                           sponsor_member_add_pending_requests=sponsor_member_add_pending_requests)
 
 
 @cmte.get('/events/registration')
@@ -325,44 +329,74 @@ def preview_event(event_id):
 @cmte_sponsor_admin_permission.union(cmte_admin_permission).require()
 def add_participants(event_id):
     errors = []
-    form = CMTEParticipantFileUploadForm()
-    event = CMTEEvent.query.get(event_id)
-    _file = form.upload_file.data
-    if _file:
-        df = pd.read_excel(_file, sheet_name='Sheet1')
-        for idx, row in df.iterrows():
-            license_number = str(row['license_number'])
-            score = float(row['score'])
-            license = License.query.filter_by(number=license_number).first()
-            if not license:
-                errors.append({
-                    'name': row['name'],
-                    'license_number': row['license_number'],
-                    'score': row['score'],
-                    'note': 'License not found.'
-                })
-                continue
-
-            rec = CMTEEventParticipationRecord.query.filter_by(
-                license_number=license_number,
-                event_id=event_id).first()
-            if not rec:
-                rec = CMTEEventParticipationRecord()
-                rec.license_number = license_number
-                rec.event_id = event_id
-            rec.create_datetime = arrow.now('Asia/Bangkok').datetime
-            rec.score = event.cmte_points if score > event.cmte_points else score
-            rec.submitted_name = row['name']
-            db.session.add(rec)
-            db.session.commit()
-        flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
-    else:
-        flash('ไม่พบ file ข้อมูล', 'danger')
-    if errors:
-        df_ = pd.DataFrame(errors)
-        return render_template('cmte/admin/upload_errors.html', errors=df_.to_html(classes=['table is-striped']),
-                               event=event)
+    source = request.args.get('source')
     if request.args.get('source') == 'admin':
+        form = CMTEAdminParticipantFileUploadForm()
+    else:
+        form = CMTEParticipantFileUploadForm()
+    event = CMTEEvent.query.get(event_id)
+    if form.validate_on_submit():
+        score_file = form.upload_file.data
+        if score_file:
+            df = pd.read_excel(score_file, sheet_name='Sheet1')
+            for idx, row in df.iterrows():
+                if not pd.isna(row['license_number']):
+                    license_number = str(int(row['license_number']))
+                    score = float(row['score'])
+                    license = License.query.filter_by(number=license_number).first()
+                else:
+                    license = None
+
+                if not license:
+                    errors.append({
+                        'name': row['name'],
+                        'license_number': row['license_number'],
+                        'score': row['score'],
+                        'note': 'License not found.'
+                    })
+                    continue
+
+                rec = CMTEEventParticipationRecord.query.filter_by(
+                    license_number=license_number,
+                    event_id=event_id).first()
+                if not rec:
+                    rec = CMTEEventParticipationRecord()
+                    rec.license_number = license_number
+                    rec.event_id = event_id
+                rec.create_datetime = arrow.now('Asia/Bangkok').datetime
+                rec.score = event.cmte_points if score > event.cmte_points else score
+                rec.submitted_name = row['name']
+                db.session.add(rec)
+                db.session.commit()
+            event.participant_updated_at = arrow.now('Asia/Bangkok').datetime
+            db.session.add(event)
+            db.session.commit()
+            flash('เพิ่มรายชื่อผู้เข้าร่วมแล้ว', 'success')
+
+            evidence_file = form.evidence_file.data
+            if evidence_file:
+                s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                         aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                         region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+                filename = evidence_file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(evidence_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTEEventDoc(event=event, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = 'ไฟล์หลักฐานการเข้าร่วมกิจกรรม'
+                db.session.add(doc)
+                event.payment_datetime = arrow.now('Asia/Bangkok').datetime
+                db.session.add(event)
+                db.session.commit()
+        if errors:
+            df_ = pd.DataFrame(errors)
+            return render_template('cmte/sponsor/score_upload_errors.html',
+                                   errors=df_.to_html(classes=['table is-fullwidth is-striped']),
+                                   event=event,
+                                   source=source)
+    else:
+        flash(f'{form.errors}', 'danger')
+    if source == 'admin':
         return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
     return redirect(url_for('cmte.preview_event', event_id=event_id))
 
@@ -428,7 +462,7 @@ def admin_preview_event(event_id):
     event = CMTEEvent.query.get(event_id)
     next_url = request.args.get('next_url')
     form = CMTEEventCodeForm()
-    participant_form = CMTEParticipantFileUploadForm()
+    participant_form = CMTEAdminParticipantFileUploadForm()
     return render_template('cmte/admin/event_preview.html',
                            event=event,
                            next_url=next_url,
@@ -760,14 +794,32 @@ def approve_event_participation_records(event_id):
 @login_required
 @cmte_admin_permission.require()
 def admin_pending_events():
-    return render_template('cmte/admin/approved_events.html', _type='pending')
+    query = '''SELECT e.id as event_id, e.title as title, e.participant_updated_at as participant_updated_at, s.name as sponsor, count(*) as number FROM cmte_event_participation_records AS r
+    INNER JOIN cmte_events AS e ON r.event_id = e.id
+    INNER JOIN cmte_event_sponsors AS s ON e.sponsor_id = s.id
+    WHERE e.participant_updated_at is not null AND e.approved_datetime is not null AND r.approved_date is null
+    GROUP BY e.id, e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC
+    '''
+    df = pd.read_sql_query(query, con=db.engine)
+    return render_template('cmte/admin/approved_events.html',
+                           _type='pending',
+                           pendings=df)
 
 
 @cmte.get('/admin/events/approved')
 @login_required
 @cmte_admin_permission.require()
 def admin_approved_events():
-    return render_template('cmte/admin/approved_events.html', _type='approved')
+    query = '''SELECT e.id as event_id, e.title as title, e.participant_updated_at as participant_updated_at, s.name as sponsor, count(*) as number FROM cmte_event_participation_records AS r
+    INNER JOIN cmte_events AS e ON r.event_id = e.id
+    INNER JOIN cmte_event_sponsors AS s ON e.sponsor_id = s.id
+    WHERE e.participant_updated_at is not null AND e.approved_datetime is not null AND r.approved_date is null
+    GROUP BY e.id, e.title, s.name, e.participant_updated_at ORDER BY e.participant_updated_at DESC
+    '''
+    df = pd.read_sql_query(query, con=db.engine)
+    return render_template('cmte/admin/approved_events.html',
+                           _type='approved',
+                           pendings=df)
 
 
 @cmte.get('/api/events')
@@ -857,7 +909,7 @@ def load_pending_events():
 def approve_event(event_id):
     event = CMTEEvent.query.get(event_id)
     event.approved_datetime = arrow.now('Asia/Bangkok').datetime
-    event.submission_due_date = event.approved_datetime + timedelta(days=event.event_type.submission_due)
+    event.submission_due_date = event.end_date + timedelta(days=event.event_type.submission_due)
     cmte_points = request.form.get('cmte_points', type=float)
     event.cmte_points = cmte_points
     event.is_pending = False
@@ -1082,6 +1134,56 @@ def sponsor_member_login():
     return render_template('cmte/sponsor/login_form.html', form=form)
 
 
+@cmte.route('/members/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    token = request.args.get('token')
+    email = request.args.get('email')
+    serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+    try:
+        token_data = serializer.loads(token)
+    except Exception as e:
+        return '<h1>Bad JSON Web token. You need a valid token.</h1>' + str(e)
+    else:
+        if token_data.get('email') != email:
+            return '<h1>Invalid JSON Web token.</h1>'
+
+        member = CMTESponsorMember.query.filter_by(email=email).first()
+        if not member:
+            return '<h1>Account not found.</h1>'
+        else:
+            form = CMTESponsorMemberPasswordForm()
+            if form.validate_on_submit():
+                member.password = request.form.get('password')
+                db.session.add(member)
+                db.session.commit()
+                return redirect(url_for('cmte.sponsor_member_login'))
+            return render_template('cmte/sponsor/reset_password_form.html', form=form)
+
+
+@cmte.route('/members/forget-password', methods=['GET', 'POST'])
+def forget_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        print(email)
+        member = CMTESponsorMember.query.filter_by(email=email).first()
+        if member:
+            serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+            token = serializer.dumps({'email': email})
+            url = url_for('cmte.reset_password', token=token, email=email, _external=True)
+            if not current_app.debug:
+                message = f'''
+                เรียน ท่านเจ้าของอีเมล
+                \n
+                กรุณาคลิกที่ลิงค์เพื่อยืนยันการแก้ไขรหัสผ่าน {url}
+                \n\n
+                หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+                '''
+                send_mail([email], 'MTC-CMTE Email validation', message)
+                return redirect(url_for('cmte.sponsor_member_login'))
+
+    return render_template('cmte/sponsor/forget_password_form.html')
+
+
 @cmte.route('/validate-email', methods=['GET'])
 def validate_email():
     token = request.args.get('token')
@@ -1122,7 +1224,7 @@ def register_sponsor_member(sponsor_id=None):
             member = CMTESponsorMember()
             form.populate_obj(member)
             member.password = form.password.data
-            member.is_valid = True
+            member.is_valid = False
             serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
             token = serializer.dumps({'email': form.email.data})
             url = url_for('cmte.validate_email', token=token, email=form.email.data, _external=True)
@@ -2134,14 +2236,15 @@ def admin_event_edit(event_id=None):
                 event = CMTEEvent()
             form.populate_obj(event)
             if event.approved_datetime:
-                event.submission_due_date = event.approved_datetime + timedelta(days=30)
+                event.submission_due_date = event.end_date + timedelta(days=30)
             db.session.add(event)
             db.session.commit()
             flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_preview_event', event_id=event.id))
         else:
             flash(f'Error {form.errors}', 'danger')
-    return render_template('cmte/admin/admin_event_form.html', form=form, event=event)
+    return render_template('cmte/admin/admin_event_form.html',
+                           form=form, event=event, bangkok=bangkok)
 
 
 @cmte.route('/upcoming-events')
@@ -2241,6 +2344,8 @@ def admin_individual_score_edit(record_id):
             db.session.commit()
             flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
             return redirect(url_for('cmte.admin_individual_score_detail', record_id=record_id))
+        else:
+            flash(f'{form.errors}', 'danger')
     return render_template('cmte/admin/individual_score_form.html', form=form, record=record)
 
 
@@ -2262,6 +2367,8 @@ def admin_confirm_payment(event_id):
     template = f'''
     <span class='tag is-rounded is-small is-success'>{event.payment_approved_at.strftime('%d/%m/%Y %H:%M')}</span>
     '''
+    resp = make_response(template)
+    resp.headers['HX-Refresh'] = 'true'
     return template
 
 
@@ -2339,3 +2446,185 @@ def admin_edit_event_activity(event_type_id, event_activity_id=None):
         return redirect(url_for('cmte.admin_manage_event_activity', event_type_id=event_type_id))
     return render_template('cmte/admin/event_activity_form.html',
                            form=form, event_type_id=event_type_id)
+
+
+@login_required
+@cmte_admin_permission.require()
+@cmte.route('/admin/sponsors/members')
+def admin_list_sponsor_members():
+    members = CMTESponsorMember.query.all()
+    return render_template('cmte/admin/sponsor_members.html', members=members)
+
+
+@login_required
+@cmte_admin_permission.require()
+@cmte.route('/admin/sponsors/members/<int:member_id>/edit', methods=['GET', 'POST'])
+def admin_edit_sponsor_member(member_id):
+    member = CMTESponsorMember.query.get(member_id)
+    form = CMTEAdminSponsorMemberForm(obj=member)
+    if form.validate_on_submit():
+        email = form.email.data
+        _member = CMTESponsorMember.query.filter_by(email=email).first()
+        if _member and _member.id == member.id:
+            flash(f'Email นี้มีการลงทะเบียนใช้งานแล้ว', 'danger')
+            return render_template('cmte/admin/sponsor_member_form.html', form=form)
+        form.populate_obj(member)
+        db.session.add(member)
+        db.session.commit()
+        flash(f'แก้ไขข้อมูลผู้ประสานงานแล้ว', 'success')
+        return redirect(url_for('cmte.admin_list_sponsor_members'))
+    else:
+        if form.errors:
+            flash(f'{form.errors}', 'danger')
+    return render_template('cmte/admin/sponsor_member_form.html', form=form)
+
+
+@login_required
+@cmte_admin_permission.require()
+@cmte.route('/admin/sponsors/members/<int:member_id>/send-verification', methods=['GET', 'POST'])
+def admin_send_email_verification(member_id):
+    member = CMTESponsorMember.query.get(member_id)
+    serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+    token = serializer.dumps({'email': member.email})
+    url = url_for('cmte.validate_email', token=token, email=member.email, _external=True)
+    message = f'''
+    เรียน ท่านเจ้าของอีเมล
+
+    บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์ของหน่วยงาน {member.sponsor.name}
+    \n
+    กรุณาคลิกที่ลิงค์เพื่อยืนยัน {url}
+    \n\n
+    หากไม่ได้ดำเนินการกรุณาติดต่อเจ้าหน้าที่สภาเทคนิคการแพทย์
+    '''
+    send_mail([member.email], 'MTC-CMTE Email validation', message)
+    resp = make_response()
+    return resp
+
+
+@login_required
+@cmte_admin_permission.union(cmte_sponsor_admin_permission).require()
+@cmte.route('/sponsors/<int:sponsor_id>/members/add', methods=['GET', 'POST'])
+def add_sponsor_members(sponsor_id):
+    sponsor = CMTEEventSponsor.query.get(sponsor_id)
+    if request.method == 'POST':
+        members = request.form.getlist('sponsor_members')
+        for member_id in members:
+            member = CMTESponsorMember.query.get(member_id)
+            req = CMTESponsorMemberAddRequest(to_sponsor_id=int(sponsor_id),
+                                              member=member,
+                                              requested_at=arrow.now('Asia/Bangkok').datetime,
+                                              )
+            db.session.add(req)
+            db.session.commit()
+            if not current_app.debug:
+                message = f'''
+                เรียน ท่านเจ้าของอีเมล
+                \n
+                กรุณาเข้าสู่ระบบสารสนเทศของสภาเทคนิคการแพทย์และดำเนินการเพื่อยืนยันการเข้าร่วมเป็นผู้ประสานงานของ {member.sponsor}
+                '''
+                send_mail([member.email], 'MTC-CMTE แจ้งการขอเพิ่มชื่อผู้ประสานงาน', message)
+        flash(f'ดำเนินการแจ้งเจ้าของบัญชีเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('cmte.manage_sponsor', sponsor_id=sponsor_id))
+
+    return render_template('cmte/sponsor/add_sponsor_member.html', sponsor=sponsor)
+
+
+@login_required
+@cmte_admin_permission.union(cmte_sponsor_admin_permission).require()
+@cmte.route('/sponsors/members/add/<int:req_id>/confirm', methods=['DELETE', 'POST'])
+def confirm_add_sponsor_members(req_id):
+    req = CMTESponsorMemberAddRequest.query.get(req_id)
+    if request.method == 'POST':
+        req.accepted_at = arrow.now('Asia/Bangkok').datetime
+        req.member.sponsor = req.to_sponsor
+        db.session.add(req)
+        db.session.commit()
+        flash(f'ดำเนินการเรียบร้อย', 'success')
+    if request.method == 'DELETE':
+        req.cancelled_at = arrow.now('Asia/Bangkok').datetime
+        db.session.add(req)
+        db.session.commit()
+        flash(f'ยกเลิกการดำเนินการเรียบร้อย', 'success')
+
+    resp = make_response()
+    resp.headers['HX-Refresh'] = 'true'
+    return resp
+
+
+@login_required
+@cmte_admin_permission.union(cmte_sponsor_admin_permission).require()
+@cmte.route('/api/sponsors/members/')
+def get_sponsor_members():
+    search_term = request.args.get('term', '')
+    results = []
+    for member in CMTESponsorMember.query:
+        if search_term in str(member) or search_term in (member.email if member.email else ''):
+            index_ = member.id
+            results.append({
+                "id": index_,
+                "text": f'{str(member)}, {member.email}'
+            })
+    return jsonify({'results': results})
+
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/scores/')
+def admin_search_members():
+    return render_template('cmte/admin/member_cmte_scores.html')
+
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/<int:member_id>/scores/')
+def admin_check_member_cmte_scores(member_id):
+    member = Member.query.get(member_id)
+    records = CMTEEventParticipationRecord.query.filter_by(license_number=member.license.number)\
+        .filter(CMTEEventParticipationRecord.score.isnot(None))\
+        .order_by(CMTEEventParticipationRecord.approved_date.desc())
+    return render_template('cmte/admin/member_cmte_score_records.html',
+                           records=records, member=member)
+
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/scores/<int:record_id>', methods=['POST', 'GET'])
+def admin_update_cmte_score_valid_date(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    if request.headers.get('HX-Request') == 'true':
+        record.set_score_valid_date()
+        db.session.add(record)
+        db.session.commit()
+        resp = make_response()
+        resp.headers['HX-Refresh'] = 'true'
+        return resp
+    form = AdminParticipantRecordForm(obj=record)
+    if request.method == 'GET':
+        return render_template('cmte/admin/edit_participant_record_form.html',
+                               form=form, record=record)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(record)
+            db.session.add(record)
+            db.session.commit()
+        else:
+            flash(f'{form.errors}', 'danger')
+        return redirect(url_for('cmte.admin_check_member_cmte_scores', member_id=record.license.member_id))
+
+
+@cmte_admin_permission.require()
+@login_required
+@cmte.route('/admin/members/scores/<int:record_id>/delete', methods=['DELETE'])
+def admin_delete_cmte_score_record(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    db.session.delete(record)
+    db.session.commit()
+    resp = make_response()
+    return resp
+
+
+@cmte.route('/members/events')
+@login_required
+def list_event_types():
+    event_types = CMTEEventType.query.filter_by(deprecated=False).order_by(CMTEEventType.number)
+    return render_template('cmte/event_list.html', event_types=event_types)

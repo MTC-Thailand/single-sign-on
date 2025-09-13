@@ -1,3 +1,4 @@
+import base64
 import json
 from datetime import datetime
 
@@ -18,13 +19,15 @@ from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine, or_, func, and_
 
+from app.cmte.views import bangkok
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm, \
     MemberInfoForm
 
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm
-from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord
+from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, CMTEEvent, \
+    CMTEEventActivity, CMTEEventCategory
 from app import admin_permission
 
 from requests.adapters import HTTPAdapter
@@ -32,6 +35,7 @@ from urllib3.util import Retry
 
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
+IMG_BASE_URL = 'https://mtc.thaijobjob.com'
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
 MYSQL_USER = os.environ.get('MYSQL_USER')
 MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
@@ -116,7 +120,7 @@ def load_from_mtc(firstname=None, lastname=None, license_id=None):
 
 
 def check_license_status(delta, status):
-    if status == 'ปกติ' and delta.days > 0:
+    if status == 'ปกติ' and delta.days >= 0:
         return 'ปกติ'
     elif status == 'ปกติ' and delta.days < 0:
         return 'หมดอายุ'
@@ -258,7 +262,7 @@ def search_member():
                                                    rec.get('firstnameEN'),
                                                    rec.get('lastnameEN'),
                                                    int(rec.get('license_no')),
-                                                   'has-text-success' if delta.days > 0 else 'has-text-danger',
+                                                   'has-text-success' if delta.days >= 0 else 'has-text-danger',
                                                    exp_date.format('DD MMMM YYYY', locale='th'),
                                                    exp_date.humanize(granularity=['year', 'day'], locale='th'),
                                                    'is-success' if license_status == 'ปกติ' else 'is-danger',
@@ -333,9 +337,34 @@ def search_member():
     return render_template('members/search_form.html', form=form)
 
 
-@member.route('/info')
-def view_member_info():
-    return render_template('members/member_info.html')
+@member.route('/info/<int:member_id>')
+def view_member_info(member_id):
+    member = Member.query.get(member_id)
+    if member and member.license:
+        status_tag = '<span class="tag {}">{}</span>'
+        if member.license.is_expired:
+            lic_status = status_tag.format('is-danger', 'หมดอายุ')
+        elif member.license.status:
+            if member.license.status == 'ปกติ':
+                lic_status = status_tag.format('is-success', member.license.status)
+            else:
+                lic_status = status_tag.format('is-warning', member.license.status)
+        else:
+            lic_status = status_tag.format('is-success', 'ปกติ')
+        try:
+            img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
+                                        params={'license_no': member.license.number})
+        except:
+            image_base64 = None
+        else:
+            if img_response.status_code == 200:
+                image_base64 = base64.b64encode(img_response.content).decode('utf-8')
+            else:
+                image_base64 = None
+    return render_template('members/member_info.html',
+                           member=member,
+                           image_base64=image_base64,
+                           lic_status=lic_status)
 
 
 @member.route('/login-otp', methods=['GET', 'POST'])
@@ -447,11 +476,21 @@ def logout():
 @login_required
 def index():
     license = current_user.license
+    try:
+        img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
+                                    params={'license_no': current_user.license.number})
+    except:
+        image_base64 = None
+    else:
+        if img_response.status_code == 200:
+            image_base64 = base64.b64encode(img_response.content).decode('utf-8')
+        else:
+            image_base64 = None
     valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score)) \
         .filter(
         CMTEEventParticipationRecord.license == license,
         CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date).scalar()
-    return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores)
+    return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores, image_base64=image_base64)
 
 
 @member.route('/cmte/individual-scores/index', methods=['GET'])
@@ -466,6 +505,19 @@ def individual_score_group_index():
     event_types = CMTEEventType.query \
         .filter_by(for_group=True, is_sponsored=False).all()
     return render_template('members/cmte/individual_score_group_index.html', event_types=event_types)
+
+
+@member.route('/cmte/api/activity-field', methods=['GET'])
+@login_required
+def get_activity_field():
+    event_type_id = request.args.get('event_type')
+    event_type = CMTEEventType.query.get(event_type_id)
+    template = '<div id="activity_field" class="select">'
+    template += '<select id="event_activity" name="activity">"'
+    for activity in event_type.activities.all():
+        template += f'<option value="{activity.id}">{activity.name}</option>'
+    template += f'</select></div>'
+    return template
 
 
 @member.route('/cmte/individual-scores/form', methods=['GET', 'POST'])
@@ -623,19 +675,25 @@ def get_login_otp():
                              headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True, timeout=99)
     if response.status_code == 200:
         resp_data = response.json().get('results')
-        refcode = resp_data.get('refcode')
-        message = resp_data.get('message')
-        if message == 'confirm_otp_login':
-            return f'<p class="help is-warning">ระบบได้ทำการส่งรหัส OTP แล้วกรุณากรอกรหัสที่ได้รับโดยทันที รหัสอ้างอิง OTP <strong>{refcode}</strong>"<p/>'
-        elif message == 'confirm_otp_register':
-            mobile_ref_id = resp_data.get('mobile_ref_id')
-            return f'''<p class="help is-warning">
-            ระบบได้ทำการส่งรหัส OTP แล้ว รหัสอ้างอิง OTP <strong>{refcode}</strong>
-            <p/>
-            <input type="hidden" name="mobile_ref_id" value="{mobile_ref_id}">
-            '''
+        if resp_data:
+            refcode = resp_data.get('refcode')
+            message = resp_data.get('message')
+            if message == 'confirm_otp_login':
+                return f'<p class="help is-warning">ระบบได้ทำการส่งรหัส OTP แล้วกรุณากรอกรหัสที่ได้รับโดยทันที รหัสอ้างอิง OTP <strong>{refcode}</strong>"<p/>'
+            elif message == 'confirm_otp_register':
+                mobile_ref_id = resp_data.get('mobile_ref_id')
+                return f'''<p class="help is-warning">
+                ระบบได้ทำการส่งรหัส OTP แล้ว รหัสอ้างอิง OTP <strong>{refcode}</strong>
+                <p/>
+                <input type="hidden" name="mobile_ref_id" value="{mobile_ref_id}">
+                '''
+        else:
+            message = response.json().get('message')
+            if message == 'Data Medtech Not Found':
+                return f'<p id="otp-message" class="tag mb-2 is-danger">ไม่พบข้อมูลในระบบ</p>'
+            return f'<p id="otp-message" class="tag mb-2 is-danger">หมายเลขโทรศัพท์ไม่ถูกต้อง</p>'
     else:
-        return f'<p class="help is-danger">{response.json()}!</p>'
+        return f'<p id="otp-message" class="tag mb-2 is-danger">{response.json()}!</p>'
 
 
 @member.post('/login/old-form')
@@ -663,12 +721,78 @@ def old_form_login():
     return redirect(url_for('member.login'))
 
 
+@member.post('/members/mailing-address/verify')
+@login_required
+def verify_member_mailing_address():
+    mailing_address = MemberAddress.query.filter_by(member=current_user, address_type=1).first()
+    if mailing_address:
+        mailing_address.updated_at = arrow.now('Asia/Bangkok').datetime
+        db.session.add(mailing_address)
+        db.session.commit()
+    humanized_dt = arrow.get(mailing_address.updated_at).to('Asia/Bangkok').humanize(locale='th', granularity=['year', 'day'])
+    return f'<small class="tag is-rounded is-primary">Verified at {mailing_address.updated_at.astimezone(bangkok).strftime("%d/%m/%Y %H:%M:%S")} {humanized_dt}</small>'
+
+
+@member.post('/members/info/verify')
+@login_required
+def verify_member_info():
+    current_user.updated_at = arrow.now('Asia/Bangkok').datetime
+    db.session.add(current_user)
+    db.session.commit()
+    humanized_dt = arrow.get(current_user.updated_at).to('Asia/Bangkok').humanize(locale='th', granularity=['year', 'day'])
+    return f'<small class="tag is-rounded is-primary">Verified at {current_user.updated_at.astimezone(bangkok).strftime("%d/%m/%Y %H:%M:%S")} {humanized_dt}</small>'
+
+
+@member.post('/members/info/update')
+@login_required
+def update_member_info():
+    if not current_user.addresses:
+        client_id = os.environ.get('MTC_CLIENT_ID')
+        client_secret = os.environ.get('MTC_CLIENT_SECRET')
+        base_url = 'https://mtc-webservices.herokuapp.com'
+        resp = requests.post(f'{base_url}/api/auth/login',
+                             json={'client_id': client_id, 'client_secret': client_secret})
+        token = resp.json().get('access_token')
+        try:
+            response = requests.get(f'{base_url}/api/members/{current_user.pid}/info',
+                                headers={'Authorization': f'Bearer {token}'})
+            if response.status_code == 200:
+                pprint(response.json())
+        except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
+            pass
+        else:
+            try:
+                data_ = response.json().get('data', {})
+            except requests.exceptions.JSONDecodeError as e:
+                pass
+            else:
+                address = MemberAddress(member=current_user)
+                home_addr = data_.get('home_addr')
+                if home_addr:
+                    address.street_number = home_addr.get('add1')
+                    address.district = home_addr.get('DISTRICT_NAME')
+                    address.city = home_addr.get('AMPHUR_NAME')
+                    address.province = home_addr.get('PROVINCE_NAME')
+                    address.village = home_addr.get('moo')
+                    address.alley = home_addr.get('soi')
+                    address.road = home_addr.get('road')
+                    address.zipcode = home_addr.get('zipcode')
+                    db.session.add(address)
+                    db.session.commit()
+    resp = make_response()
+    resp.headers['HX-Redirect'] = url_for('member.edit_member_info')
+    return resp
+
+
 @member.route('/members/info', methods=['GET', 'POST'])
 @login_required
 def edit_member_info():
     form = MemberInfoForm(obj=current_user)
     if request.method == 'POST':
         if form.validate_on_submit():
+            # set a mail address.
+            #TODO : add a work address
+            form.addresses[0].address_type.data = 1
             form.populate_obj(current_user)
             db.session.add(current_user)
             db.session.commit()
@@ -732,7 +856,7 @@ def search_member_api():
                 pass
             else:
                 members = Member.query.filter(and_(Member.th_firstname.like(f'%{firstname}%'),
-                                                  Member.th_lastname.like(f'%{lastname}%')))
+                                                   Member.th_lastname.like(f'%{lastname}%')))
                 licenses = [(member.license, member) for member in members]
         if not licenses:
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
@@ -740,7 +864,7 @@ def search_member_api():
             licenses = [(member.license, member) for member in members]
         for lic, member in licenses:
             status_tag = '<span class="tag {}">{}</span>'
-            if lic.end_date <= datetime.today().date():
+            if lic.is_expired:
                 lic_status = status_tag.format('is-danger', 'หมดอายุ')
             elif lic.status:
                 if lic.status == 'ปกติ':
@@ -750,10 +874,65 @@ def search_member_api():
             else:
                 lic_status = status_tag.format('is-success', 'ปกติ')
             if lic:
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
+                template += (f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td>'
+                             f'<td><a class="button is-link is-small is-rounded" href={url_for("member.view_member_info", member_id=member.id)}>ดูข้อมูล</td></tr>')
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</tr>'
+                template += (f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td></tr>'
+                            f'<td><a class="button is-link is-small is-rounded" href={url_for("member.view_member_info", member_id=member.id)}>ดูข้อมูล</td></tr>')
         template += '</tbody></table>'
         return make_response(template)
     return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
+
+
+@member.route('/api/members/cmte-overdue-events', methods=['GET'])
+@login_required
+def get_overdue_events():
+    query = ((CMTEEvent.query.filter(CMTEEvent.submission_due_date <= datetime.today())
+              .filter_by(participant_updated_at=None))
+             .filter(CMTEEvent.event_type.has(CMTEEventType.is_sponsored==True))
+             .filter_by(cancelled_datetime=None).filter(CMTEEvent.approved_datetime.isnot(None))
+             .order_by(CMTEEvent.submission_due_date.desc()))
+
+    records_total = query.count()
+    search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    if col_name:
+        try:
+            column = getattr(CMTEEvent, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
+    if search:
+        query = query.filter(CMTEEvent.title.contains(search))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for event in query:
+        data.append({
+            'id': event.id,
+            'title': event.title,
+            'start_date': event.start_date.isoformat(),
+            'end_date': event.end_date.isoformat(),
+            'sponsor': event.sponsor.name,
+            'venue': event.venue,
+            'submission_due_date': event.submission_due_date.isoformat(),
+        })
+    return jsonify({'data': data,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
+
+
+@member.route('/members/cmte-overdue-events')
+@login_required
+def cmte_overdue_events():
+    return render_template('members/cmte_overdue_events.html')

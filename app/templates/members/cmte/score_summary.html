@@ -6,14 +6,19 @@
     <div class="container">
         <div class="columns">
             <div class="column">
-                <h1 class="title has-text-centered">สรุปการอนุมัติคะแนนการศึกษาต่อเนื่อง</h1>
                 {% include "messages.html" %}
-                <div class="tabs is-boxed">
+                <h1 class="title has-text-centered">สรุปการอนุมัติคะแนนการศึกษาต่อเนื่อง</h1>
+                <div class="has-text-centered">
+                    หากไม่พบรายการอนุมัติคะแนนที่ท่านเข้าร่วมกรุณาติดต่อผู้จัดเพื่อตรวจสอบการยื่นรายชื่อ
+                    <a href="{{url_for('member.cmte_overdue_events')}}" class="has-text-danger">ตรวจสอบกิจกรรมที่เกินกำหนดเวลายื่นขอคะแนนที่นี่</a>
+                </div>
+                <hr>
+                <div class="tabs is-toggle">
                     <ul>
                         <li {% if filter=='approved_valid' %}class="is-active"{% endif %}><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">สำหรับต่ออายุใบอนุญาต</a></li>
                         <li {% if filter=='approved' %}class="is-active"{% endif %}><a href="{{url_for('member.summarize_cmte_scores', filter='approved')}}">อนุมัติแล้ว</a></li>
-                        <li {% if filter=='pending' %}class="is-active"{% endif %}><a href="{{url_for('member.summarize_cmte_scores', filter='pending')}}">รออนุมัติ<span class="tag is-rounded is-danger">{{pending_record_counts}}</tag></span></a></li>
-                        <li {% if filter=='' %}class="is-active"{% endif %}><a href="{{url_for('member.summarize_cmte_scores')}}">ทั้งหมด</a></li>
+                        <li {% if filter=='pending' %}class="is-active"{% endif %}><a href="{{url_for('member.summarize_cmte_scores', filter='pending')}}">รออนุมัติ {% if pending_record_counts %}<span class="icon"><i class="fa-solid fa-circle has-text-danger"></i></span>{% endif %}</a></li>
+                        <li {% if filter=='all' %}class="is-active"{% endif %}><a href="{{url_for('member.summarize_cmte_scores', filter='all')}}">ทั้งหมด</a></li>
                     </ul>
                 </div>
                 {{score_table|safe}}

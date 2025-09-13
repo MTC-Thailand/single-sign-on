@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "cmte/admin_nav.html" %}
+<section class="section">
+    <div class="container">
+        {% include "messages.html" %}
+        <div class="columns">
+            <div class="column">
+                <h1 class="title is-size-4">รายการกิจกรรมรออนุมัติคะแนน</h1>
+                <table id="members" class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อ นามสกุล</th>
+                    <th>E-mail</th>
+                    <th>สถาบัน</th>
+                    <th>สถานะ</th>
+                    <th></th>
+                    </thead>
+                    {% for member in members %}
+                    <tr>
+                        <td>{{member}}</td>
+                        <td>{{member.email}}</td>
+                        <td>{{member.sponsor}}</td>
+                        <td>{{member.is_valid or ''}}</td>
+                        <td>
+                            <a href="{{url_for('cmte.admin_edit_sponsor_member', member_id=member.id)}}" class="button is-link is-small">
+                                <span class="icon"><i class="fa-solid fa-pencil"></i></span>
+                                <span>Edit</span>
+                            </a>
+                            <a hx-get="{{url_for('cmte.admin_send_email_verification', member_id=member.id)}}"
+                               hx-indicator="this"
+                               hx-swap="none"
+                               class="button is-small is-warning">
+                                <span class="icon">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </span>
+                                <span>Send Verify Email</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{super()}}
+<script>
+   $(document).ready(function () {
+       $('#members').DataTable();
+   })
+</script>
+{% endblock %}

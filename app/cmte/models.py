@@ -1,5 +1,6 @@
 import datetime
 
+from dateutil.relativedelta import relativedelta
 from flask_login import UserMixin
 from sqlalchemy_utils import EmailType
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -10,6 +11,7 @@ from sqlalchemy_continuum import make_versioned
 import sqlalchemy as sa
 
 from app import db
+from app.members.models import License
 
 make_versioned(user_cls=None)
 
@@ -130,6 +132,20 @@ class CMTESponsorMember(UserMixin, db.Model):
     @property
     def unique_id(self):
         return f'sponsor-member-{self.id}'
+
+
+class CMTESponsorMemberAddRequest(db.Model):
+    __versioned__ = {}
+    __tablename__ = 'cmte_sponsor_member_add_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    to_sponsor_id = db.Column('to_sponsor_id', db.Integer, db.ForeignKey('cmte_event_sponsors.id'))
+    member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
+    requested_at = db.Column('requested_at', db.DateTime(timezone=True))
+    member = db.relationship(CMTESponsorMember, backref=db.backref('sponsor_requests',
+                                                                     cascade="all, delete-orphan"))
+    to_sponsor = db.relationship(CMTEEventSponsor)
+    accepted_at = db.Column('accepted_at', db.DateTime(timezone=True))
+    cancelled_at = db.Column('cancalled_at', db.DateTime(timezone=True))
 
 
 class CMTESponsorQualification(db.Model):
@@ -446,21 +462,23 @@ class CMTEEventParticipationRecord(db.Model):
     event_id = db.Column('event_id', db.ForeignKey('cmte_events.id'))
     event = db.relationship(CMTEEvent, backref=db.backref('participants', lazy='dynamic', cascade='all, delete-orphan'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
-    approved_date = db.Column('approved_date', db.Date())
+    approved_date = db.Column('approved_date', db.Date(), info={'label': 'วันอนุมัติคะแนน'})
     start_date = db.Column('start_date', db.Date(), info={'label': 'เริ่ม'})
     end_date = db.Column('end_date', db.Date(), info={'label': 'สิ้นสุด'})
     license = db.relationship('License', backref=db.backref('cmte_records', lazy='dynamic'))
-    score = db.Column('score', db.Numeric(), info={'label': 'Score'})
+    score = db.Column('score', db.Numeric(), info={'label': 'หน่วยคะแนน'})
     desc = db.Column('description', db.Text(), info={'label': 'รายละเอียดกิจกรรม'})
     individual = db.Column('individual', db.Boolean(), default=False)
     event_type_id = db.Column('event_type_id', db.ForeignKey('cmte_event_types.id'))
-    score_valid_until = db.Column('score_valid_until', db.Date())
+    event_type = db.relationship(CMTEEventType)
+    score_valid_until = db.Column('score_valid_until', db.Date(), info={'label': 'วันหมดอายุคะแนน'})
     closed_date = db.Column('closed_date', db.Date())
     reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
     activity_id = db.Column('activity_id', db.ForeignKey('cmte_event_activities.id'))
     activity = db.relationship(CMTEEventActivity, backref=db.backref('records',
                                                                      lazy='dynamic',
                                                                      cascade='all, delete-orphan'))
+    # TODO: add member ID to link to a member because scores should belong to a member not a license holder.
 
     @property
     def is_valid(self):
@@ -475,8 +493,16 @@ class CMTEEventParticipationRecord(db.Model):
 
     def set_score_valid_date(self):
         if self.event:
-            if self.event.end_date.date() <= self.license.end_date:
+            if self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() <= self.license.end_date:
                 self.score_valid_until = self.license.end_date
+            elif self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() > self.license.end_date:
+                next_license_end_date = self.license.end_date + relativedelta(years=5)
+                self.score_valid_until = next_license_end_date
+            else:
+                for lic in License.query.filter_by(number=self.license.number):
+                    if lic.end_date.year == self.event.end_date.year:
+                        self.score_valid_until = lic.end_date
+                        break
         else:
             self.score_valid_until = self.license.end_date
 

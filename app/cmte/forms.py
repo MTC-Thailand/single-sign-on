@@ -1,9 +1,10 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
+from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import NumberRange, EqualTo, Email, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
-from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField, RadioField
+from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField, \
+    RadioField
 from wtforms_components import DateField, DateTimeField, TimeField
 
 from app.cmte.models import *
@@ -66,6 +67,13 @@ class AdminParticipantForm(FlaskForm):
     approved_date = DateField('Approved Date', validators=[Optional()])
 
 
+class AdminParticipantRecordForm(ModelForm):
+    class Meta:
+        model = CMTEEventParticipationRecord
+        only = ['score', 'score_valid_until', 'approved_date']
+        date_format = '%d/%m/%Y'
+
+
 class ParticipantForm(FlaskForm):
     license_number = StringField('License Number')
     score = DecimalField('Score', validators=[NumberRange(min=0),
@@ -78,6 +86,14 @@ class IndividualScoreForm(ModelForm):
         only = ['start_date', 'end_date', 'desc']
         date_format = '%d/%m/%Y'
 
+    event_type = QuerySelectField('ประเภทกิจกรรม',
+                                  get_label='name',
+                                  query_factory=lambda: CMTEEventType.query.filter_by(is_sponsored=False,
+                                                                                      deprecated=False).all())
+    activity = QuerySelectField('ชนิดกิจกรรม',
+                                get_label='name',
+                                query_factory=lambda: CMTEEventActivity.query.all())
+
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
 
@@ -87,11 +103,15 @@ class IndividualScoreAdminForm(ModelForm):
         only = ['start_date', 'end_date', 'desc', 'score', 'reason']
         date_format = '%d/%m/%Y'
 
-    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
+    event_type = QuerySelectField('ประเภทกิจกรรม',
+                                  get_label='name',
+                                  query_factory=lambda: CMTEEventType.query.filter_by(is_sponsored=False,
+                                                                                      deprecated=False).all())
     activity = QuerySelectField('ชนิดกิจกรรม',
-                                query_factory=lambda: CMTEEventActivity.query.all(),
-                                allow_blank=True,
-                                blank_text='กรุณาเลือกชนิดกิจกรรม')
+                                get_label='name',
+                                query_factory=lambda: CMTEEventActivity.query.all())
+
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
 
 class CMTEEventCodeForm(FlaskForm):
@@ -124,6 +144,17 @@ class CMTESponsorMemberForm(ModelForm):
     password = PasswordField('รหัสผ่าน',
                              validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
     confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
+
+
+class CMTESponsorMemberPasswordForm(ModelForm):
+    password = PasswordField('รหัสผ่าน',
+                             validators=[DataRequired(), EqualTo('confirm_password', message='รหัสผ่านต้องตรงกัน')])
+    confirm_password = PasswordField('ยืนยันรหัสผ่าน', validators=[DataRequired()])
+
+
+class CMTEAdminSponsorMemberForm(ModelForm):
+    class Meta:
+        model = CMTESponsorMember
 
 
 class CMTESponsorMemberEditForm(ModelForm):
@@ -171,8 +202,7 @@ class CMTEEventSponsorForm(ModelForm):
                                               option_widget=CheckboxInput())
     private_sector = SelectField(choices=[('', 'องค์กรรัฐ'), ('private', 'องค์กรเอกชน')], coerce=bool)
     has_med_tech = RadioField(choices=[('True', 'มีนักเทคนิคการแพทย์'), ('False', 'ไม่มีนักเทคนิคการแพทย์')],
-                            validators=[DataRequired()])
-
+                              validators=[DataRequired()])
 
 
 class CMTESponsorEditForm(ModelForm):
@@ -225,7 +255,13 @@ class CMTEPaymentForm(FlaskForm):
 
 
 class CMTEParticipantFileUploadForm(FlaskForm):
-    upload_file = FileField('Participants')
+    upload_file = FileField('ไฟล์รายชื่อผู้เข้าร่วม', validators=[DataRequired(), FileAllowed(['xlsx'])])
+    evidence_file = FileField('ไฟล์หลักฐาน', validators=[FileAllowed(['pdf']), DataRequired()])
+
+
+class CMTEAdminParticipantFileUploadForm(FlaskForm):
+    upload_file = FileField('ไฟล์รายชื่อผู้เข้าร่วม', validators=[DataRequired(), FileAllowed(['xlsx'])])
+    evidence_file = FileField('ไฟล์หลักฐาน', validators=[FileAllowed(['pdf'])])
 
 
 class CMTEAdminEventTypeForm(ModelForm):

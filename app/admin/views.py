@@ -216,7 +216,7 @@ def search_member():
         for lic, member in licenses:
             url = url_for('webadmin.edit_member_info', member_id=member.id)
             status_tag = '<span class="tag {}">{}</span>'
-            if lic.end_date <= datetime.today().date():
+            if lic.is_expired:
                 lic_status = status_tag.format('is-danger', 'หมดอายุ')
             elif lic.status:
                 if lic.status == 'ปกติ':
@@ -226,10 +226,10 @@ def search_member():
             else:
                 lic_status = status_tag.format('is-success', 'ปกติ')
             if lic:
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
+                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.valid_cmte_scores}</td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'
+                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
         template += '</tbody></table>'
         return make_response(template)
     return 'Waiting for a search query...'
