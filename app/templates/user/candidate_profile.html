@@ -68,6 +68,12 @@
                 </tr>
             </table>
         <div class="buttons is-centered">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('users.list_candidates') }}"
+                   class="button is-light">
+                    <span>Back</span>
+                </a>
+            {% endif %}
             <a href="{{ url_for('users.submit_candidate_profile', record_id=record.id) }}"
                 class="button is-light">
                 <span class="icon">

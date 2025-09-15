@@ -1,5 +1,5 @@
 import arrow
-from flask import render_template, flash, redirect, url_for, current_app, session, request
+from flask import render_template, flash, redirect, url_for, current_app, session, request, make_response
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from werkzeug.security import check_password_hash
@@ -121,7 +121,7 @@ def cmte_admin_index():
                            pending_requests=pending_requests)
 
 
-@user.route('/candidates/<int:record_id>', methods=['GET', 'POST'])
+@user.route('/candidates/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
 @user.route('/candidates', methods=['GET', 'POST'])
 def submit_candidate_profile(record_id=None):
     if not record_id:
@@ -130,6 +130,12 @@ def submit_candidate_profile(record_id=None):
     else:
         record = CandidateProfile.query.get(record_id)
         form = CandidateProfileForm(obj=record)
+
+    if request.method == 'DELETE':
+        db.session.delete(record)
+        db.session.commit()
+        resp = make_response()
+        return resp
     if request.method == 'POST':
         if form.validate_on_submit():
             form.populate_obj(record)
@@ -145,3 +151,16 @@ def submit_candidate_profile(record_id=None):
             flash(f'{form.errors}', 'danger')
     return render_template('user/candidate_profile_form.html', form=form)
 
+
+@user.route('/candidates/<int:record_id>/view', methods=['GET', 'POST'])
+@login_required
+def view_candidate_profile(record_id=None):
+    record = CandidateProfile.query.get(record_id)
+    return render_template('user/candidate_profile.html', record=record)
+
+
+@user.route('/candidates/list', methods=['GET', 'POST'])
+@login_required
+def list_candidates():
+    records = CandidateProfile.query.all()
+    return render_template('user/candidates.html', records=records)
