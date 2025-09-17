@@ -238,6 +238,7 @@ class MemberPID(Resource):
                     'th_title': member.th_title,
                     'th_firstname': member.th_firstname,
                     'th_lastname': member.th_lastname,
+                    'telephone': member.tel,
                 },
                 'cmte': {
                     'active_cmte_payment': cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {},
