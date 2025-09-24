@@ -512,12 +512,25 @@ def individual_score_group_index():
 def get_activity_field():
     event_type_id = request.args.get('event_type')
     event_type = CMTEEventType.query.get(event_type_id)
+    activity_detail_url = url_for('member.get_activity_detail')
     template = '<div id="activity_field" class="select">'
-    template += '<select id="event_activity" name="activity">"'
+    template += f'<select id="event_activity" name="activity" hx-get="{activity_detail_url}" hx-target="#activity_detail" hx-swap="innerHTML">'
     for activity in event_type.activities.all():
         template += f'<option value="{activity.id}">{activity.name}</option>'
     template += f'</select></div>'
+    activity = event_type.activities[0]
+    template += (f'<div id="activity_detail" hx-swap-oob="true">'
+                 f'<div class="notification is-warning is-light">{activity.detail}</div></div>')
     return template
+
+
+@member.route('/cmte/api/activity-detail', methods=['GET'])
+@login_required
+def get_activity_detail():
+    event_activity_id = request.args.get('activity', type=int)
+    event_activity = CMTEEventActivity.query.get(event_activity_id)
+    template = f'<div class="notification is-warning is-light">{event_activity.detail}</div>'
+    return make_response(template)
 
 
 @member.route('/cmte/individual-scores/form', methods=['GET', 'POST'])
