@@ -280,3 +280,8 @@ class CMTEAdminEventActivityForm(ModelForm):
                                          allow_blank=True,
                                          widget=ListWidget(prefix_label=False),
                                          option_widget=CheckboxInput())
+
+
+class CMTEEventParticipationRecordAdditionalRequestForm(ModelForm):
+    class Meta:
+        model = CMTEParticipationRecordRequest

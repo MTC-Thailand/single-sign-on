@@ -12,6 +12,22 @@
             <div class="column is-two-thirds is-offset-2">
                 <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคล</h1>
                 {% include "messages.html" %}
+                {% if record.active_info_requests %}
+                    <table class="table is-fullwidth is-bordered">
+                    <thead>
+                    <th>รายละเอียด</th>
+                    <th>วันที่ขอ</th>
+                    </thead>
+                    <tbody>
+                    {% for req in record.active_info_requests %}
+                        <tr style="background-color: orange">
+                            <td>{{ req.detail }}</td>
+                            <td>{{ req.created_at|localdate }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    </table>
+                {% endif %}
                 <form method="post" enctype="multipart/form-data">
                     {{form.hidden_tag()}}
                     <div class="field">
@@ -44,6 +60,41 @@
                             {{form.desc(class="textarea is-danger")}}
                         </div>
                     </div>
+                    <table class="table is-bordered">
+                        <thead>
+                        <th>คำอธิบาย</th>
+                        <th>ไฟล์</th>
+                        <th></th>
+                        </thead>
+                        <tbody>
+                        {% for doc in record.docs %}
+                            <tr>
+                                <td>{{ doc.note }}</td>
+                                <td>
+                                    <a href="{{ url_for('cmte.download_file', key=doc.key, download_filename=doc.filename) }}">
+                                      <span class="icon">
+                                          <i class="fa-solid fa-file-arrow-down"></i>
+                                      </span>
+                                        <span>
+                                        {{ doc.filename }}
+                                      </span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a hx-delete="{{ url_for('member.delete_file', doc_id=doc.id) }}"
+                                       hx-target="closest tr"
+                                       hx-swap="outerHTML"
+                                       hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                                       hx-confirm="คุณต้องการลบไฟล์นี้ใช่หรือไม่">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-trash has-text-danger"></i>
+                                        </span>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                     {% for f_field in form.upload_files %}
                         <div class="field">
                             {{f_field()}}

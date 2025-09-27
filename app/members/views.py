@@ -25,9 +25,9 @@ from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, Membe
     MemberInfoForm
 
 from app.members.models import *
-from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm
+from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm, CMTEEventParticipationRecordAdditionalRequestForm
 from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, CMTEEvent, \
-    CMTEEventActivity, CMTEEventCategory
+    CMTEEventActivity, CMTEParticipationRecordRequest
 from app import admin_permission
 
 from requests.adapters import HTTPAdapter
@@ -566,6 +566,65 @@ def individual_score_form():
         flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
         return redirect(url_for('member.individual_score_index'))
     return render_template('members/cmte/individual_score_form.html', form=form)
+
+
+@member.route('/files/<int:doc_id>', methods=['DELETE'])
+@login_required
+def delete_file(doc_id):
+    doc = CMTEEventDoc.query.get(doc_id)
+    db.session.delete(doc)
+    db.session.commit()
+    return ''
+
+
+@member.route('/cmte/individual-scores/<int:record_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_individual_score_form(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    form = IndividualScoreForm(obj=record)
+    if form.validate_on_submit():
+        form.populate_obj(record)
+        s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                                 aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                                 region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+        for doc_form in form.upload_files:
+            _file = doc_form.upload_file.data
+            if _file:
+                filename = _file.filename
+                key = uuid.uuid4()
+                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                doc = CMTEEventDoc(record=record, key=key, filename=filename)
+                doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                doc.note = doc_form.note.data
+                record.docs.append(doc)
+                db.session.add(doc)
+        db.session.add(record)
+        db.session.commit()
+        flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
+        return redirect(url_for('member.individual_score_index'))
+    return render_template('members/cmte/individual_score_form.html', form=form, record=record)
+
+
+@member.route('/cmte/individual-scores/<int:record_id>/list', methods=['GET', 'POST'])
+@login_required
+def list_individual_score_info_requests(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    return render_template('members/cmte/individual_score_info_requests.html', record=record)
+
+
+@member.route('/cmte/individual-scores/<int:record_id>/requests/<int:req_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_individual_score_info_request(req_id, record_id):
+    req = CMTEParticipationRecordRequest.query.get(req_id)
+    form = CMTEEventParticipationRecordAdditionalRequestForm(obj=req)
+    if form.validate_on_submit():
+        form.populate_obj(req)
+        req.responded_at = arrow.now('Asia/Bangkok').datetime
+        db.session.add(req)
+        db.session.commit()
+        flash('ดำเนินการบันทึกข้อมูลแล้ว', 'success')
+        return redirect(url_for('member.list_individual_score_info_requests', record_id=record_id))
+    return render_template('members/cmte/individual_score_info_request_form.html', req_id=req_id, form=form)
 
 
 @member.route('/cmte/individual-score-group/<int:event_type_id>/form', methods=['GET', 'POST'])

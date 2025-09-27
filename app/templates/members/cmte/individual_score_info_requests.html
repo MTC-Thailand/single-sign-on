@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "members/cmte/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <table class="table is-fullwidth is-striped">
+                    <thead>
+                    <th>ลำดับ</th>
+                    <th>รายละเอียด</th>
+                    <th>วันที่</th>
+                    <th></th>
+                    </thead>
+                    <tbody>
+                    {% for req in record.info_requests %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ req.detail }}</td>
+                            <td>{{ req.created_at|localdate }}</td>
+                            <td>
+                                {% if not req.responded_at %}
+                                <a class="button is-small" href="{{ url_for('member.edit_individual_score_info_request', record_id=record.id, req_id=req.id) }}">
+                                    <span class="icon">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                    </span>
+                                    <span>แจ้งการดำเนินการ</span>
+                                </a>
+                                {% else %}
+                                    <span class="icon">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                    </span>
+                                    <span>ดำเนินการแล้วเมื่อ {{ req.responded_at|localdatetime }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <div class="buttons is-centered">
+                    <a href="{{ url_for('member.individual_score_index') }}" class="button is-light">
+                        Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

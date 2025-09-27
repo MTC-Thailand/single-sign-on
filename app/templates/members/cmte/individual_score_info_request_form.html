@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block head %}
+{{super()}}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+{% include "members/cmte/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column is-two-thirds is-offset-2">
+                <h1 class="title has-text-centered">บันทึกการแก้ไขคำขออนุมัติคะแนน</h1>
+                {% include "messages.html" %}
+                <form method="post" class="box">
+                    {{form.hidden_tag()}}
+                    <div class="field">
+                        {{ form.detail.data }}
+                    </div>
+                    <div class="field">
+                        <label class="label">ข้อความถึงเจ้าหน้าที่</label>
+                        <div class="control">
+                            {{form.note(class="input is-danger", type="text", placeholder="เช่น อัพโหลดเอกสารแล้ว", required=True)}}
+                        </div>
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <a class="button is-light" href="{{url_for('member.individual_score_index')}}">Cancel</a>
+                        </div>
+                        <div class="control">
+                            <button type="submit" class="button is-success">Submit</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,46 +1,95 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% include "cmte/admin_nav.html" %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">Admin Individual Scores</h1>
-    {% include "messages.html" %}
-    <div class="columns">
-      <div class="column">
-        <table id="events-table" class="table is-fullwidth">
-          <thead>
-          <th>ชื่อ</th>
-          <th>ท.น.</th>
-          <th>รายละเอียด</th>
-          <th>วันที่ยื่น</th>
-          <th></th>
-          </thead>
-          <tbody>
-          {% for record in records %}
-          <tr>
-            <td>{{record.license.member}}</td>
-            <td>{{record.license_number}}</td>
-            <td>{{record.desc}}</td>
-            <td>{{record.create_datetime|localdatetime}}</td>
-            <td>
-              <a href="{{url_for('cmte.admin_individual_score_detail', record_id=record.id)}}"
-                 class="button is-link">รายละเอียด</a>
-            </td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</section>
+    {% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Admin Individual Scores</h1>
+            {% include "messages.html" %}
+            <div class="tabs is-boxed">
+                <ul>
+                    <li {% if status == 'pending' %} class="is-active" {% endif %}>
+                        <a href="{{ url_for('cmte.admin_individual_score_index', status='pending') }}">รออนุมัติ</a>
+                    </li>
+                    <li {% if status == 'approved' %} class="is-active" {% endif %}>
+                        <a href="{{ url_for('cmte.admin_individual_score_index', status='approved') }}">อนุมัติแล้ว</a>
+                    </li>
+                    <li {% if status == 'rejected' %} class="is-active" {% endif %}>
+                        <a href="{{ url_for('cmte.admin_individual_score_index', status='rejected') }}">ไม่อนุมัติ</a>
+                    </li>
+                    <li {% if status == 'waiting' %} class="is-active" {% endif %}>
+                        <a href="{{ url_for('cmte.admin_individual_score_index', status='waiting') }}">ขอเอกสารเพิ่มเติม</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="columns">
+                <div class="column">
+                    <table id="events-table" class="table is-fullwidth">
+                        <thead>
+                        <th>ชื่อ</th>
+                        <th>ท.น.</th>
+                        <th>รายละเอียด</th>
+                        <th>สถานะ</th>
+                        <th>คะแนน</th>
+                        <th>วันที่ยื่น</th>
+                        <th>วันที่อนุมัติ</th>
+                        <th></th>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
 {% endblock %}
 {% block scripts %}
-{{super()}}
-<script>
-  $(document).ready(function () {
-    $('#events-table').DataTable();
-  })
-</script>
+    {{ super() }}
+    <script>
+        $.fn.dataTable.moment('LL')
+        $(document).ready(function () {
+            $('#events-table').DataTable({
+                searchDelay: 350,
+                ajax: '{{ url_for("cmte.admin_get_individual_score_records", status=status) }}',
+                serverSide: true,
+                columns: [
+                    {data: 'name'},
+                    {data: 'license_number'},
+                    {data: 'detail'},
+                    {data: 'status'},
+                    {data: 'score'},
+                    {
+                        data: 'created_at',
+                        render: function (data, type) {
+                            if (data) {
+                                return moment(data).format('LL')
+                            } else {
+                                return null
+                            }
+                        }
+                    },
+                    {
+                        data: 'approved_at',
+                        render: function (data, type) {
+                            if (data) {
+                                return moment(data).format('LL')
+                            } else {
+                                return null
+                            }
+                        }
+                    },
+                    {
+                        data: 'url',
+                        render: function (data, type) {
+                            if (data) {
+                                return `<a href=${data} class="button is-link is-small">รายละเอียด</a>`
+                            } else {
+                                return null
+                            }
+                        }
+                    },
+                ],
+            });
+        });
+    </script>
 {% endblock %}

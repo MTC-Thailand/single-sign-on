@@ -12,6 +12,7 @@ import sqlalchemy as sa
 
 from app import db
 from app.members.models import License
+from app.models import User
 
 make_versioned(user_cls=None)
 
@@ -488,8 +489,14 @@ class CMTEEventParticipationRecord(db.Model):
     def status(self):
         if self.approved_date:
             return 'อนุมัติ'
+        elif self.closed_date:
+            return 'ไม่อนุมัติ'
         else:
             return 'รออนุมัติ'
+
+    @property
+    def active_info_requests(self):
+        return [req for req in self.info_requests if req.responded_at is None]
 
     def set_score_valid_date(self):
         if self.event:
@@ -518,6 +525,19 @@ class CMTEEventParticipationRecord(db.Model):
             'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
             'approved_at': self.approved_date.isoformat() if self.approved_date else None,
         }
+
+    def individual_score_to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.license.member.th_fullname,
+            'license_number': self.license_number,
+            'detail': self.desc,
+            'score': self.score,
+            'status': self.status,
+            'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
+            'approved_at': self.approved_date.isoformat() if self.approved_date else None,
+        }
+
 
 
 class CMTEEventDoc(db.Model):
@@ -561,6 +581,21 @@ class CMTEFeePaymentRecord(db.Model):
                 'start_date': self.start_date.strftime('%Y-%m-%d') if self.start_date else None,
                 'payment_datetime': self.payment_datetime.isoformat() if self.payment_datetime else None,
                 'license_number': self.license_number}
+
+
+class CMTEParticipationRecordRequest(db.Model):
+    __tablename__ = 'cmte_participation_record_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    detail = db.Column('detail', db.String())
+    record_id = db.Column('record_id', db.ForeignKey('cmte_event_participation_records.id'))
+    record = db.relationship(CMTEEventParticipationRecord,
+                             backref=db.backref('info_requests', cascade='all, delete-orphan'))
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    requester_id = db.Column('requester', db.ForeignKey('users.id'))
+    requester = db.relationship(User)
+    closed_at = db.Column('closed_at', db.DateTime(timezone=True))
+    note = db.Column('note', db.String())
+    responded_at = db.Column('responded_at', db.DateTime(timezone=True))
 
 
 sa.orm.configure_mappers()

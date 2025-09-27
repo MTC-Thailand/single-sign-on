@@ -17,7 +17,7 @@ from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from itsdangerous import TimedJSONWebSignatureSerializer
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from app import db, sponsor_event_management_permission, send_mail
 from app.cmte import cmte_bp as cmte
@@ -2242,10 +2242,72 @@ def show_event_detail_modal(event_id):
 @login_required
 @cmte_admin_permission.require()
 def admin_individual_score_index():
+    status = request.args.get('status', 'pending')
     records = CMTEEventParticipationRecord.query.filter_by(individual=True,
                                                            approved_date=None,
                                                            closed_date=None)
-    return render_template('cmte/admin/individual_scores.html', records=records)
+    return render_template('cmte/admin/individual_scores.html',
+                           status=status,
+                           records=records)
+
+
+@cmte.route('/api/events/individual-score-records/')
+@login_required
+@cmte_admin_permission.require()
+def admin_get_individual_score_records():
+    status = request.args.get('status', 'pending')
+    search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    query = CMTEEventParticipationRecord.query.filter_by(individual=True)
+    records_total = query.count()
+
+    if status == 'pending':
+        query = query.filter_by(approved_date=None).order_by(CMTEEventParticipationRecord.create_datetime.desc())
+    elif status == 'approved':
+        query = query.filter(CMTEEventParticipationRecord.approved_date!=None)\
+            .order_by(CMTEEventParticipationRecord.approved_date.desc())
+    elif status == 'rejected':
+        query = query.filter(CMTEEventParticipationRecord.closed_date!=None)
+    elif status == 'waiting':
+        query = query.filter(CMTEEventParticipationRecord.approved_date==None)\
+            .filter(CMTEEventParticipationRecord.closed_date==None)\
+            .join(CMTEParticipationRecordRequest)\
+            .group_by(CMTEEventParticipationRecord.id)\
+            .having(func.count(CMTEEventParticipationRecord.id) > 0)
+
+    if col_name:
+        try:
+            column = getattr(CMTEEventParticipationRecord, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
+    if search:
+        query = query.join(License).join(Member).filter(or_(
+            Member.th_firstname.contains(search),
+            Member.th_lastname.contains(search),
+            CMTEEventParticipationRecord.desc.contains(search),
+            CMTEEventParticipationRecord.license_number.contains(search),
+
+        ))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for record in query:
+        _dict = record.individual_score_to_dict()
+        _dict['url'] = url_for('cmte.admin_individual_score_detail', record_id=record.id)
+        data.append(_dict)
+    return jsonify({'data': data,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
 
 
 @cmte.route('/events/individuals/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
@@ -2255,21 +2317,35 @@ def admin_individual_score_detail(record_id):
     record = CMTEEventParticipationRecord.query.get(record_id)
     form = IndividualScoreAdminForm(obj=record)
     if request.method == 'POST':
-        approved = request.form.get('approved')
-        if approved == 'true':
+        action = request.form.get('action')
+        if action == 'approve':
             if form.score.data and form.score.data > 0.0:
                 form.populate_obj(record)
                 record.approved_date = arrow.now('Asia/Bangkok').date()
+                record.closed_date = None
                 record.set_score_valid_date()
+                for req in record.info_requests:
+                    req.closed_at = arrow.now('Asia/Bangkok').datetime
+                    db.session.add(req)
                 db.session.add(record)
                 db.session.commit()
                 flash('อนุมัติคะแนนเรียบร้อย', 'success')
                 return redirect(url_for('cmte.admin_individual_score_index'))
             else:
                 flash('กรุณาตรวจสอบคะแนนอีกครั้ง', 'warning')
+        elif action == 'info_request':
+            info_request = CMTEParticipationRecordRequest(detail=request.form.get('detail'),
+                                                          record=record)
+            info_request.created_at = arrow.now('Asia/Bangkok').date()
+            info_request.requester = current_user
+            db.session.add(info_request)
+            db.session.commit()
+            flash('ส่งคำขอเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('cmte.admin_individual_score_index'))
         else:
             form.populate_obj(record)
             record.closed_date = arrow.now('Asia/Bangkok').date()
+            record.approved_date = None
             db.session.add(record)
             db.session.commit()
             flash('บันทึกข้อมูลเรียบร้อย', 'success')
