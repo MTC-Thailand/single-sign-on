@@ -6,6 +6,9 @@
     <div class="container">
         <div class="columns">
             <div class="column">
+                <div class="notification is-warning is-light">
+                    กรุณาคลิกเพื่อแจ้งการดำเนินการแก้ไขเพื่อความสะดวกแก่เจ้าหน้าที่ในการพิจารณา
+                </div>
                 <table class="table is-fullwidth is-striped">
                     <thead>
                     <th>ลำดับ</th>
@@ -21,7 +24,7 @@
                             <td>{{ req.created_at|localdate }}</td>
                             <td>
                                 {% if not req.responded_at %}
-                                <a class="button is-small" href="{{ url_for('member.edit_individual_score_info_request', record_id=record.id, req_id=req.id) }}">
+                                <a class="button is-small is-success" href="{{ url_for('member.edit_individual_score_info_request', record_id=record.id, req_id=req.id) }}">
                                     <span class="icon">
                                         <i class="fa-solid fa-circle-check"></i>
                                     </span>

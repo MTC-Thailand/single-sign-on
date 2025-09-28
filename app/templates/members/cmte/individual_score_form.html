@@ -12,7 +12,7 @@
             <div class="column is-two-thirds is-offset-2">
                 <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคล</h1>
                 {% include "messages.html" %}
-                {% if record.active_info_requests %}
+                {% if record and record.active_info_requests %}
                     <table class="table is-fullwidth is-bordered">
                     <thead>
                     <th>รายละเอียด</th>
@@ -67,6 +67,7 @@
                         <th></th>
                         </thead>
                         <tbody>
+                        {% if record %}
                         {% for doc in record.docs %}
                             <tr>
                                 <td>{{ doc.note }}</td>
@@ -93,6 +94,7 @@
                                 </td>
                             </tr>
                         {% endfor %}
+                        {% endif %}
                         </tbody>
                     </table>
                     {% for f_field in form.upload_files %}

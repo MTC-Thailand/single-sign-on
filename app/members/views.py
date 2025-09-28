@@ -493,6 +493,19 @@ def index():
     return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores, image_base64=image_base64)
 
 
+@member.route('/alerts')
+@login_required
+def alerts():
+    individual_score_requests = CMTEEventParticipationRecord.query\
+        .filter_by(license_number=current_user.license.number)\
+        .join(CMTEParticipationRecordRequest).filter_by(responded_at=None).count()
+    if individual_score_requests > 0:
+        template = f'<span class="tag is-rounded is-success">{individual_score_requests}</span>'
+    else:
+        template = ''
+    return template
+
+
 @member.route('/cmte/individual-scores/index', methods=['GET'])
 @login_required
 def individual_score_index():
@@ -551,7 +564,6 @@ def individual_score_form():
                                  region_name=os.environ.get('BUCKETEER_AWS_REGION'))
         for doc_form in form.upload_files:
             _file = doc_form.upload_file.data
-            print(_file)
             if _file:
                 filename = _file.filename
                 key = uuid.uuid4()
@@ -566,6 +578,14 @@ def individual_score_form():
         flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
         return redirect(url_for('member.individual_score_index'))
     return render_template('members/cmte/individual_score_form.html', form=form)
+
+
+@member.route('/cmte/individual-score-records/<int:record_id>', methods=['GET'])
+@login_required
+def individual_score_detail(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    return render_template('members/cmte/individual_score_detail.html', record=record)
+
 
 
 @member.route('/files/<int:doc_id>', methods=['DELETE'])

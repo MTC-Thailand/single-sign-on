@@ -2260,13 +2260,16 @@ def admin_get_individual_score_records():
     col_idx = request.args.get('order[0][column]')
     direction = request.args.get('order[0][dir]')
     col_name = request.args.get('columns[{}][data]'.format(col_idx))
-    query = CMTEEventParticipationRecord.query.filter_by(individual=True)
+    query = CMTEEventParticipationRecord.query.filter_by(individual=True)\
+        .filter(CMTEEventParticipationRecord.create_datetime!=None)\
+        .order_by(CMTEEventParticipationRecord.create_datetime.desc())
     records_total = query.count()
 
     if status == 'pending':
-        query = query.filter_by(approved_date=None).order_by(CMTEEventParticipationRecord.create_datetime.desc())
+        query = query.filter(CMTEEventParticipationRecord.approved_date==None) \
+            .filter(CMTEEventParticipationRecord.closed_date==None)
     elif status == 'approved':
-        query = query.filter(CMTEEventParticipationRecord.approved_date!=None)\
+        query = query.filter(CMTEEventParticipationRecord.approved_date!=None) \
             .order_by(CMTEEventParticipationRecord.approved_date.desc())
     elif status == 'rejected':
         query = query.filter(CMTEEventParticipationRecord.closed_date!=None)
@@ -2303,7 +2306,11 @@ def admin_get_individual_score_records():
     for record in query:
         _dict = record.individual_score_to_dict()
         _dict['url'] = url_for('cmte.admin_individual_score_detail', record_id=record.id)
-        data.append(_dict)
+        if status == 'pending':
+            if not record.info_requests:
+                data.append(_dict)
+        else:
+            data.append(_dict)
     return jsonify({'data': data,
                     'recordsFiltered': total_filtered,
                     'recordsTotal': records_total,

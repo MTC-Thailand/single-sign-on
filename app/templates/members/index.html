@@ -29,7 +29,9 @@
                     <ul class="menu-list">
                         <li><a href="{{ url_for('cmte.list_event_types') }}">รายการกิจกรรม</a></li>
                         <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
-                        <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล</a></li>
+                        <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล
+                        <div id="individual-score-requests"></div>
+                        </a></li>
                         <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
                         <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
                         <li><a href="{{url_for('cmte.upcoming_events')}}">รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></a></li>
@@ -211,4 +213,16 @@
         </div>
     </div>
 </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $(document).ready(()=>{
+        htmx.ajax('GET', {{ url_for('member.alerts')|tojson|safe }},
+                {
+                    target: "#individual-score-requests",
+                    swap: "innerHTML",
+                })
+    })
+    </script>
 {% endblock %}
