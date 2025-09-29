@@ -286,6 +286,7 @@ class CMTEEventActivity(db.Model):
     number = db.Column('number', db.Integer(), info={'label': 'ลำดับ'})
     name = db.Column('name', db.String(255), unique=True, nullable=False, info={'label': 'ชื่อชนิดกิจกรรม'})
     type_id = db.Column('type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
+    event_type = db.relationship('CMTEEventType')
     en_name = db.Column('en_name', db.String(255))
     detail = db.Column('detail', db.Text(), info={'label': 'รายละเอียด'})
     group_submission_only = db.Column('group_submission_only', db.Boolean(),
@@ -454,6 +455,36 @@ class CMTEEvent(db.Model):
         return self.participants.filter(CMTEEventParticipationRecord.approved_date==None).count()
 
 
+class CMTEEventGroupParticipationRecord(db.Model):
+    __tablename__ = 'cmte_event_group_participation_records'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    creator_id = db.Column('creator_id', db.ForeignKey('members.id'), nullable=False)
+    creator = db.relationship('Member', backref=db.backref('cmte_group_submission_records',
+                                                           lazy='dynamic',
+                                                           cascade='all, delete-orphan'))
+    create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
+    approved_date = db.Column('approved_date', db.Date(), info={'label': 'วันอนุมัติคะแนน'})
+    closed_date = db.Column('closed_date', db.Date())
+    reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
+
+    @property
+    def detail(self):
+        return self.records.all()[0].desc
+
+    @property
+    def status(self):
+        if self.approved_date:
+            return 'อนุมัติ'
+        elif self.closed_date:
+            return 'ไม่อนุมัติ'
+        else:
+            return 'รออนุมัติ'
+
+    @property
+    def participants(self):
+        return [rec.license.member.th_fullname for rec in self.records.all()]
+
+
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
@@ -476,6 +507,8 @@ class CMTEEventParticipationRecord(db.Model):
     closed_date = db.Column('closed_date', db.Date())
     reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
     activity_id = db.Column('activity_id', db.ForeignKey('cmte_event_activities.id'))
+    group_id = db.Column('group_id', db.ForeignKey('cmte_event_group_participation_records.id'))
+    group = db.relationship(CMTEEventGroupParticipationRecord, backref=db.backref('records', lazy='dynamic'))
     activity = db.relationship(CMTEEventActivity, backref=db.backref('records',
                                                                      lazy='dynamic',
                                                                      cascade='all, delete-orphan'))

@@ -97,6 +97,15 @@ class IndividualScoreForm(ModelForm):
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
 
+class IndividualScoreGroupForm(ModelForm):
+    class Meta:
+        model = CMTEEventParticipationRecord
+        only = ['start_date', 'end_date', 'desc']
+        date_format = '%d/%m/%Y'
+
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
+
+
 class IndividualScoreAdminForm(ModelForm):
     class Meta:
         model = CMTEEventParticipationRecord
