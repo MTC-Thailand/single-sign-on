@@ -2347,6 +2347,18 @@ def admin_individual_score_detail(record_id):
             info_request.requester = current_user
             db.session.add(info_request)
             db.session.commit()
+            if not current_app.debug:
+                message = f'''
+                เรียน สมาชิกสภาเทคนิคการแพทย์
+                
+                กรุณาตรวจสอบคำขอรายละเอียดเพิ่มเติมเพื่อการอนุมัติคะแนนส่วนบุคคลในระบบสารสนเทศสมาชิก
+
+                \n\n
+                อีเมลนี้เป็นระบบอัตโนมัติกรุณาอย่าตอบกลับ
+                '''
+                send_mail([record.license.member.email], 'MTC-CMTE Email validation', message)
+            else:
+                print(f'Sending an email to {record.license.member.email}')
             flash('ส่งคำขอเรียบร้อยแล้ว', 'success')
             return redirect(url_for('cmte.admin_individual_score_index'))
         else:
