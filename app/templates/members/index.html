@@ -28,6 +28,7 @@
                     <p class="menu-label">CMTE</p>
                     <ul class="menu-list">
                         <li><a href="{{ url_for('cmte.list_event_types') }}">รายการกิจกรรม</a></li>
+                        <li><a href="{{ url_for('member.cmte_overdue_events') }}">รายการกิจกรรมที่เกินกำหนดยื่นขอคะแนน</a></li>
                         <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
                         <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล
                         <div id="individual-score-requests"></div>
