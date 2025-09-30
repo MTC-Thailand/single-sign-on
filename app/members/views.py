@@ -18,6 +18,7 @@ from flask import render_template, make_response, jsonify, current_app, flash, r
 from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine, or_, func, and_
+from sqlalchemy_continuum.plugins import activity
 
 from app.cmte.views import bangkok
 from app.members import member_blueprint as member
@@ -632,6 +633,13 @@ def list_individual_score_info_requests(record_id):
     return render_template('members/cmte/individual_score_info_requests.html', record=record)
 
 
+@member.route('/cmte/individual-group-scores/<int:record_id>/list', methods=['GET', 'POST'])
+@login_required
+def list_individual_group_score_info_requests(record_id):
+    record = CMTEEventGroupParticipationRecord.query.get(record_id)
+    return render_template('members/cmte/individual_score_info_requests.html', record=record)
+
+
 @member.route('/cmte/individual-scores/<int:record_id>/requests/<int:req_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_individual_score_info_request(req_id, record_id):
@@ -657,15 +665,19 @@ def individual_score_group_form(activity_id):
                              region_name=os.environ.get('BUCKETEER_AWS_REGION'))
     if request.method == 'POST':
         all_docs = []
-        for doc_form in form.upload_files:
-            _file = doc_form.upload_file.data
-            if _file:
-                filename = _file.filename
-                key = uuid.uuid4()
-                s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
-                all_docs.append((key, filename, doc_form.note.data))
         if form.validate_on_submit():
             group = CMTEEventGroupParticipationRecord(creator=current_user)
+            for doc_form in form.upload_files:
+                _file = doc_form.upload_file.data
+                if _file:
+                    filename = _file.filename
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    all_docs.append((key, filename, doc_form.note.data))
+                    doc = CMTEEventDoc(group_record=group, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = doc_form.note.data
+                    db.session.add(doc)
             for license_number in request.form.getlist('licenses'):
                 record = CMTEEventParticipationRecord()
                 form.populate_obj(record)
@@ -674,21 +686,61 @@ def individual_score_group_form(activity_id):
                 record.event_type_id = activity.type_id
                 record.activity_id = activity_id
                 record.create_datetime = arrow.now('Asia/Bangkok').datetime
-                for key, filename, note in all_docs:
-                    doc = CMTEEventDoc(record=record, key=key, filename=filename)
-                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
-                    doc.note = note
-                    db.session.add(doc)
                 group.records.append(record)
                 db.session.add(record)
             group.create_datetime = arrow.now('Asia/Bangkok').datetime
             db.session.add(group)
             db.session.commit()
             flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
-            return redirect(url_for('member.index'))
+            return redirect(url_for('member.individual_score_group_index'))
         else:
             flash(f'{form.errors}', 'danger')
     return render_template('members/cmte/individual_score_group_form.html', form=form)
+
+
+@member.route('/cmte/individual-score-group/<int:group_record_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_individual_score_group_form(group_record_id):
+    group_record = CMTEEventGroupParticipationRecord.query.get(group_record_id)
+    first_record = group_record.records.all()[0]
+    form = IndividualScoreGroupForm()
+    if request.method == 'GET':
+        form.desc.data = first_record.desc
+        form.start_date.data = first_record.start_date
+        form.end_date.data = first_record.end_date
+
+    s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                             aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                             region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            for doc_form in form.upload_files:
+                _file = doc_form.upload_file.data
+                if _file:
+                    filename = _file.filename
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTEEventDoc(group_record=group_record, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = doc_form.note.data
+                    db.session.add(doc)
+            for license_number in request.form.getlist('members'):
+                record = CMTEEventParticipationRecord.query.filter_by(license_number=license_number,
+                                                                      group_id=group_record_id).first()
+                if not record:
+                    record = CMTEEventParticipationRecord(group_id=group_record_id)
+                    record.license_number = license_number
+                    record.event_type_id = first_record.activity.type_id
+                    record.activity_id = first_record.activity_id
+                    record.create_datetime = arrow.now('Asia/Bangkok').datetime
+                    db.session.add(record)
+            db.session.commit()
+            flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
+            return redirect(url_for('member.individual_score_group_index'))
+        else:
+            flash(f'{form.errors}', 'danger')
+    return render_template('members/cmte/individual_score_group_form.html',
+                           form=form, record=group_record)
 
 
 @member.route('/cmte/scores', methods=['GET', 'POST'])
@@ -754,7 +806,7 @@ def get_members():
     term = request.args.get('term')
     search = f'%{term}%'
     members = []
-    if term.isdigit():
+    if term and term.isdigit():
         query = Member.query.join(License).filter(License.number==term)
     else:
         query = Member.query.filter(or_(Member.th_firstname.like(search), Member.th_lastname.like(search)))

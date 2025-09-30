@@ -39,6 +39,7 @@
                     <th>สมาชิก</th>
                     <th>วันที่ยื่น</th>
                     <th>สถานะ</th>
+                    <th></th>
                     </thead>
                     <tbody>
                         {% for rec in current_user.pending_cmte_group_submission_records %}
@@ -47,6 +48,22 @@
                             <td>{{rec.participants|join(',')}}</td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
                             <td>{{rec.status}}</td>
+                            <td>
+                                {% if rec.active_info_requests %}
+                                    <a class="button is-link" href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </span>
+                                        <span>ดำเนินการแก้ไข</span>
+                                    </a>
+                                    <a class="button is-success" href="{{ url_for('member.list_individual_group_score_info_requests', record_id=rec.id) }}">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </span>
+                                        <span>ส่งขออนุมัติอีกครั้ง</span>
+                                    </a>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -17,6 +17,7 @@ from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from itsdangerous import TimedJSONWebSignatureSerializer
+from openpyxl.pivot.record import Record
 from sqlalchemy import or_, func
 
 from app import db, sponsor_event_management_permission, send_mail
@@ -2251,6 +2252,59 @@ def admin_individual_score_index():
                            records=records)
 
 
+@cmte.route('/events/group-individuals/index')
+@login_required
+@cmte_admin_permission.require()
+def admin_group_individual_score_index():
+    status = request.args.get('status', 'pending')
+    return render_template('cmte/admin/group_individual_scores.html', status=status)
+
+
+@cmte.route('/api/events/group-individual-score-records/')
+@login_required
+@cmte_admin_permission.require()
+def admin_get_group_individual_score_records():
+    status = request.args.get('status', 'pending')
+    search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    query = CMTEEventGroupParticipationRecord.query \
+        .filter(CMTEEventGroupParticipationRecord.create_datetime!=None) \
+        .order_by(CMTEEventGroupParticipationRecord.create_datetime.desc())
+    records_total = query.count()
+    if col_name:
+        try:
+            column = getattr(CMTEEventGroupParticipationRecord, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
+    if search:
+        query = query.join(License).join(Member).join(CMTEEventParticipationRecord) \
+            .filter(or_(Member.th_firstname.contains(search),
+                        Member.th_lastname.contains(search),
+                        CMTEEventParticipationRecord.desc.contains(search),
+                        License.number.contains(search),
+        ))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for record in query:
+        _dict = record.to_dict()
+        _dict['url'] = url_for('cmte.admin_group_individual_score_detail', record_id=record.id)
+        data.append(_dict)
+    return jsonify({'data': data,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
+
+
 @cmte.route('/api/events/individual-score-records/')
 @login_required
 @cmte_admin_permission.require()
@@ -2370,6 +2424,40 @@ def admin_individual_score_detail(record_id):
             flash('บันทึกข้อมูลเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_individual_score_index'))
     return render_template('cmte/admin/individual_score_detail.html', record=record, form=form)
+
+
+@cmte.route('/events/group-individuals/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_group_individual_score_detail(record_id):
+    group_record = CMTEEventGroupParticipationRecord.query.get(record_id)
+    form = IndividualScoreGroupForm(obj=group_record)
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'approve':
+            score = request.form.get('score', type=float)
+            for record in group_record.records:
+                record.score = score
+                record.set_score_valid_date()
+                record.approved_date = arrow.now('Asia/Bangkok').date()
+                db.session.add(record)
+                group_record.approved_date = arrow.now('Asia/Bangkok').date()
+            db.session.add(group_record)
+            db.session.commit()
+            flash(f'อนุมัติคะแนนเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('cmte.admin_group_individual_score_index'))
+        elif action == 'info_request':
+            _request = CMTEParticipationRecordRequest(group_record=group_record)
+            _request.created_at = arrow.now('Asia/Bangkok').datetime
+            _request.requester = current_user
+            _request.detail = request.form.get('detail')
+            db.session.add(_request)
+            db.session.commit()
+            flash(f'ส่งคำขอข้อมูลเพิ่มเติมเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('cmte.admin_group_individual_score_index'))
+
+    return render_template('cmte/admin/group_individual_score_detail.html',
+                           group_record=group_record, form=form)
 
 
 @cmte.route('/events/individuals/docs/<int:doc_id>', methods=['DELETE'])

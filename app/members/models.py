@@ -55,6 +55,10 @@ class Member(db.Model, UserMixin):
     def check_password(self, password):
         return self.password == password
 
+    @property
+    def pending_cmte_group_submission_records(self):
+        return self.cmte_group_submission_records.filter_by(approved_date=None, closed_date=None)
+
 
 class License(db.Model):
     __tablename__ = 'licenses'

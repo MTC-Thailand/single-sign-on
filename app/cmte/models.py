@@ -468,8 +468,12 @@ class CMTEEventGroupParticipationRecord(db.Model):
     reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
 
     @property
+    def record(self):
+        return self.records.all()[0]
+
+    @property
     def detail(self):
-        return self.records.all()[0].desc
+        return self.record.desc
 
     @property
     def status(self):
@@ -483,6 +487,20 @@ class CMTEEventGroupParticipationRecord(db.Model):
     @property
     def participants(self):
         return [rec.license.member.th_fullname for rec in self.records.all()]
+
+    @property
+    def active_info_requests(self):
+        return [req for req in self.info_requests if req.responded_at is None]
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.creator.th_fullname,
+            'status': self.status,
+            'create_datetime': self.create_datetime.isoformat() if self.create_datetime else None,
+            'license_number': self.creator.license.number,
+            'detail': self.detail,
+        }
 
 
 class CMTEEventParticipationRecord(db.Model):
@@ -586,6 +604,9 @@ class CMTEEventDoc(db.Model):
     record_id = db.Column('record_id', db.ForeignKey('cmte_event_participation_records.id'))
     record = db.relationship(CMTEEventParticipationRecord,
                              backref=db.backref('docs', cascade='all, delete-orphan'))
+    group_record_id = db.Column('group_record_id', db.ForeignKey('cmte_event_group_participation_records.id'))
+    group_record = db.relationship(CMTEEventGroupParticipationRecord,
+                                   backref=db.backref('docs', cascade='all, delete-orphan'))
     is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
     bill_name = db.Column('bill_name', db.String())
     receipt_item = db.Column('receipt_item', db.Text())
@@ -623,6 +644,9 @@ class CMTEParticipationRecordRequest(db.Model):
     record_id = db.Column('record_id', db.ForeignKey('cmte_event_participation_records.id'))
     record = db.relationship(CMTEEventParticipationRecord,
                              backref=db.backref('info_requests', cascade='all, delete-orphan'))
+    group_record_id = db.Column('group_record_id', db.ForeignKey('cmte_event_group_participation_records.id'))
+    group_record = db.relationship(CMTEEventGroupParticipationRecord,
+                                   backref=db.backref('info_requests', cascade='all, delete-orphan'))
     created_at = db.Column('created_at', db.DateTime(timezone=True))
     requester_id = db.Column('requester', db.ForeignKey('users.id'))
     requester = db.relationship(User)
