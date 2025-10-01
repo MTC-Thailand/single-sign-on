@@ -126,7 +126,11 @@ def cmte_index():
 def register_event():
     if not sponsor_event_management_permission.can():
         return render_template('errors/sponsor_expired.html')
-    form = CMTEEventForm()
+    form = CMTEEventForm(data={
+        'coord_name': str(current_user),
+        'coord_email': current_user.email,
+        'coord_phone': current_user.mobile_phone,
+    })
     return render_template('cmte/event_registration.html', form=form)
 
 
@@ -136,6 +140,8 @@ def register_event():
 def edit_event(event_id):
     event = CMTEEvent.query.get(event_id)
     form = CMTEEventForm(obj=event)
+    form.start_date.data = arrow.get(event.start_date).to('Asia/Bangkok')
+    form.end_date.data = arrow.get(event.end_date).to('Asia/Bangkok')
     return render_template('cmte/event_registration.html', form=form, event=event)
 
 
