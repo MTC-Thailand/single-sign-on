@@ -2204,6 +2204,13 @@ def admin_event_edit(event_id=None):
     else:
         event = None
         form = CMTEAdminEventForm()
+
+    if request.method == 'GET':
+        form.start_date.data = arrow.get(event.start_date).to('Asia/Bangkok') if form.start_date.data else None
+        form.end_date.data = arrow.get(event.end_date).to('Asia/Bangkok') if form.end_date.data else None
+        form.submitted_datetime.data = arrow.get(event.submitted_datetime).to('Asia/Bangkok') if form.submitted_datetime.data else None
+        form.approved_datetime.data = arrow.get(event.approved_datetime).to('Asia/Bangkok') if form.approved_datetime.data else None
+
     if request.method == 'DELETE':
         db.session.delete(event)
         db.session.commit()
@@ -2218,9 +2225,13 @@ def admin_event_edit(event_id=None):
             form.populate_obj(event)
             if event.approved_datetime:
                 event.submission_due_date = event.end_date + timedelta(days=30)
+            event.start_date = arrow.get(event.start_date, 'Asia/Bangkok').datetime if event.start_date else None
+            event.end_date = arrow.get(event.end_date, 'Asia/Bangkok').datetime if event.end_date else None
+            event.submitted_datetime = arrow.get(event.submitted_datetime, 'Asia/Bangkok').datetime if event.submitted_datetime else None
+            event.approved_datetime = arrow.get(event.approved_datetime, 'Asia/Bangkok').datetime if event.approved_datetime else None
             db.session.add(event)
             db.session.commit()
-            flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
+            flash('บันทึกการแก้ไขกิจกรรมเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_preview_event', event_id=event.id))
         else:
             flash(f'Error {form.errors}', 'danger')
