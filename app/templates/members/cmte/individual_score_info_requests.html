@@ -24,7 +24,7 @@
                             <td>{{ req.created_at|localdate }}</td>
                             <td>
                                 {% if not req.responded_at %}
-                                <a class="button is-small is-success" href="{{ url_for('member.edit_individual_score_info_request', record_id=record.id, req_id=req.id) }}">
+                                <a class="button is-small is-success" href="{{ url_for('member.edit_individual_score_info_request', next=request.url, record_id=record.id, req_id=req.id) }}">
                                     <span class="icon">
                                         <i class="fa-solid fa-circle-check"></i>
                                     </span>
@@ -42,9 +42,15 @@
                     </tbody>
                 </table>
                 <div class="buttons is-centered">
-                    <a href="{{ url_for('member.individual_score_index') }}" class="button is-light">
-                        Back
-                    </a>
+                    {% if next %}
+                        <a href="{{ next }}" class="button is-light">
+                            Back
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('member.individual_score_index') }}" class="button is-light">
+                            Back
+                        </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -636,8 +636,9 @@ def list_individual_score_info_requests(record_id):
 @member.route('/cmte/individual-group-scores/<int:record_id>/list', methods=['GET', 'POST'])
 @login_required
 def list_individual_group_score_info_requests(record_id):
+    next = request.args.get('next')
     record = CMTEEventGroupParticipationRecord.query.get(record_id)
-    return render_template('members/cmte/individual_score_info_requests.html', record=record)
+    return render_template('members/cmte/individual_score_info_requests.html', record=record, next=next)
 
 
 @member.route('/cmte/individual-scores/<int:record_id>/requests/<int:req_id>/edit', methods=['GET', 'POST'])
@@ -645,14 +646,18 @@ def list_individual_group_score_info_requests(record_id):
 def edit_individual_score_info_request(req_id, record_id):
     req = CMTEParticipationRecordRequest.query.get(req_id)
     form = CMTEEventParticipationRecordAdditionalRequestForm(obj=req)
+    next = request.args.get('next')
     if form.validate_on_submit():
         form.populate_obj(req)
         req.responded_at = arrow.now('Asia/Bangkok').datetime
         db.session.add(req)
         db.session.commit()
         flash('ดำเนินการบันทึกข้อมูลแล้ว', 'success')
-        return redirect(url_for('member.list_individual_score_info_requests', record_id=record_id))
-    return render_template('members/cmte/individual_score_info_request_form.html', req_id=req_id, form=form)
+        if next:
+            return redirect(next)
+        else:
+            return redirect(url_for('member.list_individual_score_info_requests', record_id=record_id))
+    return render_template('members/cmte/individual_score_info_request_form.html', next=next, req_id=req_id, form=form)
 
 
 @member.route('/cmte/individual-score-group/<int:activity_id>/form', methods=['GET', 'POST'])
@@ -666,7 +671,7 @@ def individual_score_group_form(activity_id):
     if request.method == 'POST':
         all_docs = []
         if form.validate_on_submit():
-            group = CMTEEventGroupParticipationRecord(creator=current_user)
+            group = CMTEEventGroupParticipationRecord(creator=current_user, activity=activity)
             for doc_form in form.upload_files:
                 _file = doc_form.upload_file.data
                 if _file:
@@ -678,8 +683,8 @@ def individual_score_group_form(activity_id):
                     doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                     doc.note = doc_form.note.data
                     db.session.add(doc)
-            for license_number in request.form.getlist('licenses'):
-                record = CMTEEventParticipationRecord()
+            for license_number in request.form.getlist('members'):
+                record = CMTEEventParticipationRecord(group=group)
                 form.populate_obj(record)
                 record.individual = True
                 record.license_number = license_number
@@ -695,7 +700,8 @@ def individual_score_group_form(activity_id):
             return redirect(url_for('member.individual_score_group_index'))
         else:
             flash(f'{form.errors}', 'danger')
-    return render_template('members/cmte/individual_score_group_form.html', form=form)
+    return render_template('members/cmte/individual_score_group_form.html',
+                           form=form, activity=activity)
 
 
 @member.route('/cmte/individual-score-group/<int:group_record_id>/edit', methods=['GET', 'POST'])
@@ -740,7 +746,16 @@ def edit_individual_score_group_form(group_record_id):
         else:
             flash(f'{form.errors}', 'danger')
     return render_template('members/cmte/individual_score_group_form.html',
-                           form=form, record=group_record)
+                           activity=group_record.activity, form=form, record=group_record)
+
+
+@member.route('/api/cmte/individual-score-group/<int:record_id>/delete', methods=['DELETE'])
+@login_required
+def delete_individual_score_record(record_id):
+    record = CMTEEventParticipationRecord.query.get(record_id)
+    db.session.delete(record)
+    db.session.commit()
+    return ''
 
 
 @member.route('/cmte/scores', methods=['GET', 'POST'])

@@ -6,6 +6,7 @@
     <div class="container">
         <div class="columns">
             <div class="column">
+                {% include "messages.html" %}
                 <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนนแบบกลุ่ม</h1>
                 <h1 class="subtitle has-text-centered">สมาชิกสามารถยื่นขอคะแนนให้ตนเองและผู้อื่นได้</h1>
                 <table class="table is-fullwidth">
@@ -44,7 +45,15 @@
                     <tbody>
                         {% for rec in current_user.pending_cmte_group_submission_records %}
                         <tr>
-                            <td>{{rec.detail}}</td>
+                            <td>
+                                {% if rec.status == 'รออนุมัติ' %}
+                                <a href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
+                                    {{rec.detail}}
+                                </a>
+                                {% else %}
+                                {{rec.detail}}
+                                {% endif %}
+                            </td>
                             <td>{{rec.participants|join(',')}}</td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
                             <td>{{rec.status}}</td>
@@ -56,7 +65,7 @@
                                         </span>
                                         <span>ดำเนินการแก้ไข</span>
                                     </a>
-                                    <a class="button is-success" href="{{ url_for('member.list_individual_group_score_info_requests', record_id=rec.id) }}">
+                                    <a class="button is-success" href="{{ url_for('member.list_individual_group_score_info_requests', next=request.url, record_id=rec.id) }}">
                                         <span class="icon">
                                             <i class="fa-solid fa-circle-info"></i>
                                         </span>

@@ -12,6 +12,24 @@
             <div class="column">
                 <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคลแบบกลุ่ม</h1>
                 {% include "messages.html" %}
+                <table class="table is-bordered is-fullwidth">
+                    <tr>
+                        <td>ชนิดกิจกรรม</td>
+                        <td>{{ activity.event_type }}</td>
+                    </tr>
+                    <tr>
+                        <td>ประเภทกิจกรรม</td>
+                        <td>{{ activity }}</td>
+                    </tr>
+                    <tr>
+                        <td>รายละเอียด</td>
+                        <td>
+                            <p class="help">
+                                {{ activity.detail }}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
                 {% if record and record.active_info_requests %}
                     <table class="table is-fullwidth is-bordered">
                         <thead>
@@ -48,6 +66,7 @@
                             {{form.end_date(class="input", type="text")}}
                         </div>
                     </div>
+                    {% if record %}
                     <label class="label">รายชื่อสมาชิก</label>
                     <table class="table is-bordered is-striped">
                         <tbody>
@@ -56,7 +75,12 @@
                             <td>{{ r.license.member.th_fullname }}</td>
                             <td>{{ r.license_number }}</td>
                             <td>
-                                <a>
+                                <a hx-delete="{{ url_for('member.delete_individual_score_record', record_id=r.id) }}"
+                                   hx-confirm="ต้องการลบรายนี้หรือไม่"
+                                   hx-target="closest tr"
+                                   hx-swap="outerHTML"
+                                   hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                                >
                                     <span class="icon">
                                         <i class="fa-solid fa-trash has-text-danger"></i>
                                     </span>
@@ -66,6 +90,7 @@
                         {% endfor %}
                         </tbody>
                     </table>
+                    {% endif %}
                     <div class="field">
                         <label class="label">เพิ่มรายชื่อสมาชิก</label>
                         <div class="control">
@@ -110,7 +135,7 @@
                     {% endfor %}
                     <div class="field is-grouped">
                         <div class="control">
-                            <a class="button is-light" href="{{url_for('member.individual_score_index')}}">Cancel</a>
+                            <a class="button is-light" href="{{url_for('member.individual_score_group_index')}}">Cancel</a>
                         </div>
                         <div class="control">
                             <button type="submit" class="button is-success">Submit</button>

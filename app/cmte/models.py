@@ -466,6 +466,9 @@ class CMTEEventGroupParticipationRecord(db.Model):
     approved_date = db.Column('approved_date', db.Date(), info={'label': 'วันอนุมัติคะแนน'})
     closed_date = db.Column('closed_date', db.Date())
     reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
+    activity_id = db.Column('activity_id', db.ForeignKey('cmte_event_activities.id'))
+    activity = db.relationship(CMTEEventActivity, backref=db.backref('cmte_group_submission_records',
+                                                                     cascade='all, delete-orphan'))
 
     @property
     def record(self):

@@ -86,7 +86,7 @@ class License(db.Model):
 
     @property
     def pending_individual_cmte_records(self):
-        return self.cmte_records.filter_by(approved_date=None, individual=True)
+        return self.cmte_records.filter_by(approved_date=None, individual=True, group_id=None)
 
     @property
     def pending_cmte_records(self):
