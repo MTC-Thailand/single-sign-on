@@ -498,13 +498,23 @@ def index():
 @member.route('/alerts')
 @login_required
 def alerts():
-    individual_score_requests = CMTEEventParticipationRecord.query\
-        .filter_by(license_number=current_user.license.number)\
-        .join(CMTEParticipationRecordRequest).filter_by(responded_at=None).count()
-    if individual_score_requests > 0:
-        template = f'<span class="tag is-rounded is-success">{individual_score_requests}</span>'
-    else:
-        template = ''
+    item = request.args.get('item')
+    if item == 'individual-score-requests':
+        count = CMTEEventParticipationRecord.query\
+            .filter_by(license_number=current_user.license.number)\
+            .join(CMTEParticipationRecordRequest).filter_by(responded_at=None).count()
+        if count > 0:
+            template = f'<span class="tag is-rounded is-success">{count}</span>'
+        else:
+            template = ''
+    if item == 'individual-group-score-requests':
+        count = CMTEEventGroupParticipationRecord.query \
+            .filter_by(creator=current_user) \
+            .join(CMTEParticipationRecordRequest).filter_by(responded_at=None).count()
+        if count > 0:
+            template = f'<span class="tag is-rounded is-success">{count}</span>'
+        else:
+            template = ''
     return template
 
 

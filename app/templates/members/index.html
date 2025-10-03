@@ -33,7 +33,9 @@
                         <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล
                         <div id="individual-score-requests"></div>
                         </a></li>
-                        <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</a></li>
+                        <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม
+                            <div id="individual-group-score-requests"></div>
+                        </a></li>
                         <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
                         <li><a href="{{url_for('cmte.upcoming_events')}}">รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></a></li>
                         <li><a href="https://mtc-cmte.one.th">ระบบ e-learning (ทำข้อสอบออนไลน์) <span class="tag is-rounded is-success">new</span></a></li>
@@ -219,11 +221,16 @@
     {{ super() }}
     <script>
     $(document).ready(()=>{
-        htmx.ajax('GET', {{ url_for('member.alerts')|tojson|safe }},
+        htmx.ajax('GET', {{ url_for('member.alerts', item='individual-score-requests')|tojson|safe }},
                 {
                     target: "#individual-score-requests",
                     swap: "innerHTML",
                 })
+        htmx.ajax('GET', {{ url_for('member.alerts', item='individual-group-score-requests')|tojson|safe }},
+            {
+                target: "#individual-group-score-requests",
+                swap: "innerHTML",
+            })
     })
     </script>
 {% endblock %}
