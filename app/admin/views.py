@@ -47,7 +47,7 @@ def upload_renew():
 def upload_new():
     if request.method == 'POST':
         f = request.files['file']
-        df = pd.read_excel(f, engine='openpyxl')
+        df = pd.read_excel(f, engine='openpyxl', dtype={'telephone_number': str})
         for idx, row in df.iterrows():
             member = Member.query.filter_by(pid=str(int(row['idcardnumber']))).first()
             if not member:
