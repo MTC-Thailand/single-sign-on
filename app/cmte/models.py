@@ -554,18 +554,30 @@ class CMTEEventParticipationRecord(db.Model):
 
     def set_score_valid_date(self):
         if self.event:
-            if self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() <= self.license.end_date:
-                self.score_valid_until = self.license.end_date
-            elif self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() > self.license.end_date:
-                next_license_end_date = self.license.end_date + relativedelta(years=5)
-                self.score_valid_until = next_license_end_date
-            else:
-                for lic in License.query.filter_by(number=self.license.number):
-                    if lic.end_date.year == self.event.end_date.year:
-                        self.score_valid_until = lic.end_date
-                        break
+            event_start = self.event.start_date.date()
+            event_end = self.event.end_date.date()
         else:
+            event_start = self.start_date
+            event_end = self.end_date
+
+        # The event starts and ends within the current license period
+        if event_start >= self.license.start_date \
+            and event_end <= self.license.end_date:
             self.score_valid_until = self.license.end_date
+
+        # The event starts before but ends within the current license period
+        elif event_start < self.license.start_date <= event_end <= self.license.end_date:
+            self.score_valid_until = self.license.end_date
+
+        # The event starts and ends before the current license period
+        elif event_start < self.license.start_date and event_end < self.license.start_date:
+            self.score_valid_until = self.license.start_date - relativedelta(days=1)
+
+        # The event starts within the license period but ends after the license period
+        elif event_start >= self.license.start_date \
+                and event_end > self.license.end_date:
+            next_license_end_date = self.license.end_date + relativedelta(years=5)
+            self.score_valid_until = next_license_end_date
 
     def to_dict(self):
         return {
