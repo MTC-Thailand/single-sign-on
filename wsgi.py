@@ -43,6 +43,7 @@ admin.add_view(ModelView(CMTEEventCode, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventDoc, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventParticipationRecord, db.session, category='CMTE'))
 admin.add_view(ModelView(CMTEEventActivity, db.session, category='CMTE'))
+admin.add_view(ModelView(CMTEEventGroupParticipationRecord, db.session, category='CMTE'))
 
 admin.add_view(ModelView(CMTESponsorMember, db.session, category='Sponsor'))
 admin.add_view(ModelView(CMTEEventSponsor, db.session, category='Sponsor'))

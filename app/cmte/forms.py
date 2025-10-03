@@ -4,7 +4,7 @@ from wtforms.validators import NumberRange, EqualTo, Email, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms_alchemy import model_form_factory, QuerySelectField, QuerySelectMultipleField
 from wtforms import FieldList, FormField, StringField, DecimalField, TextAreaField, PasswordField, SelectField, \
-    RadioField
+    RadioField, SelectMultipleField
 from wtforms_components import DateField, DateTimeField, TimeField
 
 from app.cmte.models import *
@@ -93,6 +93,15 @@ class IndividualScoreForm(ModelForm):
     activity = QuerySelectField('ชนิดกิจกรรม',
                                 get_label='name',
                                 query_factory=lambda: CMTEEventActivity.query.all())
+
+    upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
+
+
+class IndividualScoreGroupForm(ModelForm):
+    class Meta:
+        model = CMTEEventParticipationRecord
+        only = ['start_date', 'end_date', 'desc', 'reason']
+        date_format = '%d/%m/%Y'
 
     upload_files = FieldList(FormField(CMTEEventDocForm, default=CMTEEventDoc), min_entries=5)
 
@@ -280,3 +289,8 @@ class CMTEAdminEventActivityForm(ModelForm):
                                          allow_blank=True,
                                          widget=ListWidget(prefix_label=False),
                                          option_widget=CheckboxInput())
+
+
+class CMTEEventParticipationRecordAdditionalRequestForm(ModelForm):
+    class Meta:
+        model = CMTEParticipationRecordRequest

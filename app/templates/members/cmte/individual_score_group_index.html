@@ -6,22 +6,24 @@
     <div class="container">
         <div class="columns">
             <div class="column">
-                <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนน</h1>
+                {% include "messages.html" %}
+                <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนนแบบกลุ่ม</h1>
+                <h1 class="subtitle has-text-centered">สมาชิกสามารถยื่นขอคะแนนให้ตนเองและผู้อื่นได้</h1>
                 <table class="table is-fullwidth">
                     <thead>
-                    <th>กิจกรรม</th>
+                    <th>ชนิดกิจกรรม</th>
+                    <th>ประเภทกิจกรรม</th>
                     <th>รายละเอียด</th>
-                    <th>เกณฑ์การให้คะแนน</th>
                     <th></th>
                     </thead>
                     <tbody>
-                    {% for et in event_types %}
+                    {% for activity in activities %}
                     <tr>
-                        <td>{{et.name}}</td>
-                        <td>{{et.desc}}</td>
-                        <td>{{et.score_criteria}}</td>
+                        <td>{{activity.name}}</td>
+                        <td>{{activity.event_type}}</td>
+                        <td>{{activity.detail}}</td>
                         <td>
-                            <a class="button is-primary" href="{{url_for('member.individual_score_group_form', event_type_id=et.id)}}">
+                            <a class="button is-primary" href="{{url_for('member.individual_score_group_form', activity_id=activity.id)}}">
                                 ยื่นคะแนน
                             </a>
                         </td>
@@ -30,16 +32,52 @@
                     </tbody>
                 </table>
                 <h1 class="title has-text-centered is-size-4">รายการยื่นขออนุมัติคะแนนส่วนบุคคลที่รอการอนุมัติ</h1>
+                <pre>
+                </pre>
                 <table class="table is-fullwidth">
                     <thead>
                     <th>รายละเอียด</th>
+                    <th>สมาชิก</th>
                     <th>วันที่ยื่น</th>
+                    <th>สถานะ</th>
+                    <th></th>
                     </thead>
                     <tbody>
-                        {% for rec in current_user.license.pending_individual_cmte_records %}
+                        {% for rec in current_user.pending_cmte_group_submission_records %}
                         <tr>
-                            <td>{{rec.desc}}</td>
+                            <td>
+                                {% if rec.status == 'รออนุมัติ' %}
+                                <a href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
+                                    <span>
+                                        {{rec.detail}}
+                                    </span>
+                                    <span class="icon">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </span>
+                                </a>
+                                {% else %}
+                                {{rec.detail}}
+                                {% endif %}
+                            </td>
+                            <td>{{rec.participants|join(',')}}</td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
+                            <td>{{rec.status}}</td>
+                            <td>
+                                {% if rec.active_info_requests %}
+                                    <a class="button is-link" href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </span>
+                                        <span>ดำเนินการแก้ไข</span>
+                                    </a>
+                                    <a class="button is-success" href="{{ url_for('member.list_individual_group_score_info_requests', next=request.url, record_id=rec.id) }}">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </span>
+                                        <span>ส่งขออนุมัติอีกครั้ง</span>
+                                    </a>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

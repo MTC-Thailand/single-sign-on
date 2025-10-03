@@ -7,16 +7,19 @@
         <div class="columns">
             <div class="column">
                 <h1 class="title has-text-centered">กิจกรรมสำหรับขออนุมัติคะแนน</h1>
+                {% include "messages.html" %}
                 {% if not current_user.license.get_active_cmte_fee_payment() %}
                 <p class="is-warning is-light notification">กรุณาชำระค่าธรรมเนียม 500 บาทต่อรอบการต่อใบอนุญาตใน One Platform Application เพื่อยื่นคะแนนส่วนบุคคล หรือ
                     <a href="{{url_for('member.cmte_fee_payment_form')}}">คลิกที่นี่</a> เพื่อทำรายการ
-
                 </p>
                 {% endif %}
                 <div class="buttons is-centered">
                     <a class="button is-primary" href="{{url_for('member.individual_score_form')}}"
                     >
-                        ยื่นคะแนน
+                        <span class="icon">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                        <span>ยื่นขออนุมัติคะแนน</span>
                     </a>
                 </div>
                 <h1 class="title has-text-centered is-size-4">รายการยื่นขออนุมัติคะแนนส่วนบุคคลที่รอการอนุมัติ</h1>
@@ -27,15 +30,42 @@
                     <th>วันที่พิจารณา</th>
                     <th>คะแนน</th>
                     <th>เหตุผล</th>
+                    <th>ส่งข้อมูลเพิ่มเติม</th>
                     </thead>
                     <tbody>
                         {% for rec in current_user.license.pending_individual_cmte_records %}
                         <tr>
-                            <td>{{rec.desc}}</td>
+                            <td>
+                                <a href="{{ url_for('member.individual_score_detail', record_id=rec.id) }}">
+                                    <span>
+                                        {{rec.desc}}
+                                    </span>
+                                    <span class="icon">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </span>
+                                </a>
+                            </td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
                             <td>{{rec.closed_date or 'รอพิจารณา'}}</td>
                             <td>{{rec.score or 'ไม่อนุมัติ' if rec.closed_date else '-'}}</td>
                             <td>{{rec.reason or ''}}</td>
+                            <td>
+                                {% if rec.active_info_requests %}
+                                    <a class="button is-small is-link" href="{{ url_for('member.edit_individual_score_form', record_id=rec.id) }}">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </span>
+                                        <span>ดำเนินการแก้ไข</span>
+                                    </a>
+                                    <a class="button is-small is-success" href="{{ url_for('member.list_individual_score_info_requests', record_id=rec.id) }}">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </span>
+                                        <span>ส่งขออนุมัติอีกครั้ง</span>
+                                    </a>
+                                {% else %}
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

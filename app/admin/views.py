@@ -47,7 +47,7 @@ def upload_renew():
 def upload_new():
     if request.method == 'POST':
         f = request.files['file']
-        df = pd.read_excel(f, engine='openpyxl')
+        df = pd.read_excel(f, engine='openpyxl', dtype={'telephone_number': str})
         for idx, row in df.iterrows():
             member = Member.query.filter_by(pid=str(int(row['idcardnumber']))).first()
             if not member:
@@ -76,16 +76,16 @@ def upload_new():
                     license.issue_date = row['approve_date']
                 db.session.add(license)
             if row['form_tradition'] == 1 and not pd.isna(row['payment_date']):
-                cmte_payment_record = license.cmte_fee_payment_records.filter_by(
-                    start_date=license.start_date,
-                    end_date=license.end_date,
-                    license=license).first()
+                cmte_payment_record = member.license.cmte_fee_payment_records.filter_by(
+                    start_date=member.license.start_date,
+                    end_date=member.license.end_date,
+                    license=member.license).first()
                 if not cmte_payment_record:
                     cmte_payment_record = CMTEFeePaymentRecord(
-                        start_date=license.start_date,
-                        end_date=license.end_date,
+                        start_date=member.license.start_date,
+                        end_date=member.license.end_date,
                         payment_datetime=row['payment_date'],
-                        license=license,
+                        license=member.license,
                     )
                     db.session.add(cmte_payment_record)
         db.session.commit()

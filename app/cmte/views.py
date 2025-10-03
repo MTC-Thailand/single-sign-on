@@ -17,7 +17,8 @@ from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from itsdangerous import TimedJSONWebSignatureSerializer
-from sqlalchemy import or_
+from openpyxl.pivot.record import Record
+from sqlalchemy import or_, func
 
 from app import db, sponsor_event_management_permission, send_mail
 from app.cmte import cmte_bp as cmte
@@ -129,7 +130,11 @@ def cmte_index():
 def register_event():
     if not sponsor_event_management_permission.can():
         return render_template('errors/sponsor_expired.html')
-    form = CMTEEventForm()
+    form = CMTEEventForm(data={
+        'coord_name': str(current_user),
+        'coord_email': current_user.email,
+        'coord_phone': current_user.mobile_phone,
+    })
     return render_template('cmte/event_registration.html', form=form)
 
 
@@ -139,6 +144,8 @@ def register_event():
 def edit_event(event_id):
     event = CMTEEvent.query.get(event_id)
     form = CMTEEventForm(obj=event)
+    form.start_date.data = arrow.get(event.start_date).to('Asia/Bangkok')
+    form.end_date.data = arrow.get(event.end_date).to('Asia/Bangkok')
     return render_template('cmte/event_registration.html', form=form, event=event)
 
 
@@ -2223,6 +2230,13 @@ def admin_event_edit(event_id=None):
     else:
         event = None
         form = CMTEAdminEventForm()
+
+    if request.method == 'GET':
+        form.start_date.data = arrow.get(event.start_date).to('Asia/Bangkok') if form.start_date.data else None
+        form.end_date.data = arrow.get(event.end_date).to('Asia/Bangkok') if form.end_date.data else None
+        form.submitted_datetime.data = arrow.get(event.submitted_datetime).to('Asia/Bangkok') if form.submitted_datetime.data else None
+        form.approved_datetime.data = arrow.get(event.approved_datetime).to('Asia/Bangkok') if form.approved_datetime.data else None
+
     if request.method == 'DELETE':
         db.session.delete(event)
         db.session.commit()
@@ -2237,9 +2251,13 @@ def admin_event_edit(event_id=None):
             form.populate_obj(event)
             if event.approved_datetime:
                 event.submission_due_date = event.end_date + timedelta(days=30)
+            event.start_date = arrow.get(event.start_date, 'Asia/Bangkok').datetime if event.start_date else None
+            event.end_date = arrow.get(event.end_date, 'Asia/Bangkok').datetime if event.end_date else None
+            event.submitted_datetime = arrow.get(event.submitted_datetime, 'Asia/Bangkok').datetime if event.submitted_datetime else None
+            event.approved_datetime = arrow.get(event.approved_datetime, 'Asia/Bangkok').datetime if event.approved_datetime else None
             db.session.add(event)
             db.session.commit()
-            flash('เพิ่มกิจกรรมเรียบร้อย', 'success')
+            flash('บันทึกการแก้ไขกิจกรรมเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_preview_event', event_id=event.id))
         else:
             flash(f'Error {form.errors}', 'danger')
@@ -2262,10 +2280,144 @@ def show_event_detail_modal(event_id):
 @login_required
 @cmte_admin_permission.require()
 def admin_individual_score_index():
+    status = request.args.get('status', 'pending')
     records = CMTEEventParticipationRecord.query.filter_by(individual=True,
                                                            approved_date=None,
                                                            closed_date=None)
-    return render_template('cmte/admin/individual_scores.html', records=records)
+    return render_template('cmte/admin/individual_scores.html',
+                           status=status,
+                           records=records)
+
+
+@cmte.route('/events/group-individuals/index')
+@login_required
+@cmte_admin_permission.require()
+def admin_group_individual_score_index():
+    status = request.args.get('status', 'pending')
+    return render_template('cmte/admin/group_individual_scores.html', status=status)
+
+
+@cmte.route('/api/events/group-individual-score-records/')
+@login_required
+@cmte_admin_permission.require()
+def admin_get_group_individual_score_records():
+    status = request.args.get('status', 'pending')
+    search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    query = CMTEEventGroupParticipationRecord.query \
+        .filter(CMTEEventGroupParticipationRecord.create_datetime!=None) \
+        .order_by(CMTEEventGroupParticipationRecord.create_datetime.desc())
+    if status == 'pending':
+        query = query.filter_by(approved_date=None, closed_date=None)
+    elif status == 'approved':
+        query = query.filter(CMTEEventGroupParticipationRecord.approved_date != None)
+    elif status == 'rejected':
+        query = query.filter(CMTEEventGroupParticipationRecord.closed_date != None)
+    elif status == 'waiting':
+        query = query.filter(CMTEEventGroupParticipationRecord.approved_date == None) \
+            .filter(CMTEEventGroupParticipationRecord.closed_date == None) \
+            .join(CMTEParticipationRecordRequest) \
+            .group_by(CMTEEventGroupParticipationRecord.id) \
+            .having(func.count(CMTEEventGroupParticipationRecord.id) > 0)
+    records_total = query.count()
+    if col_name:
+        try:
+            column = getattr(CMTEEventGroupParticipationRecord, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
+    if search:
+        query = query.join(License).join(Member).join(CMTEEventParticipationRecord) \
+            .filter(or_(Member.th_firstname.contains(search),
+                        Member.th_lastname.contains(search),
+                        CMTEEventParticipationRecord.desc.contains(search),
+                        License.number.contains(search),
+        ))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for record in query:
+        _dict = record.to_dict()
+        _dict['url'] = url_for('cmte.admin_group_individual_score_detail', record_id=record.id)
+        data.append(_dict)
+    return jsonify({'data': data,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
+
+
+@cmte.route('/api/events/individual-score-records/')
+@login_required
+@cmte_admin_permission.require()
+def admin_get_individual_score_records():
+    status = request.args.get('status', 'pending')
+    search = request.args.get('search[value]')
+    col_idx = request.args.get('order[0][column]')
+    direction = request.args.get('order[0][dir]')
+    col_name = request.args.get('columns[{}][data]'.format(col_idx))
+    query = CMTEEventParticipationRecord.query.filter_by(individual=True)\
+        .filter(CMTEEventParticipationRecord.create_datetime!=None)\
+        .order_by(CMTEEventParticipationRecord.create_datetime.desc())
+    records_total = query.count()
+
+    if status == 'pending':
+        query = query.filter(CMTEEventParticipationRecord.approved_date==None) \
+            .filter(CMTEEventParticipationRecord.closed_date==None)
+    elif status == 'approved':
+        query = query.filter(CMTEEventParticipationRecord.approved_date!=None) \
+            .order_by(CMTEEventParticipationRecord.approved_date.desc())
+    elif status == 'rejected':
+        query = query.filter(CMTEEventParticipationRecord.closed_date!=None)
+    elif status == 'waiting':
+        query = query.filter(CMTEEventParticipationRecord.approved_date==None)\
+            .filter(CMTEEventParticipationRecord.closed_date==None)\
+            .join(CMTEParticipationRecordRequest)\
+            .group_by(CMTEEventParticipationRecord.id)\
+            .having(func.count(CMTEEventParticipationRecord.id) > 0)
+
+    if col_name:
+        try:
+            column = getattr(CMTEEventParticipationRecord, col_name)
+        except AttributeError:
+            print(f'{col_name} not found.')
+        else:
+            if direction == 'desc':
+                column = column.desc()
+            query = query.order_by(column)
+
+    if search:
+        query = query.join(License).join(Member).filter(or_(
+            Member.th_firstname.contains(search),
+            Member.th_lastname.contains(search),
+            CMTEEventParticipationRecord.desc.contains(search),
+            CMTEEventParticipationRecord.license_number.contains(search),
+
+        ))
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
+    data = []
+    for record in query:
+        _dict = record.individual_score_to_dict()
+        _dict['url'] = url_for('cmte.admin_individual_score_detail', record_id=record.id)
+        if status == 'pending':
+            if not record.info_requests:
+                data.append(_dict)
+        else:
+            data.append(_dict)
+    return jsonify({'data': data,
+                    'recordsFiltered': total_filtered,
+                    'recordsTotal': records_total,
+                    'draw': request.args.get('draw', type=int)})
 
 
 @cmte.route('/events/individuals/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
@@ -2275,26 +2427,86 @@ def admin_individual_score_detail(record_id):
     record = CMTEEventParticipationRecord.query.get(record_id)
     form = IndividualScoreAdminForm(obj=record)
     if request.method == 'POST':
-        approved = request.form.get('approved')
-        if approved == 'true':
+        action = request.form.get('action')
+        if action == 'approve':
             if form.score.data and form.score.data > 0.0:
                 form.populate_obj(record)
                 record.approved_date = arrow.now('Asia/Bangkok').date()
+                record.closed_date = None
                 record.set_score_valid_date()
+                for req in record.info_requests:
+                    req.closed_at = arrow.now('Asia/Bangkok').datetime
+                    db.session.add(req)
                 db.session.add(record)
                 db.session.commit()
                 flash('อนุมัติคะแนนเรียบร้อย', 'success')
                 return redirect(url_for('cmte.admin_individual_score_index'))
             else:
                 flash('กรุณาตรวจสอบคะแนนอีกครั้ง', 'warning')
+        elif action == 'info_request':
+            info_request = CMTEParticipationRecordRequest(detail=request.form.get('detail'),
+                                                          record=record)
+            info_request.created_at = arrow.now('Asia/Bangkok').date()
+            info_request.requester = current_user
+            db.session.add(info_request)
+            db.session.commit()
+            if not current_app.debug:
+                message = f'''
+                เรียน สมาชิกสภาเทคนิคการแพทย์
+                
+                กรุณาตรวจสอบคำขอรายละเอียดเพิ่มเติมเพื่อการอนุมัติคะแนนส่วนบุคคลในระบบสารสนเทศสมาชิก
+
+                \n\n
+                อีเมลนี้เป็นระบบอัตโนมัติกรุณาอย่าตอบกลับ
+                '''
+                send_mail([record.license.member.email], 'MTC-CMTE Email validation', message)
+            else:
+                print(f'Sending an email to {record.license.member.email}')
+            flash('ส่งคำขอเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('cmte.admin_individual_score_index'))
         else:
             form.populate_obj(record)
             record.closed_date = arrow.now('Asia/Bangkok').date()
+            record.approved_date = None
             db.session.add(record)
             db.session.commit()
             flash('บันทึกข้อมูลเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_individual_score_index'))
     return render_template('cmte/admin/individual_score_detail.html', record=record, form=form)
+
+
+@cmte.route('/events/group-individuals/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_group_individual_score_detail(record_id):
+    group_record = CMTEEventGroupParticipationRecord.query.get(record_id)
+    form = IndividualScoreGroupForm(obj=group_record)
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'approve':
+            score = request.form.get('score', type=float)
+            for record in group_record.records:
+                record.score = score
+                record.set_score_valid_date()
+                record.approved_date = arrow.now('Asia/Bangkok').date()
+                db.session.add(record)
+                group_record.approved_date = arrow.now('Asia/Bangkok').date()
+            db.session.add(group_record)
+            db.session.commit()
+            flash(f'อนุมัติคะแนนเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('cmte.admin_group_individual_score_index'))
+        elif action == 'info_request':
+            _request = CMTEParticipationRecordRequest(group_record=group_record)
+            _request.created_at = arrow.now('Asia/Bangkok').datetime
+            _request.requester = current_user
+            _request.detail = request.form.get('detail')
+            db.session.add(_request)
+            db.session.commit()
+            flash(f'ส่งคำขอข้อมูลเพิ่มเติมเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('cmte.admin_group_individual_score_index'))
+
+    return render_template('cmte/admin/group_individual_score_detail.html',
+                           group_record=group_record, form=form)
 
 
 @cmte.route('/events/individuals/docs/<int:doc_id>', methods=['DELETE'])
@@ -2490,7 +2702,7 @@ def admin_send_email_verification(member_id):
     message = f'''
     เรียน ท่านเจ้าของอีเมล
 
-    บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์ของหน่วยงาน {member.sponsor.name}
+    บัญชีอีเมลของท่านได้รับการลงทะเบียนเป็นผู้ประสานงานของสถาบันจัดการฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์
     \n
     กรุณาคลิกที่ลิงค์เพื่อยืนยัน {url}
     \n\n

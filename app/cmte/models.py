@@ -12,6 +12,7 @@ import sqlalchemy as sa
 
 from app import db
 from app.members.models import License
+from app.models import User
 
 make_versioned(user_cls=None)
 
@@ -285,6 +286,7 @@ class CMTEEventActivity(db.Model):
     number = db.Column('number', db.Integer(), info={'label': 'ลำดับ'})
     name = db.Column('name', db.String(255), unique=True, nullable=False, info={'label': 'ชื่อชนิดกิจกรรม'})
     type_id = db.Column('type_id', db.Integer, db.ForeignKey('cmte_event_types.id'))
+    event_type = db.relationship('CMTEEventType')
     en_name = db.Column('en_name', db.String(255))
     detail = db.Column('detail', db.Text(), info={'label': 'รายละเอียด'})
     group_submission_only = db.Column('group_submission_only', db.Boolean(),
@@ -453,6 +455,57 @@ class CMTEEvent(db.Model):
         return self.participants.filter(CMTEEventParticipationRecord.approved_date==None).count()
 
 
+class CMTEEventGroupParticipationRecord(db.Model):
+    __tablename__ = 'cmte_event_group_participation_records'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    creator_id = db.Column('creator_id', db.ForeignKey('members.id'), nullable=False)
+    creator = db.relationship('Member', backref=db.backref('cmte_group_submission_records',
+                                                           lazy='dynamic',
+                                                           cascade='all, delete-orphan'))
+    create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
+    approved_date = db.Column('approved_date', db.Date(), info={'label': 'วันอนุมัติคะแนน'})
+    closed_date = db.Column('closed_date', db.Date())
+    reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
+    activity_id = db.Column('activity_id', db.ForeignKey('cmte_event_activities.id'))
+    activity = db.relationship(CMTEEventActivity, backref=db.backref('cmte_group_submission_records',
+                                                                     cascade='all, delete-orphan'))
+
+    @property
+    def record(self):
+        return self.records.all()[0]
+
+    @property
+    def detail(self):
+        return self.record.desc
+
+    @property
+    def status(self):
+        if self.approved_date:
+            return 'อนุมัติ'
+        elif self.closed_date:
+            return 'ไม่อนุมัติ'
+        else:
+            return 'รออนุมัติ'
+
+    @property
+    def participants(self):
+        return [rec.license.member.th_fullname for rec in self.records.all()]
+
+    @property
+    def active_info_requests(self):
+        return [req for req in self.info_requests if req.responded_at is None]
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.creator.th_fullname,
+            'status': self.status,
+            'create_datetime': self.create_datetime.isoformat() if self.create_datetime else None,
+            'license_number': self.creator.license.number,
+            'detail': self.detail,
+        }
+
+
 class CMTEEventParticipationRecord(db.Model):
     __tablename__ = 'cmte_event_participation_records'
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
@@ -475,6 +528,8 @@ class CMTEEventParticipationRecord(db.Model):
     closed_date = db.Column('closed_date', db.Date())
     reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
     activity_id = db.Column('activity_id', db.ForeignKey('cmte_event_activities.id'))
+    group_id = db.Column('group_id', db.ForeignKey('cmte_event_group_participation_records.id'))
+    group = db.relationship(CMTEEventGroupParticipationRecord, backref=db.backref('records', lazy='dynamic'))
     activity = db.relationship(CMTEEventActivity, backref=db.backref('records',
                                                                      lazy='dynamic',
                                                                      cascade='all, delete-orphan'))
@@ -488,23 +543,41 @@ class CMTEEventParticipationRecord(db.Model):
     def status(self):
         if self.approved_date:
             return 'อนุมัติ'
+        elif self.closed_date:
+            return 'ไม่อนุมัติ'
         else:
             return 'รออนุมัติ'
 
+    @property
+    def active_info_requests(self):
+        return [req for req in self.info_requests if req.responded_at is None]
+
     def set_score_valid_date(self):
         if self.event:
-            if self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() <= self.license.end_date:
-                self.score_valid_until = self.license.end_date
-            elif self.event.start_date.date() >= self.license.start_date and self.event.end_date.date() > self.license.end_date:
-                next_license_end_date = self.license.end_date + relativedelta(years=5)
-                self.score_valid_until = next_license_end_date
-            else:
-                for lic in License.query.filter_by(number=self.license.number):
-                    if lic.end_date.year == self.event.end_date.year:
-                        self.score_valid_until = lic.end_date
-                        break
+            event_start = self.event.start_date.date()
+            event_end = self.event.end_date.date()
         else:
+            event_start = self.start_date
+            event_end = self.end_date
+
+        # The event starts and ends within the current license period
+        if event_start >= self.license.start_date \
+            and event_end <= self.license.end_date:
             self.score_valid_until = self.license.end_date
+
+        # The event starts before but ends within the current license period
+        elif event_start < self.license.start_date <= event_end <= self.license.end_date:
+            self.score_valid_until = self.license.end_date
+
+        # The event starts and ends before the current license period
+        elif event_start < self.license.start_date and event_end < self.license.start_date:
+            self.score_valid_until = self.license.start_date - relativedelta(days=1)
+
+        # The event starts within the license period but ends after the license period
+        elif event_start >= self.license.start_date \
+                and event_end > self.license.end_date:
+            next_license_end_date = self.license.end_date + relativedelta(years=5)
+            self.score_valid_until = next_license_end_date
 
     def to_dict(self):
         return {
@@ -518,6 +591,19 @@ class CMTEEventParticipationRecord(db.Model):
             'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
             'approved_at': self.approved_date.isoformat() if self.approved_date else None,
         }
+
+    def individual_score_to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.license.member.th_fullname,
+            'license_number': self.license_number,
+            'detail': self.desc,
+            'score': self.score,
+            'status': self.status,
+            'created_at': self.create_datetime.astimezone(BANGKOK).isoformat() if self.create_datetime else None,
+            'approved_at': self.approved_date.isoformat() if self.approved_date else None,
+        }
+
 
 
 class CMTEEventDoc(db.Model):
@@ -533,6 +619,9 @@ class CMTEEventDoc(db.Model):
     record_id = db.Column('record_id', db.ForeignKey('cmte_event_participation_records.id'))
     record = db.relationship(CMTEEventParticipationRecord,
                              backref=db.backref('docs', cascade='all, delete-orphan'))
+    group_record_id = db.Column('group_record_id', db.ForeignKey('cmte_event_group_participation_records.id'))
+    group_record = db.relationship(CMTEEventGroupParticipationRecord,
+                                   backref=db.backref('docs', cascade='all, delete-orphan'))
     is_payment_slip = db.Column('is_payment_slip', db.Boolean(), default=False)
     bill_name = db.Column('bill_name', db.String())
     receipt_item = db.Column('receipt_item', db.Text())
@@ -561,6 +650,24 @@ class CMTEFeePaymentRecord(db.Model):
                 'start_date': self.start_date.strftime('%Y-%m-%d') if self.start_date else None,
                 'payment_datetime': self.payment_datetime.isoformat() if self.payment_datetime else None,
                 'license_number': self.license_number}
+
+
+class CMTEParticipationRecordRequest(db.Model):
+    __tablename__ = 'cmte_participation_record_requests'
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    detail = db.Column('detail', db.String())
+    record_id = db.Column('record_id', db.ForeignKey('cmte_event_participation_records.id'))
+    record = db.relationship(CMTEEventParticipationRecord,
+                             backref=db.backref('info_requests', cascade='all, delete-orphan'))
+    group_record_id = db.Column('group_record_id', db.ForeignKey('cmte_event_group_participation_records.id'))
+    group_record = db.relationship(CMTEEventGroupParticipationRecord,
+                                   backref=db.backref('info_requests', cascade='all, delete-orphan'))
+    created_at = db.Column('created_at', db.DateTime(timezone=True))
+    requester_id = db.Column('requester', db.ForeignKey('users.id'))
+    requester = db.relationship(User)
+    closed_at = db.Column('closed_at', db.DateTime(timezone=True))
+    note = db.Column('note', db.String())
+    responded_at = db.Column('responded_at', db.DateTime(timezone=True))
 
 
 sa.orm.configure_mappers()

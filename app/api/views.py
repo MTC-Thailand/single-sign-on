@@ -221,6 +221,52 @@ class MemberPID(Resource):
                 description: License information
                 schema:
                     id: MemberLicense
+                    properties:
+                        license:
+                            type: object
+                            properties:
+                                number:
+                                    type: string
+                                    description: หมายเลขใบอนุญาต (ท.น.)
+                                lic_b_date:
+                                    type: string
+                                    description: วันออกใบอนุญาต
+                                lic_exp_date:
+                                    type: string
+                                    description: วันหมดอายุใบอนุญาต
+                                lic_status_name:
+                                    type: string
+                                    description: สถานะใบอนุญาต
+                        member:
+                            type: object
+                            properties:
+                                th_title:
+                                    type: string
+                                    description: คำนำหน้า
+                                th_firstname:
+                                    type: string
+                                    description: ชื่อภาษาไทย
+                                th_lastname:
+                                    type: string
+                                    description: นามสกุลภาษาไทย
+                                status:
+                                    type: string
+                                    description: สถานะใบอนุญาต
+                        cmte_score:
+                            type: object
+                            properties:
+                                valid:
+                                    type: number
+                                    description: คะแนนสำหรับต่ออายุใบอนุญาตในรอบปัจจุบัน
+                                active_cmte_payment:
+                                    type: object
+                                    properties:
+                                        end_date:
+                                            type: string
+                                            description: วันที่หมดอายุ mock up
+                                        start_date:
+                                            type: string
+                                            description: วันที่เริ่มต้น mock up
         """
         member = Member.query.filter_by(pid=pid).first()
         if member:
@@ -229,21 +275,32 @@ class MemberPID(Resource):
 
             data = {
                 'license': {
-                    'number': member.license.number,
-                    'lic_b_date': member.license.issue_date.strftime('%Y-%m-%d'),
-                    'lic_status_name': member.license.status or 'ปกติ',
-                    'lic_exp_date': member.license.end_date.strftime('%Y-%m-%d'),
+                    'number': member.license.number if member.license else "",
+                    'lic_b_date': member.license.issue_date.strftime('%Y-%m-%d') if member.license else "",
+                    'lic_status_name': member.license.status or 'ปกติ' if member.license else "",
+                    'lic_exp_date': member.license.end_date.strftime('%Y-%m-%d') if member.license else "",
                 },
                 'member': {
                     'th_title': member.th_title,
                     'th_firstname': member.th_firstname,
                     'th_lastname': member.th_lastname,
+                    'telephone': member.tel,
+                    'status': member.status or 'ปกติ',
                 },
                 'cmte': {
                     'active_cmte_payment': cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {},
                     'valid_score': valid_score,
                 }
             }
+            if member.license:
+                data['license'] = {
+                    'number': member.license.number,
+                    'lic_b_date': member.license.issue_date.strftime('%Y-%m-%d'),
+                    'lic_status_name': member.license.status or 'ปกติ',
+                    'lic_exp_date': member.license.end_date.strftime('%Y-%m-%d'),
+                }
+            else:
+                data['license'] = {}
             return jsonify(data=data)
         return jsonify(data={}), 404
 
@@ -546,25 +603,30 @@ class MemberInfo(Resource):
         mem_id = data.get('mem_id', None)
         data['office'] = work_office
 
-        query = f'''
-        SELECT add_id,add1,moo,soi,road,zipcode,province.PROVINCE_NAME,amphur.AMPHUR_NAME,district.DISTRICT_NAME,updt
-        FROM member_add
-        INNER JOIN province ON province.PROVINCE_ID=member_add.PROVINCE_ID
-        INNER JOIN amphur ON amphur.AMPHUR_ID=member_add.AMPHUR_ID
-        INNER JOIN district ON district.DISTRICT_ID=member_add.DISTRICT_ID
-        WHERE mem_id={mem_id}
-        '''
+        if mem_id:
+            query = f'''
+            SELECT add_id,add1,moo,soi,road,zipcode,province.PROVINCE_NAME,amphur.AMPHUR_NAME,district.DISTRICT_NAME,updt
+            FROM member_add
+            INNER JOIN province ON province.PROVINCE_ID=member_add.PROVINCE_ID
+            INNER JOIN amphur ON amphur.AMPHUR_ID=member_add.AMPHUR_ID
+            INNER JOIN district ON district.DISTRICT_ID=member_add.DISTRICT_ID
+            WHERE mem_id={mem_id}
+            '''
 
-        addr = pd.read_sql_query(query, con=engine)
-        for idx, row in addr.iterrows():
-            dict_ = row.to_dict()
-            dict_['updt'] = row['updt'].isoformat() if row['updt'] else None
-            if dict_['add_id'] == 2:
-                work_office['office_addr'] = dict_
-            elif dict_['add_id'] == 1:
-                data['current_addr'] = dict_
-            elif dict_['add_id'] == 3:
-                data['home_addr'] = dict_
+            addr = pd.read_sql_query(query, con=engine)
+            for idx, row in addr.iterrows():
+                dict_ = row.to_dict()
+                dict_['updt'] = row['updt'].isoformat() if row['updt'] else None
+                if dict_['add_id'] == 2:
+                    work_office['office_addr'] = dict_
+                elif dict_['add_id'] == 1:
+                    data['current_addr'] = dict_
+                elif dict_['add_id'] == 3:
+                    data['home_addr'] = dict_
+        else:
+            data['current_addr'] = {}
+            data['home_addr'] = {}
+            data['office_addr'] = {}
 
         # query = f'''
         #     SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id

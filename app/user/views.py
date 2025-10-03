@@ -1,12 +1,12 @@
 import arrow
-from flask import render_template, flash, redirect, url_for, current_app, session, request
+from flask import render_template, flash, redirect, url_for, current_app, session, request, make_response
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from werkzeug.security import check_password_hash
 
 from app import db, admin_permission, cmte_admin_permission
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent, CMTEEventParticipationRecord, CMTEEventSponsor, \
-    CMTESponsorRequest, CMTESponsorEditRequest
+    CMTESponsorRequest, CMTESponsorEditRequest, CMTEEventGroupParticipationRecord
 from app.models import User, Client
 from app.user import user_bp as user
 from app.user.forms import LoginForm, ClientRegisterForm, UserRegisterForm, CandidateProfileForm
@@ -102,6 +102,8 @@ def cmte_admin_index():
     edit_requests = CMTESponsorEditRequest.query.filter_by(status='pending').count()
     pending_requests = requests + edit_requests
     pending_payments = CMTEFeePaymentRecord.query.filter_by(payment_datetime=None).count()
+    pending_group_individual_records = CMTEEventGroupParticipationRecord.query.filter_by(approved_date=None,
+                                                                                         closed_date=None).count()
     pending_individual_records = CMTEEventParticipationRecord.query.filter_by(individual=True,
                                                                               approved_date=None,
                                                                               closed_date=None).count()
@@ -117,11 +119,12 @@ def cmte_admin_index():
                            pending_participants=df,
                            pending_payments=pending_payments,
                            pending_events=pending_events,
+                           pending_group_individual_records=pending_group_individual_records,
                            pending_individual_records=pending_individual_records,
                            pending_requests=pending_requests)
 
 
-@user.route('/candidates/<int:record_id>', methods=['GET', 'POST'])
+@user.route('/candidates/<int:record_id>', methods=['GET', 'POST', 'DELETE'])
 @user.route('/candidates', methods=['GET', 'POST'])
 def submit_candidate_profile(record_id=None):
     if not record_id:
@@ -130,6 +133,12 @@ def submit_candidate_profile(record_id=None):
     else:
         record = CandidateProfile.query.get(record_id)
         form = CandidateProfileForm(obj=record)
+
+    if request.method == 'DELETE':
+        db.session.delete(record)
+        db.session.commit()
+        resp = make_response()
+        return resp
     if request.method == 'POST':
         if form.validate_on_submit():
             form.populate_obj(record)
@@ -145,3 +154,16 @@ def submit_candidate_profile(record_id=None):
             flash(f'{form.errors}', 'danger')
     return render_template('user/candidate_profile_form.html', form=form)
 
+
+@user.route('/candidates/<int:record_id>/view', methods=['GET', 'POST'])
+@login_required
+def view_candidate_profile(record_id=None):
+    record = CandidateProfile.query.get(record_id)
+    return render_template('user/candidate_profile.html', record=record)
+
+
+@user.route('/candidates/list', methods=['GET', 'POST'])
+@login_required
+def list_candidates():
+    records = CandidateProfile.query.all()
+    return render_template('user/candidates.html', records=records)

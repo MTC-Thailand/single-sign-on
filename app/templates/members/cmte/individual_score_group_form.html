@@ -1,4 +1,8 @@
 {% extends "base.html" %}
+{% block head %}
+    {{super()}}
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
 
 {% block content %}
 {% include "members/cmte/nav.html" %}
@@ -6,8 +10,42 @@
     <div class="container">
         <div class="columns">
             <div class="column">
-                <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคล</h1>
+                <h1 class="title has-text-centered">ยื่นขออนุมัติคะแนนส่วนบุคคลแบบกลุ่ม</h1>
                 {% include "messages.html" %}
+                <table class="table is-bordered is-fullwidth">
+                    <tr>
+                        <td>ชนิดกิจกรรม</td>
+                        <td>{{ activity.event_type }}</td>
+                    </tr>
+                    <tr>
+                        <td>ประเภทกิจกรรม</td>
+                        <td>{{ activity }}</td>
+                    </tr>
+                    <tr>
+                        <td>รายละเอียด</td>
+                        <td>
+                            <p class="help">
+                                {{ activity.detail }}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                {% if record and record.active_info_requests %}
+                    <table class="table is-fullwidth is-bordered">
+                        <thead>
+                        <th>รายละเอียด</th>
+                        <th>วันที่ขอ</th>
+                        </thead>
+                        <tbody>
+                        {% for req in record.active_info_requests %}
+                            <tr style="background-color: orange">
+                                <td>{{ req.detail }}</td>
+                                <td>{{ req.created_at|localdate }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
                 <form method="post" enctype="multipart/form-data">
                     {{form.hidden_tag()}}
                     <div class="field">
@@ -17,11 +55,85 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">รายชื่อสมาชิก</label>
+                        <label class="label">{{form.start_date.label}}</label>
                         <div class="control">
-                            <select multiple="multiple" name="licenses" class="js-example-basic-multiple"></select>
+                            {{form.start_date(class="input", type="text")}}
                         </div>
                     </div>
+                    <div class="field">
+                        <label class="label">{{form.end_date.label}}</label>
+                        <div class="control">
+                            {{form.end_date(class="input", type="text")}}
+                        </div>
+                    </div>
+                    {% if record %}
+                    <label class="label">รายชื่อสมาชิก</label>
+                    <table class="table is-bordered is-striped">
+                        <tbody>
+                        {% for r in record.records %}
+                            <tr>
+                            <td>{{ r.license.member.th_fullname }}</td>
+                            <td>{{ r.license_number }}</td>
+                            <td>
+                                <a hx-delete="{{ url_for('member.delete_individual_score_record', record_id=r.id) }}"
+                                   hx-confirm="ต้องการลบรายนี้หรือไม่"
+                                   hx-target="closest tr"
+                                   hx-swap="outerHTML"
+                                   hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                                >
+                                    <span class="icon">
+                                        <i class="fa-solid fa-trash has-text-danger"></i>
+                                    </span>
+                                </a>
+                            </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                    <div class="field">
+                        <label class="label">เพิ่มรายชื่อผู้เข้าร่วมกิจกรรม</label>
+                        <div class="control">
+                            <p class="help">
+                                ค้นหาด้วยชื่อหรือนามสกุลหรือเลขท.น.
+                            </p>
+                            <select multiple="multiple" name="members" class="js-example-basic-multiple"></select>
+                            <p class="help has-text-danger">
+                                กรุณาเพิ่มรายชื่ออย่างน้อย 1 คน
+                            </p>
+                        </div>
+                    </div>
+                    {% if record %}
+                        <label class="label">ไฟล์เอกสารที่อัพโหลดไว้</label>
+                        <table class="table is-bordered is-striped">
+                        {% for doc in record.docs %}
+                            <tr>
+                                <td>{{ doc.note }}</td>
+                                <td>
+                                    <a href="{{ url_for('cmte.download_file', key=doc.key, download_filename=doc.filename) }}">
+                                      <span class="icon">
+                                          <i class="fa-solid fa-file-arrow-down"></i>
+                                      </span>
+                                        <span>
+                                        {{ doc.filename }}
+                                      </span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a hx-delete="{{ url_for('member.delete_file', doc_id=doc.id) }}"
+                                       hx-target="closest tr"
+                                       hx-swap="outerHTML"
+                                       hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                                       hx-confirm="คุณต้องการลบไฟล์นี้ใช่หรือไม่">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-trash has-text-danger"></i>
+                                        </span>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </table>
+                    {% endif %}
                     {% for f_field in form.upload_files %}
                         <div class="field">
                             {{f_field()}}
@@ -29,7 +141,7 @@
                     {% endfor %}
                     <div class="field is-grouped">
                         <div class="control">
-                            <a class="button is-light" href="{{url_for('member.individual_score_index')}}">Cancel</a>
+                            <a class="button is-light" href="{{url_for('member.individual_score_group_index')}}">Cancel</a>
                         </div>
                         <div class="control">
                             <button type="submit" class="button is-success">Submit</button>
@@ -42,18 +154,42 @@
 </section>
 {% endblock %}
 {% block scripts %}
-{{super()}}
-<script>
-    $(document).ready(function() {
-        $('.js-example-basic-multiple').select2({
-            width: "100%",
-            ajax: {
-                url: {{url_for('member.get_members')|tojson|safe}},
-                dataType: 'json'
-                // Additional AJAX parameters go here; see the end of this chapter for the full code of this example
+    {{super()}}
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.js-example-basic-multiple').select2({
+                width: "100%",
+                ajax: {
+                    url: {{url_for('member.get_members')|tojson|safe}},
+                    dataType: 'json'
+                    // Additional AJAX parameters go here; see the end of this chapter for the full code of this example
+                }
             }
-        }
-        );
-    });
-</script>
+            );
+            $("input[name='end_date']").daterangepicker({
+                buttonClasses: 'button is-small',
+                applyButtonClasses: 'is-link',
+                cancelButtonClasses: 'is-light',
+                startDate: moment(),
+                timePicker: false,
+                singleDatePicker: true,
+                locale: {
+                    format: 'DD/MM/YYYY'
+                }
+            })
+            $("input[name='start_date']").daterangepicker({
+                buttonClasses: 'button is-small',
+                applyButtonClasses: 'is-link',
+                cancelButtonClasses: 'is-light',
+                startDate: moment(),
+                timePicker: false,
+                singleDatePicker: true,
+                locale: {
+                    format: 'DD/MM/YYYY'
+                }
+            })
+        });
+    </script>
 {% endblock %}

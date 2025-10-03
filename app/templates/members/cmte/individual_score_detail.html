@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="container">
+            <h1 class="title has-text-centered">รายการขออนุมัติคะแนนส่วนบุคคล</h1>
+            <h1 class="subtitle has-text-centered has-text-link">สถานะ {{ record.status }}</h1>
+            {% include "messages.html" %}
+            <div class="columns">
+                <div class="column">
+                    <table id="events-table" class="table is-fullwidth">
+                        <tbody>
+                        <tr>
+                            <td>ประเภทกิจกรรม</td>
+                            <td>{{ record.event_type.name }}</td>
+                        </tr>
+                        <tr>
+                            <td>ชนิดกิจกรรม</td>
+                            <td>{{ record.activity }}</td>
+                        </tr>
+                        <tr>
+                            <td>วันที่</td>
+                            <td>{{ record.start_date|localdate }} - {{ record.end_date|localdate }}</td>
+                        </tr>
+                        <td>รายละเอียด</td>
+                        <td>{{ record.desc }}</td>
+                        <tr>
+                            <td>วันที่ยื่น</td>
+                            <td>{{ record.create_datetime|localdatetime }}</td>
+                        </tr>
+                        <td>เอกสารประกอบ</td>
+                        <td>
+                            <table class="table is-bordered">
+                                <thead>
+                                <th>คำอธิบาย</th>
+                                <th>ไฟล์</th>
+                                </thead>
+                                <tbody>
+                                {% for doc in record.docs %}
+                                    <tr>
+                                        <td>{{ doc.note }}</td>
+                                        <td>
+                                            <a href="{{ url_for('cmte.download_file', key=doc.key, download_filename=doc.filename) }}">
+                                              <span class="icon">
+                                                  <i class="fa-solid fa-file-arrow-down"></i>
+                                              </span>
+                                                <span>
+                                                {{ doc.filename }}
+                                              </span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                {% endfor %}
+                            </table>
+                        </td>
+                        </tr>
+                        <tr style="background-color: cornsilk">
+                            <td>ขอเอกสารเพิ่มเติม</td>
+                            <td>
+                                <table class="table is-fullwidth is-bordered">
+                                <thead>
+                                <th>รายละเอียด</th>
+                                <th>วันที่ขอ</th>
+                                <th>คำอธิบายจากสมาชิก</th>
+                                <th>ตอบเมื่อ</th>
+                                </thead>
+                                <tbody>
+                                {% for req in record.info_requests %}
+                                    <tr>
+                                        <td>{{ req.detail }}</td>
+                                        <td>{{ req.created_at|localdate }}</td>
+                                        <td>{{ req.note or '' }}</td>
+                                        <td>{{ req.responded_at|localdatetime or '' }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                <div class="buttons is-centered">
+                    <a href="{{ url_for('member.individual_score_index') }}" class="button is-light">Back</a>
+                    {% if record.status == 'รออนุมัติ' %}
+                    <a class="button is-link" href="{{ url_for('member.edit_individual_score_form', record_id=record.id) }}">
+                        <span class="icon">
+                            <i class="fa-solid fa-pencil"></i>
+                        </span>
+                        <span>แก้ไข</span>
+                    </a>
+                    {% endif %}
+                </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

@@ -70,6 +70,13 @@
                         อนุมัติคะแนนส่วนบุคคล
                         <span class="tag is-success is-rounded">{{pending_individual_records or 0}}</span>
                     </a>
+                    <a class="panel-block" href="{{url_for('cmte.admin_group_individual_score_index')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-user-clock"></i>
+                        </span>
+                        อนุมัติคะแนนส่วนบุคคลยื่นแบบกลุ่ม
+                        <span class="tag is-success is-rounded">{{pending_group_individual_records or 0}}</span>
+                    </a>
                 </article>
                 <article class="panel is-info">
                     <p class="panel-heading">สมาชิก</p>
