@@ -39,18 +39,22 @@
                         <td>{{rec.score}}</td>
                         <td>{{rec.approved_date|localdate}}</td>
                         <td>
-                            {% if rec.score_valid_until > rec.license.end_date %}
-                            <span class="has-text-warning">
-                                {{rec.score_valid_until|localdate}}
-                            </span>
-                            {% elif rec.score_valid_until == rec.license.end_date %}
-                            <span class="has-text-success">
-                                {{rec.score_valid_until|localdate}}
-                            </span>
+                            {% if rec.score_valid_until %}
+                                {% if rec.score_valid_until > rec.license.end_date %}
+                                <span class="has-text-warning">
+                                    {{rec.score_valid_until|localdate}}
+                                </span>
+                                {% elif rec.score_valid_until == rec.license.end_date %}
+                                <span class="has-text-success">
+                                    {{rec.score_valid_until|localdate}}
+                                </span>
+                                {% else %}
+                                <span class="has-text-danger">
+                                    {{rec.score_valid_until|localdate}}
+                                </span>
+                                {% endif %}
                             {% else %}
-                            <span class="has-text-danger">
-                                {{rec.score_valid_until|localdate}}
-                            </span>
+                                <span>N/A</span>
                             {% endif %}
                             <div class="field has-addons">
                                 <div class="control">
