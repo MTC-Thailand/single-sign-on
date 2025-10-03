@@ -12,19 +12,15 @@
     <h1 class="title is-size-4 has-text-centered">ระบบแสดงข้อมูลผู้ประกอบวิชาชีพเทคนิคการแพทย์</h1>
     <h1 class="subtitle is-size-5 has-text-centered">สำนักงานเลขาธิการ สภาเทคนิคการแพทย์</h1>
     <div class="columns">
-      <div class="column is-one-third">
-        <div class="block">
-          <figure class="image is-128x128 is-inline-block">
-            {% if image_base64 %}
-              <img src="data:image/jpeg;base64, {{image_base64}}">
-            {% else %}
-            <img src="{{url_for('static', filename='doctor.png')}}">
-            {% endif %}
-          </figure>
-        </div>
-      </div>
+      <figure class="image is-128x128" id="profile-image">
+          <span>กำลังโหลดรูปภาพ..</span>
+      </figure>
       <div class="column">
-        <table class="table is-striped is-fullwidth">
+        <table class="table">
+            <colgroup>
+                <col style="width: 20%;">
+                <col style="width: auto;">
+            </colgroup>
           <tr>
             <td><strong>ชื่อ</strong></td>
             <td>{{member.th_fullname}}</td>
@@ -46,9 +42,28 @@
     </div>
     <div class="columns">
       <div class="column has-text-centered">
-        <a href="{{url_for('member.search_member')}}" class="button is-light">ค้นหาผู้ประกอบวิชาชีพ</a>
+        <a href="{{url_for('member.search_member')}}" class="button is-rounded is-link">
+            <span class="icon">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <span>
+                ค้นหาผู้ประกอบวิชาชีพ
+            </span>
+        </a>
       </div>
     </div>
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+    <script>
+    $(document).ready(()=>{
+        htmx.ajax('GET', {{ url_for('member.get_member_profile_image', member_id=member.id)|tojson|safe }},
+            {
+                target: "#profile-image",
+                swap: "innerHTML",
+            })
+    })
+    </script>
 {% endblock %}

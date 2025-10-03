@@ -1,5 +1,6 @@
 import base64
 import json
+import time
 from datetime import datetime
 
 import arrow
@@ -353,20 +354,28 @@ def view_member_info(member_id):
                 lic_status = status_tag.format('is-warning', member.license.status)
         else:
             lic_status = status_tag.format('is-success', 'ปกติ')
-        try:
-            img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
-                                        params={'license_no': member.license.number})
-        except:
-            image_base64 = None
+    return render_template('members/member_info.html', member=member, lic_status=lic_status)
+
+
+@member.route('/api/<int:member_id>/profile-image')
+@login_required
+def get_member_profile_image(member_id):
+    member = Member.query.get(member_id)
+    try:
+        img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
+                                    params={'license_no': member.license.number})
+    except:
+        image_base64 = None
+    else:
+        if img_response.status_code == 200:
+            image_base64 = base64.b64encode(img_response.content).decode('utf-8')
         else:
-            if img_response.status_code == 200:
-                image_base64 = base64.b64encode(img_response.content).decode('utf-8')
-            else:
-                image_base64 = None
-    return render_template('members/member_info.html',
-                           member=member,
-                           image_base64=image_base64,
-                           lic_status=lic_status)
+            image_base64 = None
+    if image_base64:
+        template = f'<img src="data:image/jpeg;base64, {image_base64}">'
+    else:
+        template= f'<img src="https://avatar.iran.liara.run/username?username={member.en_fullname}">'
+    return template
 
 
 @member.route('/login-otp', methods=['GET', 'POST'])
