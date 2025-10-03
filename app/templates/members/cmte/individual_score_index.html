@@ -37,7 +37,12 @@
                         <tr>
                             <td>
                                 <a href="{{ url_for('member.individual_score_detail', record_id=rec.id) }}">
-                                    {{rec.desc}}
+                                    <span>
+                                        {{rec.desc}}
+                                    </span>
+                                    <span class="icon">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </span>
                                 </a>
                             </td>
                             <td>{{rec.create_datetime|localdatetime}}</td>

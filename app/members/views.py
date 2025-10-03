@@ -671,6 +671,10 @@ def individual_score_group_form(activity_id):
     if request.method == 'POST':
         all_docs = []
         if form.validate_on_submit():
+            if not request.form.getlist('members'):
+                flash(f'กรุณาเพิ่มรายชื่อผู้เข้าร่วมกิจกรรม', 'danger')
+                return render_template('members/cmte/individual_score_group_form.html',
+                                       form=form, activity=activity)
             group = CMTEEventGroupParticipationRecord(creator=current_user, activity=activity)
             for doc_form in form.upload_files:
                 _file = doc_form.upload_file.data

@@ -48,7 +48,12 @@
                             <td>
                                 {% if rec.status == 'รออนุมัติ' %}
                                 <a href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
-                                    {{rec.detail}}
+                                    <span>
+                                        {{rec.detail}}
+                                    </span>
+                                    <span class="icon">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </span>
                                 </a>
                                 {% else %}
                                 {{rec.detail}}

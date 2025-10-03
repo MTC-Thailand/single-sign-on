@@ -92,9 +92,15 @@
                     </table>
                     {% endif %}
                     <div class="field">
-                        <label class="label">เพิ่มรายชื่อสมาชิก</label>
+                        <label class="label">เพิ่มรายชื่อผู้เข้าร่วมกิจกรรม</label>
                         <div class="control">
+                            <p class="help">
+                                ค้นหาด้วยชื่อหรือนามสกุลหรือเลขท.น.
+                            </p>
                             <select multiple="multiple" name="members" class="js-example-basic-multiple"></select>
+                            <p class="help has-text-danger">
+                                กรุณาเพิ่มรายชื่ออย่างน้อย 1 คน
+                            </p>
                         </div>
                     </div>
                     {% if record %}

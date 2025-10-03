@@ -2289,6 +2289,18 @@ def admin_get_group_individual_score_records():
     query = CMTEEventGroupParticipationRecord.query \
         .filter(CMTEEventGroupParticipationRecord.create_datetime!=None) \
         .order_by(CMTEEventGroupParticipationRecord.create_datetime.desc())
+    if status == 'pending':
+        query = query.filter_by(approved_date=None, closed_date=None)
+    elif status == 'approved':
+        query = query.filter(CMTEEventGroupParticipationRecord.approved_date != None)
+    elif status == 'rejected':
+        query = query.filter(CMTEEventGroupParticipationRecord.closed_date != None)
+    elif status == 'waiting':
+        query = query.filter(CMTEEventGroupParticipationRecord.approved_date == None) \
+            .filter(CMTEEventGroupParticipationRecord.closed_date == None) \
+            .join(CMTEParticipationRecordRequest) \
+            .group_by(CMTEEventGroupParticipationRecord.id) \
+            .having(func.count(CMTEEventGroupParticipationRecord.id) > 0)
     records_total = query.count()
     if col_name:
         try:
