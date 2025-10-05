@@ -358,7 +358,6 @@ def view_member_info(member_id):
 
 
 @member.route('/api/<int:member_id>/profile-image')
-@login_required
 def get_member_profile_image(member_id):
     member = Member.query.get(member_id)
     try:
