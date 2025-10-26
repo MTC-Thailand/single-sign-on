@@ -224,9 +224,15 @@ class MemberPIDPhoneNumber(Resource):
                         member:
                             type: object
                             properties:
-                                th_fullname:
+                                pid:
+                                    type: string
+                                    description: หมายเลขบัตรประจำตัวประชาชน
+                                fullname:
                                     type: string
                                     description: ชื่อเต็ม
+                                phone:
+                                    type: string
+                                    description: หมายเลขโทรศัพท์
                                 status:
                                     type: string
                                     description: สถานะสมาชิก
@@ -240,7 +246,7 @@ class MemberPIDPhoneNumber(Resource):
                     'id': member.id,
                     'pid': member.pid,
                     'fullname': member.th_fullname,
-                    'telephone': member.telephone,
+                    'phone': member.tel,
                     'status': status,
                 }}, 200
             else:
