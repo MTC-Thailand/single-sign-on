@@ -16,8 +16,6 @@ from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from dotenv import load_dotenv
 
-from app.api.views import MemberPIDPhoneNumber
-
 load_dotenv()
 
 
@@ -110,6 +108,7 @@ def create_app():
                                CMTEScore,
                                MemberInfo,
                                MemberPID,
+                               MemberPIDPhoneNumber,
                                MemberLicense,
                                RefreshToken,
                                CMTEFeePaymentResource,
