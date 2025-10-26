@@ -204,6 +204,50 @@ def check_exp_date_from_inet(license_id):
             for rec in data_:
                 return rec.get('end_date')
 
+class MemberPIDPhoneNumber(Resource):
+    @jwt_required()
+    def get(self, pid, phone):
+        """
+        This end point returns a member his/her information with a matching personal identification number.
+        ---
+        parameters:
+            -   pid: Personal Identification Number
+                in: path
+                type: string
+                required: true
+        responses:
+            200:
+                description: Member information
+                schema:
+                    id: Member
+                    properties:
+                        member:
+                            type: object
+                            properties:
+                                th_fullname:
+                                    type: string
+                                    description: ชื่อเต็ม
+                                status:
+                                    type: string
+                                    description: สถานะสมาชิก
+        """
+
+        member = Member.query.filter_by(pid=pid, tel=phone).first()
+        if member:
+            status = member.status if member.status else 'ปกติ'
+            if status == 'ปกติ':
+                return {'data': {
+                    'id': member.id,
+                    'pid': member.pid,
+                    'fullname': member.th_fullname,
+                    'telephone': member.telephone,
+                    'status': status,
+                }}, 200
+            else:
+                return {'message': 'Member status is not valid.'}, 400
+        else:
+            return {'message': 'Member not found.'}, 404
+
 
 class MemberPID(Resource):
     @jwt_required()

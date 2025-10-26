@@ -634,3 +634,24 @@ def test_cmte_upcoming_events(base_url):
         pprint(resp.json())
     else:
         print(resp.status_code, resp.text)
+
+
+@app.cli.command('test-member-info-pid-phone-endpoint')
+@click.argument('pid')
+@click.argument('phone')
+def test_member_info_pid_phone_endpoint(pid, phone):
+    import requests
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
+    base_url = 'https://mtc-webservices.herokuapp.com'
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id, 'client_secret': client_secret})
+    token = resp.json().get('access_token')
+    print('Fetching data..')
+    resp = requests.get(f'{base_url}/api/members/{pid}/phone/{phone}/info',
+                        headers={'Authorization': f'Bearer {token}'})
+    if resp.status_code == 200:
+        pprint(resp.json())
+    else:
+        print(f'Error! {resp.json()}')

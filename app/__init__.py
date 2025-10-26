@@ -16,6 +16,8 @@ from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from dotenv import load_dotenv
 
+from app.api.views import MemberPIDPhoneNumber
+
 load_dotenv()
 
 
@@ -121,6 +123,7 @@ def create_app():
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
     api.add_resource(RefreshToken, '/auth/refresh')
     api.add_resource(CMTEFeePaymentResource, '/members/<string:lic_no>/cmte-fee-payment-record')
+    api.add_resource(MemberPIDPhoneNumber, '/members/<string:pid>/phone/<string:phone>/info')
 
     app.register_blueprint(api_bp)
 
