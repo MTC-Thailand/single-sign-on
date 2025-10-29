@@ -219,7 +219,7 @@ class MemberPIDPhoneNumber(Resource):
             200:
                 description: Member information
                 schema:
-                    id: Member
+                    id: MemberPhone
                     properties:
                         member:
                             type: object
