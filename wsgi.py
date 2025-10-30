@@ -649,8 +649,12 @@ def test_member_info_pid_phone_endpoint(pid, phone):
                          json={'client_id': client_id, 'client_secret': client_secret})
     token = resp.json().get('access_token')
     print('Fetching data..')
-    resp = requests.get(f'{base_url}/api/members/{pid}/phone/{phone}/info',
-                        headers={'Authorization': f'Bearer {token}'})
+    if phone:
+        resp = requests.get(f'{base_url}/api/members/{pid}/phone/{phone}/info',
+                            headers={'Authorization': f'Bearer {token}'})
+    else:
+        resp = requests.get(f'{base_url}/api/members/{pid}/check-info',
+                            headers={'Authorization': f'Bearer {token}'})
     if resp.status_code == 200:
         pprint(resp.json())
     else:
