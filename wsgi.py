@@ -638,7 +638,7 @@ def test_cmte_upcoming_events(base_url):
 
 @app.cli.command('test-member-info-pid-phone-endpoint')
 @click.argument('pid')
-@click.argument('phone')
+@click.argument('phone', required=False)
 def test_member_info_pid_phone_endpoint(pid, phone):
     import requests
     client_id = os.environ.get('MTC_CLIENT_ID')

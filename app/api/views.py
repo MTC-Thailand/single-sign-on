@@ -204,9 +204,10 @@ def check_exp_date_from_inet(license_id):
             for rec in data_:
                 return rec.get('end_date')
 
+
 class MemberPIDPhoneNumber(Resource):
     @jwt_required()
-    def get(self, pid, phone):
+    def get(self, pid, phone=None):
         """
         This end point returns a member his/her information with a matching personal identification number.
         ---
@@ -215,6 +216,10 @@ class MemberPIDPhoneNumber(Resource):
                 in: path
                 type: string
                 required: true
+            -   phone: Phone Number
+                in: path
+                type: string
+                required: false
         responses:
             200:
                 description: Member information
@@ -227,9 +232,12 @@ class MemberPIDPhoneNumber(Resource):
                                 pid:
                                     type: string
                                     description: หมายเลขบัตรประจำตัวประชาชน
-                                fullname:
+                                firstname:
                                     type: string
-                                    description: ชื่อเต็ม
+                                    description: ชื่อ
+                                lastname:
+                                    type: string
+                                    description: นามสกุล
                                 phone:
                                     type: string
                                     description: หมายเลขโทรศัพท์
@@ -238,14 +246,18 @@ class MemberPIDPhoneNumber(Resource):
                                     description: สถานะสมาชิก
         """
 
-        member = Member.query.filter_by(pid=pid, tel=phone).first()
+        if phone is not None:
+            member = Member.query.filter_by(pid=pid, tel=phone).first()
+        else:
+            member = Member.query.filter_by(pid=pid).first()
         if member:
             status = member.status if member.status else 'ปกติ'
             if status == 'ปกติ':
                 return {'data': {
                     'id': member.id,
                     'pid': member.pid,
-                    'fullname': member.th_fullname,
+                    'firstname': member.th_fullname,
+                    'lastname': member.th_lastname,
                     'phone': member.tel,
                     'status': status,
                 }}, 200

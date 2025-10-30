@@ -122,7 +122,7 @@ def create_app():
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
     api.add_resource(RefreshToken, '/auth/refresh')
     api.add_resource(CMTEFeePaymentResource, '/members/<string:lic_no>/cmte-fee-payment-record')
-    api.add_resource(MemberPIDPhoneNumber, '/members/<string:pid>/phone/<string:phone>/info')
+    api.add_resource(MemberPIDPhoneNumber, '/members/<string:pid>/check-info', '/members/<string:pid>/phone/<string:phone>/info')
 
     app.register_blueprint(api_bp)
 
