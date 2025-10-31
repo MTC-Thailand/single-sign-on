@@ -256,7 +256,7 @@ class MemberPIDPhoneNumber(Resource):
                 return {'data': {
                     'id': member.id,
                     'pid': member.pid,
-                    'firstname': member.th_fullname,
+                    'firstname': member.th_firstname,
                     'lastname': member.th_lastname,
                     'phone': member.tel,
                     'status': status,
