@@ -205,13 +205,14 @@ def search_member():
     if query:
         template = '''<table class="table is-fullwidth is-striped">'''
         template += '''
-        <thead><th>Name</th><th>License No.</th><th>License Date</th><th>License Status</th><th colspan="2">Valid CMTE</th></thead>
+        <thead><th>Name</th><th>License No.</th><th>License Date</th><th>License Status</th><th>Phone</th><th colspan="2">Valid CMTE</th></thead>
         <tbody>
         '''
         licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
         if not licenses:
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
-                                              Member.th_lastname.like(f'%{query}%')))
+                                              Member.th_lastname.like(f'%{query}%'),
+                                              Member.tel.like(f'%{query}%')))
             licenses = [(member.license, member) for member in members]
         for lic, member in licenses:
             url = url_for('webadmin.edit_member_info', member_id=member.id)
@@ -226,10 +227,10 @@ def search_member():
             else:
                 lic_status = status_tag.format('is-success', 'ปกติ')
             if lic:
-                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
+                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.member.tel}</td><td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
+                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.member.tel}</td><<td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
         template += '</tbody></table>'
         return make_response(template)
     return 'Waiting for a search query...'
