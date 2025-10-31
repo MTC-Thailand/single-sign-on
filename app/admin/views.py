@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import arrow
 import pandas as pd
 from flask import render_template, request, url_for, make_response, flash, redirect
 from flask_login import login_required
@@ -90,6 +91,31 @@ def upload_new():
                     db.session.add(cmte_payment_record)
         db.session.commit()
         return 'Upload completed.'
+    return render_template('webadmin/upload_renew.html')
+
+
+@webadmin.route('/update/phones', methods=['GET', 'POST'])
+@login_required
+def upload_phone_numbers():
+    if request.method == 'POST':
+        f = request.files['file']
+        df = pd.read_excel(f, engine='openpyxl', dtype={'phone_number': str, 'pid_left': str})
+        fails = []
+        for idx, row in df.iterrows():
+            if pd.isna(row['pid_left']) or pd.isna(row['phone_number']):
+                continue
+            member = Member.query.filter_by(pid=row['pid_left']).first()
+            if not member:
+                fails.append({'pid': row['pid_left'],
+                              'phone_number': row['phone_number'],
+                              'firstname': row['th_firstname_left'],
+                              'lastname': row['th_lastname_left'],
+                              })
+            else:
+                member.tel = row['phone_number']
+                member.updated_at = arrow.now('Asia/Bangkok').datetime
+        db.session.commit()
+        return pd.DataFrame(fails).to_html()
     return render_template('webadmin/upload_renew.html')
 
 
