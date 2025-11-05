@@ -652,6 +652,7 @@ class MemberInfo(Resource):
             data.update(emp_data.squeeze().to_dict())
 
         data['lic_b_date'] = member.license.start_date.isoformat()
+        data['lic_number'] = member.license.number
         data['lic_exp_date'] = member.license.end_date.isoformat()
         data['document_addr'] = data.pop('address_id_doc', None) or ''
         data['birthday'] = member.dob.isoformat() if member.dob else None
