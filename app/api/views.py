@@ -484,6 +484,9 @@ class MemberInfo(Resource):
                         lic_status_name:
                             type: string
                             description: สถานะใบอนุญาต
+                        lic_number:
+                            type: string
+                            description: หมายเลขใบอนุญาต ท.น.
                         mem_id_text:
                             type: string
                             description: Member ID
@@ -624,20 +627,6 @@ class MemberInfo(Resource):
         else:
             data = data.squeeze().to_dict()
 
-        # query = f'''
-        # SELECT lic_mem.lic_exp_date,lic_mem.lic_b_date FROM lic_mem
-        # INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
-        # WHERE lic_mem.mem_id={data['mem_id']}
-        # '''
-        # lic_data = pd.read_sql_query(query, con=engine)
-        # lic_data = lic_data.squeeze().to_dict()
-        # data.update(lic_data)
-        #
-        # query = f'''
-        # SELECT status_name AS mem_status_name FROM mem_status WHERE {data['mem_status_id']}=mem_status.mem_status_id;
-        # '''
-        #
-        # mem_status_data = pd.read_sql_query(query, con=engine)
         data['mem_status'] = member.status if member else None
 
         if data['emp_function_id']:
@@ -690,18 +679,6 @@ class MemberInfo(Resource):
             data['current_addr'] = {}
             data['home_addr'] = {}
             data['office_addr'] = {}
-
-        # query = f'''
-        #     SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-        #     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-        #     WHERE lic_id={mem_id} AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
-        #     '''
-        # valid_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
-        # query = f'''
-        #     SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-        #     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-        #     WHERE lic_id={mem_id}
-        #     '''
 
         cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
         total_score = member.license.total_cmte_scores
