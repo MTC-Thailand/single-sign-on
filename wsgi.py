@@ -659,3 +659,47 @@ def test_member_info_pid_phone_endpoint(pid, phone):
         pprint(resp.json())
     else:
         print(f'Error! {resp.json()}')
+
+
+@app.cli.command('fetch-addresses-from-list')
+@click.argument('infile')
+def fetch_addresses_from_list(infile):
+    import pandas as pd
+    from bs4 import BeautifulSoup
+
+    def remove_html_tags_bs4(html_doc):
+        soup = BeautifulSoup(html_doc, 'html.parser')
+        return soup.get_text()
+
+    df = pd.read_excel(infile)
+    members = set()
+    for number in df.number.tolist():
+        license = License.query.get(number)
+        members.add(str(license.member.id))
+    mem_list = f'({", ".join(members)})'
+
+    MYSQL_HOST = os.environ.get('MYSQL_HOST')
+    MYSQL_USER = os.environ.get('MYSQL_USER')
+    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
+    MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
+    engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
+    engine.connect()
+    query = f'''
+    SELECT lic_mem.lic_id, add_id,add1,moo,soi,road,zipcode,province.PROVINCE_NAME,amphur.AMPHUR_NAME,district.DISTRICT_NAME,updt
+    FROM member_add
+    INNER JOIN province ON province.PROVINCE_ID=member_add.PROVINCE_ID
+    INNER JOIN amphur ON amphur.AMPHUR_ID=member_add.AMPHUR_ID
+    INNER JOIN district ON district.DISTRICT_ID=member_add.DISTRICT_ID
+    INNER JOIN lic_mem ON member_add.mem_id=lic_mem.mem_id
+    WHERE member_add.mem_id IN {mem_list} AND add_id=3
+    '''
+    try:
+        data = pd.read_sql_query(query, con=engine)
+    except Exception as e:
+        data = {}
+        raise e
+    else:
+        # print(data.head())
+        data['add1'] = data['add1'].apply(remove_html_tags_bs4)
+        data.to_excel('voter_no_phones_home_addresses.xlsx', index=False)
+
