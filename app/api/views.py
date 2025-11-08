@@ -205,6 +205,68 @@ def check_exp_date_from_inet(license_id):
                 return rec.get('end_date')
 
 
+class MemberPIDPhoneNumber(Resource):
+    @jwt_required()
+    def get(self, pid, phone=None):
+        """
+        This end point returns a member his/her information with a matching personal identification number.
+        ---
+        parameters:
+            -   pid: Personal Identification Number
+                in: path
+                type: string
+                required: true
+            -   phone: Phone Number
+                in: path
+                type: string
+                required: false
+        responses:
+            200:
+                description: Member information
+                schema:
+                    id: MemberPhone
+                    properties:
+                        member:
+                            type: object
+                            properties:
+                                pid:
+                                    type: string
+                                    description: หมายเลขบัตรประจำตัวประชาชน
+                                firstname:
+                                    type: string
+                                    description: ชื่อ
+                                lastname:
+                                    type: string
+                                    description: นามสกุล
+                                phone:
+                                    type: string
+                                    description: หมายเลขโทรศัพท์
+                                status:
+                                    type: string
+                                    description: สถานะสมาชิก
+        """
+
+        if phone is not None:
+            member = Member.query.filter_by(pid=pid, tel=phone).first()
+        else:
+            member = Member.query.filter_by(pid=pid).first()
+        if member:
+            status = member.status if member.status else 'ปกติ'
+            if status == 'ปกติ':
+                return {'data': {
+                    'id': member.id,
+                    'pid': member.pid,
+                    'firstname': member.th_firstname,
+                    'lastname': member.th_lastname,
+                    'phone': member.tel,
+                    'status': status,
+                }}, 200
+            else:
+                return {'message': 'Member status is not valid.'}, 400
+        else:
+            return {'message': 'Member not found.'}, 404
+
+
 class MemberPID(Resource):
     @jwt_required()
     def get(self, pid):
@@ -422,6 +484,9 @@ class MemberInfo(Resource):
                         lic_status_name:
                             type: string
                             description: สถานะใบอนุญาต
+                        lic_number:
+                            type: string
+                            description: หมายเลขใบอนุญาต ท.น.
                         mem_id_text:
                             type: string
                             description: Member ID
@@ -562,20 +627,6 @@ class MemberInfo(Resource):
         else:
             data = data.squeeze().to_dict()
 
-        # query = f'''
-        # SELECT lic_mem.lic_exp_date,lic_mem.lic_b_date FROM lic_mem
-        # INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
-        # WHERE lic_mem.mem_id={data['mem_id']}
-        # '''
-        # lic_data = pd.read_sql_query(query, con=engine)
-        # lic_data = lic_data.squeeze().to_dict()
-        # data.update(lic_data)
-        #
-        # query = f'''
-        # SELECT status_name AS mem_status_name FROM mem_status WHERE {data['mem_status_id']}=mem_status.mem_status_id;
-        # '''
-        #
-        # mem_status_data = pd.read_sql_query(query, con=engine)
         data['mem_status'] = member.status if member else None
 
         if data['emp_function_id']:
@@ -590,6 +641,7 @@ class MemberInfo(Resource):
             data.update(emp_data.squeeze().to_dict())
 
         data['lic_b_date'] = member.license.start_date.isoformat()
+        data['lic_number'] = member.license.number
         data['lic_exp_date'] = member.license.end_date.isoformat()
         data['document_addr'] = data.pop('address_id_doc', None) or ''
         data['birthday'] = member.dob.isoformat() if member.dob else None
@@ -627,18 +679,6 @@ class MemberInfo(Resource):
             data['current_addr'] = {}
             data['home_addr'] = {}
             data['office_addr'] = {}
-
-        # query = f'''
-        #     SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-        #     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-        #     WHERE lic_id={mem_id} AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
-        #     '''
-        # valid_score = pd.read_sql_query(query, con=engine).cpd_score.sum()
-        # query = f'''
-        #     SELECT lic_mem.lic_exp_date, cpd_work.w_bdate, cpd_work.cpd_score FROM cpd_work INNER JOIN member ON member.mem_id=cpd_work.mem_id
-        #     INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-        #     WHERE lic_id={mem_id}
-        #     '''
 
         cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
         total_score = member.license.total_cmte_scores
