@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+{% endblock %}
+{% block content %}
+    {% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="column">
+            <div class="is-flex is-justify-content-center is-align-items-center">
+                <button class="button is-primary">สถาบัน</button>
+                <button class="button is-link ml-3">สมาชิก</button>
+                <button class="button is-info ml-3">กิจกรรมกลุ่ม</button>
+            </div>
+            <div class="column">
+                <h1 class="title has-text-centered">ทะเบียนสถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
+                <p>ช่วงเวลา</p>
+                <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="control has-icons-left" style="display: flex; align-items: center;">
+                        <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
+                               style="width: auto;">
+                        <span class="icon is-small is-left">
+                        <i class="far fa-calendar-alt"></i>
+                    </span>
+                        <button class="button is-info ml-3">ค้นหา</button>
+                    </div>
+                </form>
+            </div>
+            <div class="columns">
+                <div class="column is-one-quarter">
+                    <div class="box card-hover">
+                        <div class="columns">
+                            <div class="column">
+                                <h2 class="title is-4 has-text-weight-bold mt-2">ทั้งหมด</h2>
+                            </div>
+                            <div class="column is-align-content-flex-end">
+                                <div class="has-text-right">
+                                    <p class="title is-1 has-text-primary">{{ sponsors }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="is-size-3 has-text-weight-bold has-text-success">{{ sponsors }}</div>
+                        <p class="is-size-7 has-text-grey">รายการที่รอการอนุมัติ</p>
+                        <div class="buttons is-centered mt-4">
+                            <a href=""
+                               class="button is-success is-rounded is-small is-fullwidth">
+                                ดูทั้งหมด
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-two-fifths">
+                    <div class="box card-hover">
+                        <div class="columns">
+                            <div class="column">
+                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่ขอต่ออายุ/ขึ้นทะเบียน</h2>
+                            </div>
+                            <div class="column is-align-content-flex-end">
+                                <div class="has-text-right">
+                                    <p class="title is-1 has-text-warning">{{ pending_requests or 0 }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="is-size-3 has-text-weight-bold has-text-success">{{ pending_requests or 0 }}</div>
+                        <p class="is-size-7 has-text-grey">รายการที่รอการอนุมัติ</p>
+                        <div class="buttons is-centered mt-4">
+                            <a href=""
+                               class="button is-success is-rounded is-small is-fullwidth">
+                                ดูทั้งหมด
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-one-third">
+                    <div class="box card-hover">
+                        <div class="columns">
+                            <div class="column">
+                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่จะหมดอายุ</h2>
+                            </div>
+                            <div class="column is-align-content-flex-end">
+                                <div class="has-text-right">
+                                    <p class="title is-1 has-text-danger">{{ expire_count or 0 }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="is-size-3 has-text-weight-bold has-text-success">{{ expire_count or 0 }}</div>
+                        <p class="is-size-7 has-text-grey">รายการที่รอการอนุมัติ</p>
+                        <div class="buttons is-centered mt-4">
+                            <a href=""
+                               class="button is-success is-rounded is-small is-fullwidth">
+                                ดูทั้งหมด
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript"
+            src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        $(document).ready(() => {
+            var today = moment();
+            var startOfYear = moment().startOf('year');
+            var selectedDates = '{{ selected_dates or "" }}';
+            if (!selectedDates) {
+                selectedDates = startOfYear.format('DD/MM/YYYY') + ' - ' + today.format('DD/MM/YYYY');
+            }
+
+            $('#dates').daterangepicker({
+                timePicker: false,
+                showDropdowns: true,
+                linkedCalendars: false,
+                locale: {
+                    format: 'DD/MM/YYYY'
+                },
+                startDate: selectedDates.split(' - ')[0],
+                endDate: selectedDates.split(' - ')[1]
+            });
+        });
+    </script>
+{% endblock %}

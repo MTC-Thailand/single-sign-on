@@ -18,7 +18,7 @@ from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from itsdangerous import TimedJSONWebSignatureSerializer
 from openpyxl.pivot.record import Record
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, and_
 
 from app import db, sponsor_event_management_permission, send_mail
 from app.cmte import cmte_bp as cmte
@@ -2840,3 +2840,51 @@ def admin_delete_cmte_score_record(record_id):
 def list_event_types():
     event_types = CMTEEventType.query.filter_by(deprecated=False).order_by(CMTEEventType.number)
     return render_template('cmte/event_list.html', event_types=event_types)
+
+
+@cmte.route('/report/sponsors', methods=['GET', 'POST'])
+@login_required
+def report_sponsors_index():
+    today = datetime.now().date()
+    start_of_year = datetime(today.year, 1, 1).date()
+
+    sponsors = CMTEEventSponsor.query.filter(
+        CMTEEventSponsor.registered_datetime >= start_of_year,
+        CMTEEventSponsor.expire_date >= today
+    ).count()
+
+    thirty_days_later = today + timedelta(days=30)
+
+    expire_count = db.session.query(CMTEEventSponsor).filter(
+        CMTEEventSponsor.expire_date == thirty_days_later
+    ).count()
+
+    requests = CMTESponsorRequest.query.filter_by(approved_at=None, cancelled_at=None).count()
+    edit_requests = CMTESponsorEditRequest.query.filter_by(status='pending').count()
+    pending_requests = requests + edit_requests
+    selected_dates=None
+    if request.method == 'POST':
+        form = request.form
+        selected_dates = request.form.get('dates', None)
+        start_d, end_d = form.get('dates').split(' - ')
+        start = datetime.strptime(start_d, '%d/%m/%Y')
+        end = datetime.strptime(end_d, '%d/%m/%Y')
+        query = CMTEEventSponsor.query
+        if start:
+            query = query.filter(
+                and_(
+                    func.date(CMTEEventSponsor.registered_datetime) >= start.date(),
+                    func.date(CMTEEventSponsor.expire_date) <= end.date()
+                )
+            )
+        sponsors = query.count()
+        thirty_days_later = end + timedelta(days=30)
+        expire_count = query.filter(
+            CMTEEventSponsor.expire_date == thirty_days_later
+        ).count()
+
+        requests = CMTESponsorRequest.query.filter_by(approved_at=None, cancelled_at=None).count()
+        edit_requests = CMTESponsorEditRequest.query.filter_by(status='pending').count()
+        pending_requests = requests + edit_requests
+    return render_template('cmte/admin/report_sponsors_index.html', sponsors=sponsors,
+                           pending_requests=pending_requests, expire_count=expire_count, selected_dates=selected_dates)
