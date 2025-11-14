@@ -2849,20 +2849,24 @@ def report_sponsors_index():
     start_of_year = datetime(today.year, 1, 1).date()
 
     sponsors = CMTEEventSponsor.query.filter(
-        CMTEEventSponsor.registered_datetime >= start_of_year,
+        func.date(CMTEEventSponsor.registered_datetime) >= start_of_year,
         CMTEEventSponsor.expire_date >= today
     ).count()
-
-    thirty_days_later = today + timedelta(days=30)
-
     expire_count = db.session.query(CMTEEventSponsor).filter(
-        CMTEEventSponsor.expire_date == thirty_days_later
+        CMTEEventSponsor.expire_date.between(today, today + timedelta(days=30))
     ).count()
 
-    requests = CMTESponsorRequest.query.filter_by(approved_at=None, cancelled_at=None).count()
-    edit_requests = CMTESponsorEditRequest.query.filter_by(status='pending').count()
-    pending_requests = requests + edit_requests
-    selected_dates=None
+    sponsor_requests = (
+        CMTESponsorRequest.query.filter(
+            CMTESponsorRequest.approved_at != None,
+            CMTESponsorRequest.cancelled_at == None,
+            CMTESponsorRequest.type != 'change')
+        .distinct(CMTESponsorRequest.sponsor_id)
+        .all()
+    )
+    sponsor_requests_count = len(sponsor_requests)
+
+    selected_dates = None
     if request.method == 'POST':
         form = request.form
         selected_dates = request.form.get('dates', None)
@@ -2874,17 +2878,75 @@ def report_sponsors_index():
             query = query.filter(
                 and_(
                     func.date(CMTEEventSponsor.registered_datetime) >= start.date(),
-                    func.date(CMTEEventSponsor.expire_date) <= end.date()
+                    CMTEEventSponsor.expire_date >= end.date()
                 )
             )
         sponsors = query.count()
-        thirty_days_later = end + timedelta(days=30)
         expire_count = query.filter(
-            CMTEEventSponsor.expire_date == thirty_days_later
+            CMTEEventSponsor.expire_date.between(end, end+ timedelta(days=30))
         ).count()
 
-        requests = CMTESponsorRequest.query.filter_by(approved_at=None, cancelled_at=None).count()
-        edit_requests = CMTESponsorEditRequest.query.filter_by(status='pending').count()
-        pending_requests = requests + edit_requests
+        sponsor_requests = (
+            CMTESponsorRequest.query.filter(
+                CMTESponsorRequest.approved_at != None,
+                CMTESponsorRequest.cancelled_at == None,
+                CMTESponsorRequest.type != 'change')
+            .filter(CMTESponsorRequest.approved_at.between(start, end))
+            .distinct(CMTESponsorRequest.sponsor_id)
+            .all()
+        )
+        sponsor_requests_count = len(sponsor_requests)
+
+
     return render_template('cmte/admin/report_sponsors_index.html', sponsors=sponsors,
-                           pending_requests=pending_requests, expire_count=expire_count, selected_dates=selected_dates)
+                           sponsor_requests_count=sponsor_requests_count, expire_count=expire_count,
+                           selected_dates=selected_dates)
+
+
+@cmte.route('/report/eventr', methods=['GET', 'POST'])
+@login_required
+def report_events_index():
+    selected_dates = None
+    today = datetime.now().date()
+    start_of_year = datetime(today.year, 1, 1).date()
+
+    all_events = CMTEEvent.query.filter(
+        CMTEEvent.approved_datetime != None,
+        func.date(CMTEEvent.start_date) <= today,
+        func.date(CMTEEvent.end_date) >= start_of_year,
+    )
+    count_events = all_events.count()
+
+    sponsor_events = {}
+    for event in all_events:
+        sponsor_id = event.sponsor_id
+        sponsor_events.setdefault(sponsor_id, []).append(event)
+
+    if request.method == 'POST':
+        form = request.form
+        selected_dates = request.form.get('dates', None)
+        start_d, end_d = form.get('dates').split(' - ')
+        start = datetime.strptime(start_d, '%d/%m/%Y')
+        end = datetime.strptime(end_d, '%d/%m/%Y')
+        query = CMTEEvent.query
+        if start:
+            query = query.filter(
+                CMTEEvent.approved_datetime != None,
+                and_(
+                    func.date(CMTEEvent.start_date) <= end.date(),
+                    CMTEEvent.end_date >= start.date()
+                )
+            )
+        count_events = query.count()
+
+        all_events = query
+        sponsor_events = {}
+        for event in query:
+            sponsor_id = event.sponsor_id
+            sponsor_events.setdefault(sponsor_id, []).append(event)
+
+
+    return render_template('cmte/admin/report_event_index.html', all_events=all_events,
+                           sponsor_events=sponsor_events,
+                           count_events=count_events,
+                           selected_dates=selected_dates)
