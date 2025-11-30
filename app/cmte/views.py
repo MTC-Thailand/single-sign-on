@@ -2912,16 +2912,30 @@ def report_events_index():
     start_of_year = datetime(today.year, 1, 1).date()
 
     all_events = CMTEEvent.query.filter(
-        CMTEEvent.approved_datetime != None,
+        CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None,
         func.date(CMTEEvent.start_date) <= today,
         func.date(CMTEEvent.end_date) >= start_of_year,
     )
     count_events = all_events.count()
+    without_participants = all_events.filter(CMTEEvent.participants == None)
 
+    cancel_events = CMTEEvent.query.filter(
+        CMTEEvent.cancelled_datetime != None,
+        func.date(CMTEEvent.start_date) <= today,
+        func.date(CMTEEvent.end_date) >= start_of_year,
+    )
+
+    count_pending_approve_participants = 0
     sponsor_events = {}
+    event_pending_approve_participants = []
     for event in all_events:
         sponsor_id = event.sponsor_id
         sponsor_events.setdefault(sponsor_id, []).append(event)
+        if event.num_pending_participants:
+            count_pending_approve_participants += 1
+            event_pending_approve_participants.append(event)
+
+
 
     if request.method == 'POST':
         form = request.form
@@ -2932,7 +2946,14 @@ def report_events_index():
         query = CMTEEvent.query
         if start:
             query = query.filter(
-                CMTEEvent.approved_datetime != None,
+                CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None,
+                and_(
+                    func.date(CMTEEvent.start_date) <= end.date(),
+                    CMTEEvent.end_date >= start.date()
+                )
+            )
+            cancel_events = query.filter(
+                CMTEEvent.cancelled_datetime != None,
                 and_(
                     func.date(CMTEEvent.start_date) <= end.date(),
                     CMTEEvent.end_date >= start.date()
@@ -2940,14 +2961,22 @@ def report_events_index():
             )
         count_events = query.count()
 
+        without_participants = query.filter(CMTEEvent.participants == None)
+
         all_events = query
         sponsor_events = {}
         for event in query:
             sponsor_id = event.sponsor_id
             sponsor_events.setdefault(sponsor_id, []).append(event)
+            if event.num_pending_participants:
+                count_pending_approve_participants += 1
+                event_pending_approve_participants.append(event)
+
 
 
     return render_template('cmte/admin/report_event_index.html', all_events=all_events,
                            sponsor_events=sponsor_events,
-                           count_events=count_events,
-                           selected_dates=selected_dates)
+                           count_events=count_events, without_participants=without_participants,
+                           event_pending_approve_participants=event_pending_approve_participants,
+                           count_pending_approve_participants=count_pending_approve_participants,
+                           selected_dates=selected_dates, cancel_events=cancel_events)
