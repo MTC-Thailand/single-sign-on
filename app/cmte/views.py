@@ -2847,24 +2847,26 @@ def list_event_types():
 def report_sponsors_index():
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
-
+    all_sponsor = CMTEEventSponsor.query.filter(CMTEEventSponsor.expire_date >= today).count()
     sponsors = CMTEEventSponsor.query.filter(
         func.date(CMTEEventSponsor.registered_datetime) >= start_of_year,
         CMTEEventSponsor.expire_date >= today
     ).count()
-    expire_count = db.session.query(CMTEEventSponsor).filter(
-        CMTEEventSponsor.expire_date.between(today, today + timedelta(days=30))
-    ).count()
-
-    sponsor_requests = (
-        CMTESponsorRequest.query.filter(
-            CMTESponsorRequest.approved_at != None,
-            CMTESponsorRequest.cancelled_at == None,
-            CMTESponsorRequest.type != 'change')
-        .distinct(CMTESponsorRequest.sponsor_id)
-        .all()
+    expire_sponsor = db.session.query(CMTEEventSponsor).filter(
+        CMTEEventSponsor.expire_date.between(today, today + timedelta(days=90))
     )
-    sponsor_requests_count = len(sponsor_requests)
+    fifth_expire_sponsor = expire_sponsor.order_by(CMTEEventSponsor.expire_date).limit(5).all()
+    expire_count = expire_sponsor.count()
+
+    # sponsor_requests = (
+    #     CMTESponsorRequest.query.filter(
+    #         CMTESponsorRequest.approved_at != None,
+    #         CMTESponsorRequest.cancelled_at == None,
+    #         CMTESponsorRequest.type != 'change')
+    #     .distinct(CMTESponsorRequest.sponsor_id)
+    #     .all()
+    # )
+    # sponsor_requests_count = len(sponsor_requests)
 
     selected_dates = None
     if request.method == 'POST':
@@ -2883,24 +2885,23 @@ def report_sponsors_index():
             )
         sponsors = query.count()
         expire_count = query.filter(
-            CMTEEventSponsor.expire_date.between(end, end+ timedelta(days=30))
+            CMTEEventSponsor.expire_date.between(end, end+ timedelta(days=90))
         ).count()
+        # sponsor_requests = (
+        #     CMTESponsorRequest.query.filter(
+        #         CMTESponsorRequest.approved_at != None,
+        #         CMTESponsorRequest.cancelled_at == None,
+        #         CMTESponsorRequest.type != 'change')
+        #     .filter(CMTESponsorRequest.approved_at.between(start, end))
+        #     .distinct(CMTESponsorRequest.sponsor_id)
+        #     .all()
+        # )
+        # sponsor_requests_count = len(sponsor_requests)
 
-        sponsor_requests = (
-            CMTESponsorRequest.query.filter(
-                CMTESponsorRequest.approved_at != None,
-                CMTESponsorRequest.cancelled_at == None,
-                CMTESponsorRequest.type != 'change')
-            .filter(CMTESponsorRequest.approved_at.between(start, end))
-            .distinct(CMTESponsorRequest.sponsor_id)
-            .all()
-        )
-        sponsor_requests_count = len(sponsor_requests)
 
-
-    return render_template('cmte/admin/report_sponsors_index.html', sponsors=sponsors,
-                           sponsor_requests_count=sponsor_requests_count, expire_count=expire_count,
-                           selected_dates=selected_dates)
+    return render_template('cmte/admin/report_sponsors_index.html', all_sponsor=all_sponsor
+                           ,sponsors=sponsors, expire_count=expire_count,
+                           selected_dates=selected_dates, fifth_expire_sponsor=fifth_expire_sponsor)
 
 
 @cmte.route('/report/eventr', methods=['GET', 'POST'])
