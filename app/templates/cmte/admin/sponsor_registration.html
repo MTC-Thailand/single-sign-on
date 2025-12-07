@@ -14,35 +14,35 @@
                                 <a href="{{ url_for('cmte.all_requests', tab='new') }}">
                                     <span class="icon is-small"><i class="fas fa-hourglass-half"></i></span>
                                     <span>ขอขึ้นทะเบียน</span>
-                                    <span class="tag is-danger is-rounded">{{pending_new or 0}}</span>
+                                    {% if pending_new %}<span class="tag is-danger is-rounded">{{pending_new }}</span>{% endif %}
                                 </a>
                             </li>
                             <li {% if tab == 'renew' %}class="is-active"{% endif %}>
                                 <a href="{{ url_for('cmte.all_requests', tab='renew') }}">
                                     <span class="icon is-small"><i class="fas fa-history"></i></span>
                                     <span>ต่ออายุ</span>
-                                    <span class="tag is-danger is-rounded">{{pending_renew or 0}}</span>
+                                   {% if pending_renew %}<span class="tag is-danger is-rounded">{{pending_renew }}</span>{% endif %}
                                 </a>
                             </li>
                             <li {% if tab == 'paid' %}class="is-active"{% endif %}>
                                 <a href="{{ url_for('cmte.all_requests', tab='paid') }}">
                                     <span class="icon is-small"><i class="fas fa-paperclip"></i></span>
                                     <span>ชำระเงินแล้ว รอขึ้นทะเบียน</span>
-                                    <span class="tag is-danger is-rounded">{{pending_paid or 0}}</span>
+                                    {% if pending_paid %}<span class="tag is-danger is-rounded">{{pending_paid }}</span>{% endif %}
                                 </a>
                             </li>
                             <li {% if tab == 'edit' %}class="is-active"{% endif %}>
                                 <a href="{{ url_for('cmte.all_requests', tab='edit') }}">
                                     <span class="icon is-small"><i class="fas fa-pen-fancy"></i></span>
                                     <span>ขอแก้ไขข้อมูลสถาบัน</span>
-                                    <span class="tag is-danger is-rounded">{{pending_edit or 0}}</span>
+                                    {% if pending_edit %}<span class="tag is-danger is-rounded">{{pending_edit }}</span>{% endif %}
                                 </a>
                             </li>
                             <li {% if tab == 'change' %}class="is-active"{% endif %}>
                                 <a href="{{ url_for('cmte.all_requests', tab='change') }}">
                                     <span class="icon is-small"><i class="fas fa-people-carry"></i></span>
                                     <span>ขอเปลี่ยนผู้ประสานงาน</span>
-                                    <span class="tag is-danger is-rounded">{{pending_change or 0}}</span>
+                                    {% if pending_change %}<span class="tag is-danger is-rounded">{{pending_change }}</span>{% endif %}
                                 </a>
                             </li>
                             <li {% if tab == 'all' %}class="is-active"{% endif %}>
