@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+{% endblock %}
+{% block content %}
+    {% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="column">
+            <div class="is-flex is-justify-content-center is-align-items-center">
+                <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button">สถาบัน</a>
+                <a href="{{ url_for('cmte.report_events_index') }}" class="button ml-3">กิจกรรมกลุ่ม</a>
+                <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button is-link ml-3">กิจกรรมประเภทที่
+                    1</a>
+                <a href="{{ url_for('cmte.report_members_index') }}" class="button ml-3">สมาชิก</a>
+            </div>
+            <br>
+            <h1 class="title has-text-centered">กิจกรรมที่สถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์จัด</h1>
+            <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="columns">
+                    <div class="column">
+                        <p>ช่วงเวลา</p>
+                        <div class="control has-icons-left" style="display: flex; align-items: center;">
+                            <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
+                                   style="width: auto;">
+                            <span class="icon is-small is-left">
+                                <i class="far fa-calendar-alt"></i>
+                            </span>
+                            <button class="button is-info ml-3">ค้นหา</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <div class="column">
+                <h3 class="title is-3">
+                    ที่อนุมัติคะแนนกิจกรรมแล้ว
+                    <span class="tag is-warning is-rounded">{{ all_events.count() }}</span>
+                </h3>
+                <table id="events" class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อกิจกรรม</th>
+                    <th>เริ่มต้น</th>
+                    <th>สิ้นสุด</th>
+                    <th>สถาบัน</th>
+                    <th>จำนวนผู้เข้าร่วม</th>
+                    </thead>
+                    <tbody>
+                    {% for event in all_events %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
+                                    {{ event.title }}</a>
+                            </td>
+                            <td>{{ event.start_date|localdatetime }}</td>
+                            <td>{{ event.end_date|localdatetime }}</td>
+                            <td>{{ event.sponsor }}</td>
+                            <td>{{ event.participants.count() }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="column">
+
+                <h3 class="title is-3">
+                    ที่ยังไม่บันทึกผู้เข้าร่วมกิจกรรม
+                    {% if without_participants %}
+                        <span class="tag is-warning is-rounded">
+                            {{ without_participants.count() }}
+                        </span>
+                    {% endif %}
+                </h3>
+
+                <table id="sponsors" class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อกิจกรรม</th>
+                    <th>เริ่มต้น</th>
+                    <th>สิ้นสุด</th>
+                    <th>สถาบัน</th>
+                    </thead>
+                    <tbody>
+                    {% for event in without_participants %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
+                                    {{ event.title }}</a>
+                            </td>
+                            <td>{{ event.start_date|localdatetime }}</td>
+                            <td>{{ event.end_date|localdatetime }}</td>
+                            <td>{{ event.sponsor }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="column">
+                <h3 class="title is-3">
+                    ที่รออนุมัติคะแนนผู้เข้าร่วมกิจกรรม
+                    {% if event_pending_approve_participants %}
+                        <span class="tag is-warning is-rounded">
+                            {{ event_pending_approve_participants|length or 0 }}
+                        </span>
+                    {% endif %}
+                </h3>
+                <table id="sponsors" class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อกิจกรรม</th>
+                    <th>เริ่มต้น</th>
+                    <th>สิ้นสุด</th>
+                    <th>สถาบัน</th>
+                    </thead>
+                    <tbody>
+                    {% for event in event_pending_approve_participants %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
+                                    {{ event.title }}</a>
+                            </td>
+                            <td>{{ event.start_date|localdatetime }}</td>
+                            <td>{{ event.end_date|localdatetime }}</td>
+                            <td>{{ event.sponsor }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="column">
+                <ul>
+                    <li>
+                        <h3 class="title is-3">
+                            ที่ขอยกเลิก
+                            {% if cancel_events %}
+                                <span class="tag is-warning is-rounded">
+                                {{ cancel_events.count() or 0 }}
+                                </span>
+                            {% endif %}
+                        </h3>
+                    </li>
+                </ul>
+                <table id="sponsors" class="table is-fullwidth">
+                    <thead>
+                    <th>ชื่อกิจกรรม</th>
+                    <th>เริ่มต้น</th>
+                    <th>สิ้นสุด</th>
+                    <th>สถาบัน</th>
+                    </thead>
+                    <tbody>
+                    {% for event in cancel_events %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
+                                    {{ event.title }}</a>
+                            </td>
+                            <td>{{ event.start_date|localdatetime }}</td>
+                            <td>{{ event.end_date|localdatetime }}</td>
+                            <td>{{ event.sponsor }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript"
+            src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        $(document).ready(() => {
+            var today = moment();
+            var startOfYear = moment().startOf('year');
+            var selectedDates = '{{ selected_dates or "" }}';
+            if (!selectedDates) {
+                selectedDates = startOfYear.format('DD/MM/YYYY') + ' - ' + today.format('DD/MM/YYYY');
+            }
+
+            $('#dates').daterangepicker({
+                timePicker: false,
+                showDropdowns: true,
+                linkedCalendars: false,
+                locale: {
+                    format: 'DD/MM/YYYY'
+                },
+                startDate: selectedDates.split(' - ')[0],
+                endDate: selectedDates.split(' - ')[1]
+            });
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('#sponsors').DataTable({})
+        });
+        $(document).ready(function () {
+            $('#events').DataTable({})
+        });
+    </script>
+{% endblock %}

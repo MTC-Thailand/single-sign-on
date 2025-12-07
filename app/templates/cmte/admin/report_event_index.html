@@ -10,7 +10,8 @@
             <div class="is-flex is-justify-content-center is-align-items-center">
                 <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button">สถาบัน</a>
                 <a href="{{ url_for('cmte.report_events_index') }}" class="button is-link ml-3">กิจกรรมกลุ่ม</a>
-                <a href="" class="button ml-3">สมาชิก</a>
+                <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่ 1</a>
+                <a href="{{url_for('cmte.report_members_index')}}" class="button ml-3">สมาชิก</a>
             </div>
             <br>
             <h1 class="title has-text-centered">กิจกรรมที่สถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์จัด</h1>
@@ -40,179 +41,194 @@
                     {#                </div>#}
                 </div>
             </form>
-            <div class="columns">
-                <div class="column is-one-quarter">
-                    <div class="box card-hover">
-                        <div class="columns">
-                            <div class="column">
-                                <p class="is-size-7 has-text-grey">กิจกรรมประเภทที่ 1</p>
-                                <h2 class="title is-4 has-text-weight-bold mt-2">ทั้งหมด</h2>
-                            </div>
-                            <div class="column is-align-content-flex-end">
-                                <div class="has-text-right">
-                                    <p class="title is-1 has-text-primary">{{ count_events }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="buttons is-centered mt-4">
-                            <a href="{{url_for('cmte.admin_approved_events', _type='approved')}}"
-                               class="button is-rounded is-small is-fullwidth">
-                                ดูทั้งหมด
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="column is-one-quarter">
-                    <div class="box card-hover">
-                        <div class="columns">
-                            <div class="column">
-                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่ยังไม่บันทึกผู้เข้าร่วม</h2>
-                            </div>
-                            <div class="column is-align-content-flex-end">
-                                <div class="has-text-right">
-                                    <p class="title is-1 has-text-warning">{{ without_participants.count() or 0 }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="column has-text-grey scrollable-list-container">
-                            {% for participant in without_participants %}
-                                <li>{{ participant }}</li>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                <div class="column is-one-quarter">
-                    <div class="box card-hover">
-                        <div class="columns">
-                            <div class="column">
-                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่รออนุมัติคะแนนผู้เข้าร่วม</h2>
-                            </div>
-                            <div class="column is-align-content-flex-end">
-                                <div class="has-text-right">
-                                    <p class="title is-1 has-text-danger">{{ count_pending_approve_participants or 0 }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="column has-text-grey scrollable-list-container">
-                            {% for event in event_pending_approve_participants %}
-                                <li>{{ event }}</li>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                <div class="column is-one-quarter">
-                    <div class="box card-hover">
-                        <div class="columns">
-                            <div class="column">
-                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่ขอยกเลิก</h2>
-                            </div>
-                            <div class="column is-align-content-flex-end">
-                                <div class="has-text-right">
-                                    <p class="title is-1 has-text-grey">{{ cancel_events.count() or 0 }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="column has-text-grey scrollable-list-container">
-                            {% for cancel_event in cancel_events %}
-                                <li>{{ cancel_event }}</li>
-                        {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="columns">
-                <div class="column">
-                    <div class="box card-hover">
+{#            <div class="columns">#}
+{#                <div class="column is-one-quarter">#}
+{#                    <div class="box card-hover">#}
 {#                        <div class="columns">#}
 {#                            <div class="column">#}
+{#                                <p class="is-size-7 has-text-grey">กิจกรรมประเภทที่ 1</p>#}
 {#                                <h2 class="title is-4 has-text-weight-bold mt-2">ทั้งหมด</h2>#}
 {#                            </div>#}
 {#                            <div class="column is-align-content-flex-end">#}
 {#                                <div class="has-text-right">#}
-{#                                    <p>#}
-{#                                        <span class="title is-1 has-text-primary">{{ count_events }}</span>#}
-{#                                        <span class="has-text-dark">กิจกรรม</span>#}
-{#                                    </p>#}
+{#                                    <p class="title is-1 has-text-primary">{{ count_events }}</p>#}
 {#                                </div>#}
 {#                            </div>#}
 {#                        </div>#}
-                        {% for sponsor_id, events in sponsor_events.items() %}
-                            <div class="box mb-4">
-                                <div class="level mb-3">
-                                    <h4 class="title is-5">{{ events[0].sponsor }}</h4>
-                                    <div class="level-right">
-                                        <p>
-                                            <span class="subtitle is-6 has-text-weight-semibold has-text-primary">{{ events|length }}</span>
-                                            <span class="has-text-dark">กิจกรรม</span>
-                                        </p>
-                                    </div>
-                                </div>
-                                {% for event in events %}
-                                    <div class="mb-3">
-                                        <div class="level mb-2">
-                                            <div class="level-left">
-                                                <p><strong>{{ event.title }}</strong></p>
-                                            </div>
-                                            <div class="level-right">
-                                                <p class="subtitle is-6 has-text-weight-semibold m-0">
-                                                    {{ event.participants.count() }} คน</p>
-                                            </div>
-
-                                        </div>
-                                        <div class="level is-mobile">
-                                            <p class="is-size-7 has-text-grey">
-                                            {{ event.start_date|localdate }} - {{ event.end_date|localdate }}
-                                        </p>
-                                        </div>
-                                    </div>
-
-                                {% endfor %}
-
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-{#                <div class="column">#}
+{#                        <div class="buttons is-centered mt-4">#}
+{#                            <a href="{{url_for('cmte.admin_approved_events', _type='approved')}}"#}
+{#                               class="button is-rounded is-small is-fullwidth">#}
+{#                                ดูทั้งหมด#}
+{#                            </a>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#                <div class="column is-one-quarter">#}
 {#                    <div class="box card-hover">#}
 {#                        <div class="columns">#}
 {#                            <div class="column">#}
-{#                                <h2 class="title is-4 has-text-weight-bold mt-2">กิจกรรมทั้งหมด</h2>#}
+{#                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่ยังไม่บันทึกผู้เข้าร่วม</h2>#}
 {#                            </div>#}
 {#                            <div class="column is-align-content-flex-end">#}
 {#                                <div class="has-text-right">#}
-{#                                    <p class="title is-1 has-text-warning">{{ count_all_events }}</p>#}
+{#                                    <p class="title is-1 has-text-warning">{{ without_participants.count() or 0 }}</p>#}
 {#                                </div>#}
 {#                            </div>#}
 {#                        </div>#}
-{#                        {% for event in all_events %}#}
-{#                            <div class="box mb-3">#}
-{#                                <div class="level mb-2">#}
-{#                                    <h4 class="title is-5">{{ event.sponsor }}</h4>#}
+{#                        <div class="column has-text-grey scrollable-list-container">#}
+{#                            {% for participant in without_participants %}#}
+{#                                <li>{{ participant }}</li>#}
+{#                            {% endfor %}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#                <div class="column is-one-quarter">#}
+{#                    <div class="box card-hover">#}
+{#                        <div class="columns">#}
+{#                            <div class="column">#}
+{#                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่รออนุมัติคะแนนผู้เข้าร่วม</h2>#}
+{#                            </div>#}
+{#                            <div class="column is-align-content-flex-end">#}
+{#                                <div class="has-text-right">#}
+{#                                    <p class="title is-1 has-text-danger">{{ count_pending_approve_participants or 0 }}</p>#}
 {#                                </div>#}
-{#                                <div class="level is-mobile">#}
-{#                                    <div class="level-left">#}
-{#                                        <p class="subtitle is-6">เรื่อง: {{ event.title }}</p>#}
-{#                                    </div>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                        <div class="column has-text-grey scrollable-list-container">#}
+{#                            {% for event in event_pending_approve_participants %}#}
+{#                                <li>{{ event }}</li>#}
+{#                            {% endfor %}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#                <div class="column is-one-quarter">#}
+{#                    <div class="box card-hover">#}
+{#                        <div class="columns">#}
+{#                            <div class="column">#}
+{#                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่ขอยกเลิก</h2>#}
+{#                            </div>#}
+{#                            <div class="column is-align-content-flex-end">#}
+{#                                <div class="has-text-right">#}
+{#                                    <p class="title is-1 has-text-grey">{{ cancel_events.count() or 0 }}</p>#}
+{#                                </div>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                        <div class="column has-text-grey scrollable-list-container">#}
+{#                            {% for cancel_event in cancel_events %}#}
+{#                                <li>{{ cancel_event }}</li>#}
+{#                        {% endfor %}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="columns">#}
+{#                <div class="column">#}
+{#                    <div class="box card-hover">#}
+{#                        {% for sponsor_id, events in sponsor_events.items() %}#}
+{#                            <div class="box mb-4">#}
+{#                                <div class="level mb-3">#}
+{#                                    <h4 class="title is-5">{{ events[0].sponsor }}</h4>#}
 {#                                    <div class="level-right">#}
-{#                                        <p class="subtitle is-6 has-text-weight-semibold">คน</p>#}
+{#                                        <p>#}
+{#                                            <span class="subtitle is-6 has-text-weight-semibold has-text-primary">{{ events|length }}</span>#}
+{#                                            <span class="has-text-dark">กิจกรรม</span>#}
+{#                                        </p>#}
 {#                                    </div>#}
 {#                                </div>#}
+{#                                {% for event in events %}#}
+{#                                    <div class="mb-3">#}
+{#                                        <div class="level mb-2">#}
+{#                                            <div class="level-left">#}
+{#                                                <p><strong>{{ event.title }}</strong></p>#}
+{#                                            </div>#}
+{#                                            <div class="level-right">#}
+{#                                                <p class="subtitle is-6 has-text-weight-semibold m-0">#}
+{#                                                    {{ event.participants.count() }} คน</p>#}
+{#                                            </div>#}
+{##}
+{#                                        </div>#}
+{#                                        <div class="level is-mobile">#}
+{#                                            <p class="is-size-7 has-text-grey">#}
+{#                                            {{ event.start_date|localdate }} - {{ event.end_date|localdate }}#}
+{#                                        </p>#}
+{#                                        </div>#}
+{#                                    </div>#}
+{##}
+{#                                {% endfor %}#}
+{##}
 {#                            </div>#}
 {#                        {% endfor %}#}
 {#                    </div>#}
 {#                </div>#}
+{#            </div>#}
+            <hr>
+            <div class="column">
+                <div class="is-flex is-justify-content-space-between is-align-items-center">
+                    <h3 class="title is-3">
+                        กิจกรรมที่สถาบันจัดขึ้น แยกตามสถาบัน
+                    </h3>
+                    <p class="has-text-right is-size-5">
+                        จำนวนกิจกรรม: {{ all_events.count() }}
+                    </p>
+                </div>
+                <table id="sponsors" class="table is-fullwidth">
+                    <thead>
+                    <th>สถาบัน</th>
+                    <th>จำนวนที่จัด(ครั้ง)</th>
+                    <th>กิจกรรม</th>
+                    </thead>
+                    <tbody>
+                    {% for sponsor_id, events in sponsor_events.items() %}
+                        <tr>
+                            <td>{{ events[0].sponsor }}</td>
+                            <td>{{ events|length }}</td>
+                            <td>
+                                {% for event in events %}
+                                    <li>{{ event.title }} ({{ event.participants.count() }} คน)</li>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="column">
+                <h3 class="title is-3">
+                    รายการกิจกรรม
+                    <span class="tag is-warning is-rounded">{{ all_events.count() }}</span>
+                </h3>
+                <table id="events" class="table is-fullwidth">
+                    <thead>
+                        <th>ชื่อกิจกรรม</th>
+                        <th>เริ่มต้น</th>
+                        <th>สิ้นสุด</th>
+                        <th>สถาบัน</th>
+                        <th>จำนวนผู้เข้าร่วม</th>
+                    </thead>
+                    <tbody>
+                    {% for event in all_events %}
+                        <tr>
+                            <td>
+                                <a href="{{url_for('cmte.admin_preview_event', event_id=event.id)}}">
+                                    {{ event.title }}</a>
+                            </td>
+                            <td>{{ event.start_date|localdatetime }}</td>
+                            <td>{{ event.end_date|localdatetime }}</td>
+                            <td>{{ event.sponsor }}</td>
+                            <td>{{ event.participants.count() }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </section>
 {% endblock %}
 {% block scripts %}
     {{ super() }}
-
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="text/javascript"
             src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-
     <script>
         $(document).ready(() => {
             var today = moment();
@@ -236,12 +252,16 @@
             {#    placeholder: "ค้นหา Sponsor...",#}
             {#    allowClear: true,#}
             {#    width: '100%'#}
-            {#})
-                ;
-                #}
-            }
-        )
-            ;
-
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('#sponsors').DataTable({
+            })
+        });
+        $(document).ready(function () {
+            $('#events').DataTable({
+            })
+        });
     </script>
 {% endblock %}
