@@ -3103,7 +3103,7 @@ def report_events_by_sponsor():
         start_d, end_d = form.get('dates').split(' - ')
         start = datetime.strptime(start_d, '%d/%m/%Y')
         end = datetime.strptime(end_d, '%d/%m/%Y')
-        query = CMTEEvent.query
+        query = CMTEEvent.queryf
         if start:
             all_events = query.filter(
                 CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None, CMTEEvent.sponsor_id != None,
@@ -3148,3 +3148,109 @@ def report_members_index():
 
     return render_template('cmte/admin/report_member_index.html', active_payments=active_payments,
                            selected_dates=selected_dates)
+
+
+@cmte.route('/report/events_by_activity', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def report_events_by_activity():
+    today = datetime.now().date()
+    start_of_year = datetime(today.year, 1, 1).date()
+    event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime != None, CMTEEvent.activity_id != None,
+                func.date(CMTEEvent.start_date) <= today,
+                func.date(CMTEEvent.end_date) >= start_of_year)
+    selected_dates = None
+    if request.method == 'POST':
+        form = request.form
+        selected_dates = request.form.get('dates', None)
+        start_d, end_d = form.get('dates').split(' - ')
+        start = datetime.strptime(start_d, '%d/%m/%Y')
+        end = datetime.strptime(end_d, '%d/%m/%Y')
+        activity_id = request.form.get('activity_id')
+        if start:
+            event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime != None,
+                                                    CMTEEvent.activity_id != None,
+                                                    func.date(CMTEEvent.start_date) <= end.date(),
+                                                    func.date(CMTEEvent.end_date) >= start.date())
+
+    return render_template('cmte/admin/report_events_by_activity.html', selected_dates=selected_dates,
+                           event_activity=event_activity)
+
+
+@cmte.route('/report/individual_scores', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def report_individual_scores():
+    today = datetime.now().date()
+    start_of_year = datetime(today.year, 1, 1).date()
+    query = CMTEEventParticipationRecord.query.filter_by(individual=True) \
+        .filter(CMTEEventParticipationRecord.create_datetime != None,
+                func.date(CMTEEventParticipationRecord.start_date) <= today,
+                func.date(CMTEEventParticipationRecord.end_date) >= start_of_year) \
+        .order_by(CMTEEventParticipationRecord.create_datetime.desc())
+    selected_dates = None
+    if request.method == 'POST':
+        form = request.form
+        selected_dates = request.form.get('dates', None)
+        start_d, end_d = form.get('dates').split(' - ')
+        start = datetime.strptime(start_d, '%d/%m/%Y')
+        end = datetime.strptime(end_d, '%d/%m/%Y')
+        if start:
+            query = CMTEEventParticipationRecord.query.filter_by(individual=True) \
+                .filter(CMTEEventParticipationRecord.create_datetime != None,
+                        func.date(CMTEEventParticipationRecord.start_date) <= end.date(),
+                        func.date(CMTEEventParticipationRecord.end_date) >= start.date()).order_by(
+                        CMTEEventParticipationRecord.create_datetime.desc())
+    approved_status = query.filter(CMTEEventParticipationRecord.approved_date != None) \
+            .order_by(CMTEEventParticipationRecord.approved_date.desc())
+    rejected_status = query.filter(CMTEEventParticipationRecord.closed_date != None)
+    waiting_status = query.filter(CMTEEventParticipationRecord.approved_date == None) \
+            .filter(CMTEEventParticipationRecord.closed_date == None) \
+            .join(CMTEParticipationRecordRequest) \
+            .group_by(CMTEEventParticipationRecord.id) \
+            .having(func.count(CMTEEventParticipationRecord.id) > 0)
+
+
+    return render_template('cmte/admin/report_individual_scores.html', selected_dates=selected_dates,
+                           approved_status=approved_status, rejected_status=rejected_status,
+                           waiting_status=waiting_status)
+
+
+@cmte.route('/report/group_individual_scores', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def report_group_individual_scores():
+    today = datetime.now().date()
+    start_of_year = datetime(today.year, 1, 1).date()
+    query = CMTEEventGroupParticipationRecord.query \
+        .filter(CMTEEventGroupParticipationRecord.create_datetime != None,
+                func.date(CMTEEventParticipationRecord.start_date) <= today,
+                func.date(CMTEEventParticipationRecord.end_date) >= start_of_year) \
+        .order_by(CMTEEventGroupParticipationRecord.create_datetime.desc())
+
+    selected_dates = None
+    if request.method == 'POST':
+        form = request.form
+        selected_dates = request.form.get('dates', None)
+        start_d, end_d = form.get('dates').split(' - ')
+        start = datetime.strptime(start_d, '%d/%m/%Y')
+        end = datetime.strptime(end_d, '%d/%m/%Y')
+        if start:
+            query = CMTEEventGroupParticipationRecord.query \
+                .filter(CMTEEventGroupParticipationRecord.create_datetime != None,
+                        func.date(CMTEEventParticipationRecord.start_date) <= end.date(),
+                        func.date(CMTEEventParticipationRecord.end_date) >= start.date()) \
+                .order_by(CMTEEventGroupParticipationRecord.create_datetime.desc())
+
+    approved_status = query.filter(CMTEEventGroupParticipationRecord.approved_date != None)
+    rejected_status = query.filter(CMTEEventGroupParticipationRecord.closed_date != None)
+    waiting_status = query.filter(CMTEEventGroupParticipationRecord.approved_date == None) \
+                .filter(CMTEEventGroupParticipationRecord.closed_date == None) \
+                .join(CMTEParticipationRecordRequest) \
+                .group_by(CMTEEventGroupParticipationRecord.id) \
+                .having(func.count(CMTEEventGroupParticipationRecord.id) > 0)
+
+
+    return render_template('cmte/admin/report_group_individual_scores.html', selected_dates=selected_dates,
+                           approved_status=approved_status, rejected_status=rejected_status,
+                           waiting_status=waiting_status)
