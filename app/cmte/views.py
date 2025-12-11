@@ -3156,7 +3156,7 @@ def report_members_index():
 def report_events_by_activity():
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
-    event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime != None, CMTEEvent.activity_id != None,
+    event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None, CMTEEvent.activity_id != None,
                 func.date(CMTEEvent.start_date) <= today,
                 func.date(CMTEEvent.end_date) >= start_of_year)
     all_activity = CMTEEventActivity.query.all()
@@ -3169,7 +3169,7 @@ def report_events_by_activity():
         end = datetime.strptime(end_d, '%d/%m/%Y')
         activity_id = request.form.get('activity_id')
         if start:
-            event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime != None,
+            event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None,
                                                     CMTEEvent.activity_id != None,
                                                     func.date(CMTEEvent.start_date) <= end.date(),
                                                     func.date(CMTEEvent.end_date) >= start.date())
