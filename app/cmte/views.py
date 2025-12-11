@@ -3159,6 +3159,7 @@ def report_events_by_activity():
     event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime != None, CMTEEvent.activity_id != None,
                 func.date(CMTEEvent.start_date) <= today,
                 func.date(CMTEEvent.end_date) >= start_of_year)
+    all_activity = CMTEEventActivity.query.all()
     selected_dates = None
     if request.method == 'POST':
         form = request.form
@@ -3172,9 +3173,11 @@ def report_events_by_activity():
                                                     CMTEEvent.activity_id != None,
                                                     func.date(CMTEEvent.start_date) <= end.date(),
                                                     func.date(CMTEEvent.end_date) >= start.date())
+            if activity_id:
+                event_activity = event_activity.filter_by(activity_id=activity_id)
 
     return render_template('cmte/admin/report_events_by_activity.html', selected_dates=selected_dates,
-                           event_activity=event_activity)
+                           event_activity=event_activity, all_activity=all_activity)
 
 
 @cmte.route('/report/individual_scores', methods=['GET', 'POST'])

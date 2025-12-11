@@ -29,6 +29,18 @@
                         </span>
                         <button class="button is-info ml-3">ค้นหา</button>
                     </div>
+                    <div class="column">
+                        <p>กิจกรรม</p>
+                        <select id="activity-select" name="activity_id">
+                            <option value="" {% if not selected_activity %}selected{% endif %}>-- ทุกกิจกรรม --</option>
+                            {% for activity in all_activity %}
+                                <option value="{{ activity.id }}"
+                                        {% if activity.id|string == selected_activity %}selected{% endif %}>
+                                    {{ activity.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </form>
             </div>
             <div class="column">
@@ -70,7 +82,6 @@
             if (!selectedDates) {
                 selectedDates = startOfYear.format('DD/MM/YYYY') + ' - ' + today.format('DD/MM/YYYY');
             }
-
             $('#dates').daterangepicker({
                 timePicker: false,
                 showDropdowns: true,
@@ -80,7 +91,12 @@
                 },
                 startDate: selectedDates.split(' - ')[0],
                 endDate: selectedDates.split(' - ')[1]
-            });
+            })
+            $('#activity-select').select2({
+                placeholder: "ค้นหา activity...",
+                allowClear: true,
+                width: '100%'
+            })
         });
         $(document).ready(function () {
             $('#events').DataTable({
