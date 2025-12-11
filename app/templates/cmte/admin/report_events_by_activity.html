@@ -21,18 +21,18 @@
                 <h1 class="title has-text-centered">จำนวนผู้เข้าร่วมกิจกรรม ตามชนิดกิจกรรม</h1>
                 <p>ช่วงเวลา</p>
                 <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="control has-icons-left" style="display: flex; align-items: center;">
+                <div class="field is-grouped">
+                    <div class="control has-icons-left" >
                         <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
                                style="width: auto;">
                         <span class="icon is-small is-left">
                             <i class="far fa-calendar-alt"></i>
                         </span>
-                        <button class="button is-info ml-3">ค้นหา</button>
                     </div>
-                    <div class="column">
-                        <p>กิจกรรม</p>
+                    <div class="control is-expanded">
                         <select id="activity-select" name="activity_id">
-                            <option value="" {% if not selected_activity %}selected{% endif %}>-- ทุกกิจกรรม --</option>
+                            <option value="" {{ 'selected' if not selected_activity else '' }}>-- ทุกกิจกรรม --
+                            </option>
                             {% for activity in all_activity %}
                                 <option value="{{ activity.id }}"
                                         {% if activity.id|string == selected_activity %}selected{% endif %}>
@@ -41,6 +41,10 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="control">
+                        <button class="button is-info ml-3">ค้นหา</button>
+                    </div>
+                </div>
                 </form>
             </div>
             <div class="column">
@@ -95,7 +99,8 @@
             $('#activity-select').select2({
                 placeholder: "ค้นหา activity...",
                 allowClear: true,
-                width: '100%'
+                width: '100%',
+                placeholder: "-- ทุกกิจกรรม --",
             })
         });
         $(document).ready(function () {
