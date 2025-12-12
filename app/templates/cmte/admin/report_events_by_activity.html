@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+{% endblock %}
+{% block content %}
+    {% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="column">
+            <div class="is-flex is-justify-content-center is-align-items-center">
+                <a href="{{url_for('cmte.report_sponsors_index')}}" class="button ml-3">สถาบัน</a>
+                <a href="{{url_for('cmte.report_events_index')}}" class="button ml-3">กิจกรรมกลุ่ม</a>
+                <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่
+                    1</a>
+                <a href="{{url_for('cmte.report_members_index')}}" class="button ml-3">สมาชิก</a>
+                <a href="{{ url_for('cmte.report_events_by_activity') }}" class="button is-warning ml-3">ชนิดกิจกรรม</a>
+                <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมส่วนบุคคล</a>
+                <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมกลุ่มบุคคล</a>
+            </div>
+            <div class="column">
+                <h1 class="title has-text-centered">จำนวนผู้เข้าร่วมกิจกรรม ตามชนิดกิจกรรม</h1>
+                <p>ช่วงเวลา</p>
+                <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="field is-grouped">
+                    <div class="control has-icons-left" >
+                        <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
+                               style="width: auto;">
+                        <span class="icon is-small is-left">
+                            <i class="far fa-calendar-alt"></i>
+                        </span>
+                    </div>
+                    <div class="control is-expanded">
+                        <select id="activity-select" name="activity_id">
+                            <option value="" {{ 'selected' if not selected_activity else '' }}>-- ทุกกิจกรรม --
+                            </option>
+                            {% for activity in all_activity %}
+                                <option value="{{ activity.id }}"
+                                        {% if activity.id|string == selected_activity %}selected{% endif %}>
+                                    {{ activity.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="control">
+                        <button class="button is-info ml-3">ค้นหา</button>
+                    </div>
+                </div>
+                </form>
+            </div>
+            <div class="column">
+                <h3 class="title is-3">
+                    จำนวนผู้เข้าร่วมกิจกรรม
+                </h3>
+                <table id="events" class="table is-fullwidth">
+                    <thead>
+                        <th>ชนิด</th>
+                        <th>กิจกรรม</th>
+                        <th>Start-End</th>
+                        <th>จำนวนผู้เข้าร่วม</th>
+                    </thead>
+                    <tbody>
+                    {% for record in event_activity %}
+                        <tr>
+                            <td>{{record.activity}}</td>
+                            <td>{{record.title}}</td>
+                            <td>{{record.start_date|localdate}}-{{record.end_date|localdate}}</td>
+                            <td>{{ record.num_pending_participants }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript"
+            src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        $(document).ready(() => {
+            var today = moment();
+            var startOfYear = moment().startOf('year');
+            var selectedDates = '{{ selected_dates or "" }}';
+            if (!selectedDates) {
+                selectedDates = startOfYear.format('DD/MM/YYYY') + ' - ' + today.format('DD/MM/YYYY');
+            }
+            $('#dates').daterangepicker({
+                timePicker: false,
+                showDropdowns: true,
+                linkedCalendars: false,
+                locale: {
+                    format: 'DD/MM/YYYY'
+                },
+                startDate: selectedDates.split(' - ')[0],
+                endDate: selectedDates.split(' - ')[1]
+            })
+            $('#activity-select').select2({
+                placeholder: "ค้นหา activity...",
+                allowClear: true,
+                width: '100%',
+                placeholder: "-- ทุกกิจกรรม --",
+            })
+        });
+        $(document).ready(function () {
+            $('#events').DataTable({
+            })
+        });
+    </script>
+{% endblock %}

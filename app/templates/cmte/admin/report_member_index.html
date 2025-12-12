@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+{% endblock %}
+{% block content %}
+    {% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="column">
+            <div class="is-flex is-justify-content-center is-align-items-center">
+                <a href="{{url_for('cmte.report_sponsors_index')}}" class="button ml-3">สถาบัน</a>
+                <a href="{{url_for('cmte.report_events_index')}}" class="button ml-3">กิจกรรมกลุ่ม</a>
+                <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่
+                    1</a>
+                <a href="{{ url_for('cmte.report_members_index') }}" class="button is-link ml-3 is-primary">สมาชิก</a>
+                <a href="{{ url_for('cmte.report_events_by_activity') }}" class="button ml-3">ชนิดกิจกรรม</a>
+                <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมส่วนบุคคล</a>
+                <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมกลุ่มบุคคล</a>
+            </div>
+            <div class="column">
+                <h1 class="title has-text-centered">ทะเบียนสมาชิก</h1>
+                <p>ช่วงเวลา</p>
+                <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="control has-icons-left" style="display: flex; align-items: center;">
+                        <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
+                               style="width: auto;">
+                        <span class="icon is-small is-left">
+                            <i class="far fa-calendar-alt"></i>
+                        </span>
+                        <button class="button is-info ml-3">ค้นหา</button>
+                    </div>
+                </form>
+            </div>
+            <div class="column">
+                <h3 class="title is-3">
+                    ชำระค่าธรรมเนียม 500 บาท
+                </h3>
+                <table id="payments" class="table is-fullwidth">
+                    <thead>
+                        <th>ชื่อ</th>
+                        <th>เลข ท.น.</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>วันที่ชำระ</th>
+                        <th></th>
+                    </thead>
+                    <tbody>
+                    {% for record in active_payments %}
+                        <tr>
+                            <td>{{record.license.member}}</td>
+                            <td>{{record.license_number}}</td>
+                            <td>{{record.start_date|localdate}}</td>
+                            <td>{{record.end_date|localdate}}</td>
+                            <td>{{record.payment_datetime|localdatetime}}</td>
+                            <td>
+                                <a class="button" href="{{url_for('cmte.admin_edit_fee_payment_record', record_id=record.id)}}">
+                                    <span class="icon">
+                                       <i class="fas fa-pencil-alt"></i>
+                                    </span>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript"
+            src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        $(document).ready(() => {
+            var today = moment();
+            var startOfYear = moment().startOf('year');
+            var selectedDates = '{{ selected_dates or "" }}';
+            if (!selectedDates) {
+                selectedDates = startOfYear.format('DD/MM/YYYY') + ' - ' + today.format('DD/MM/YYYY');
+            }
+
+            $('#dates').daterangepicker({
+                timePicker: false,
+                showDropdowns: true,
+                linkedCalendars: false,
+                locale: {
+                    format: 'DD/MM/YYYY'
+                },
+                startDate: selectedDates.split(' - ')[0],
+                endDate: selectedDates.split(' - ')[1]
+            });
+        });
+        $(document).ready(function () {
+            $('#payments').DataTable({
+            })
+        });
+    </script>
+{% endblock %}

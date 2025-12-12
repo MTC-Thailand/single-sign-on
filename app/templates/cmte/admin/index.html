@@ -95,6 +95,27 @@
                     </a>
                 </article>
                 <article class="panel is-info">
+                    <p class="panel-heading">Report</p>
+                    <a class="panel-block" href="{{url_for('cmte.report_sponsors_index')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-file"></i>
+                        </span>
+                        สถาบัน
+                    </a>
+                    <a class="panel-block" href="{{url_for('cmte.report_events_index')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-calendar"></i>
+                        </span>
+                        กิจกรรม
+                    </a>
+                    <a class="panel-block" href="{{url_for('cmte.report_sponsors_index')}}">
+                        <span class="panel-icon">
+                            <i class="fas fa-people-carry"></i>
+                        </span>
+                        สมาชิก
+                    </a>
+                </article>
+                <article class="panel is-info">
                     <p class="panel-heading">ตั้งค่า</p>
                     <a class="panel-block" href="{{url_for('cmte.admin_event_edit')}}">
                         <span class="panel-icon">
