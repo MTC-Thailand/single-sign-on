@@ -46,11 +46,11 @@
                     <tbody>
                     {% for group_record in approved_status %}
                         <tr>
-                            <td>{{group_record.records.event_type.name}}</td>
-                            <td>{{group_record.records.activity}}</td>
-                            <td>{{group_record.records.start_date|localdate}}</td>
-                            <td>{{group_record.records.end_date|localdate}}</td>
-                            <td>{{group_record.records.desc }}</td>
+                            <td>{{group_record.record.event_type.name}}</td>
+                            <td>{{group_record.record.activity}}</td>
+                            <td>{{group_record.record.start_date|localdate}}</td>
+                            <td>{{group_record.record.end_date|localdate}}</td>
+                            <td>{{group_record.record.desc }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -71,11 +71,11 @@
                     <tbody>
                     {% for group_record in rejected_status %}
                         <tr>
-                            <td>{{group_record.records.event_type.name}}</td>
-                            <td>{{group_record.records.activity}}</td>
-                            <td>{{group_record.records.start_date|localdate}}</td>
-                            <td>{{group_record.records.end_date|localdate}}</td>
-                            <td>{{group_record.records.desc }}</td>
+                            <td>{{group_record.record.event_type.name}}</td>
+                            <td>{{group_record.record.activity}}</td>
+                            <td>{{group_record.record.start_date|localdate}}</td>
+                            <td>{{group_record.record.end_date|localdate}}</td>
+                            <td>{{group_record.record.desc }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -96,11 +96,11 @@
                     <tbody>
                     {% for group_record in waiting_status %}
                         <tr>
-                            <td>{{group_record.records.event_type.name}}</td>
-                            <td>{{group_record.records.activity}}</td>
-                            <td>{{group_record.records.start_date|localdate}}</td>
-                            <td>{{group_record.records.end_date|localdate}}</td>
-                            <td>{{group_record.records.desc }}</td>
+                            <td>{{group_record.record.event_type.name}}</td>
+                            <td>{{group_record.record.activity}}</td>
+                            <td>{{group_record.record.start_date|localdate}}</td>
+                            <td>{{group_record.record.end_date|localdate}}</td>
+                            <td>{{group_record.record.desc }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
