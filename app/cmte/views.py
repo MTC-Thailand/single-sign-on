@@ -3103,7 +3103,7 @@ def report_events_by_sponsor():
         start_d, end_d = form.get('dates').split(' - ')
         start = datetime.strptime(start_d, '%d/%m/%Y')
         end = datetime.strptime(end_d, '%d/%m/%Y')
-        query = CMTEEvent.queryf
+        query = CMTEEvent.query
         if start:
             all_events = query.filter(
                 CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None, CMTEEvent.sponsor_id != None,
@@ -3156,9 +3156,11 @@ def report_members_index():
 def report_events_by_activity():
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
-    event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None, CMTEEvent.activity_id != None,
-                func.date(CMTEEvent.start_date) <= today,
-                func.date(CMTEEvent.end_date) >= start_of_year)
+    event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None,
+                                            CMTEEvent.approved_datetime != None,
+                                            CMTEEvent.activity_id != None,
+                                            func.date(CMTEEvent.start_date) <= today,
+                                            func.date(CMTEEvent.end_date) >= start_of_year)
     all_activity = CMTEEventActivity.query.all()
     selected_dates = None
     selected_activity = ''
@@ -3171,14 +3173,28 @@ def report_events_by_activity():
         selected_activity = request.form.get('activity_id')
         if start:
             event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None,
+                                                    CMTEEvent.approved_datetime != None,
                                                     CMTEEvent.activity_id != None,
                                                     func.date(CMTEEvent.start_date) <= end.date(),
                                                     func.date(CMTEEvent.end_date) >= start.date())
             if selected_activity:
                 event_activity = event_activity.filter_by(activity_id=selected_activity)
 
+    # event_activities = []
+    # for event in event_activity:
+    #     event_activities.append({
+    #         'title': event.title,
+    #         'activity': event.activity.name,
+    #         'participants': event.participants.count(),
+    #     })
+    #
+    # event_activity_df = pd.DataFrame(event_activities)
+    # event_activity_table = event_activity_df.pivot(index=['activity'], columns=['title', 'participants']).to_html()
+    event_activity_table = None
+
     return render_template('cmte/admin/report_events_by_activity.html', selected_dates=selected_dates,
-                           event_activity=event_activity, all_activity=all_activity, selected_activity=selected_activity)
+                           event_activity=event_activity, all_activity=all_activity, selected_activity=selected_activity,
+                           event_activity_table=event_activity_table)
 
 
 @cmte.route('/report/individual_scores', methods=['GET', 'POST'])
