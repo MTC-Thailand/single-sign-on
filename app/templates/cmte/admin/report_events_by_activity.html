@@ -53,24 +53,6 @@
                     จำนวนผู้เข้าร่วมกิจกรรม
                 </h3>
                 {{ event_activity_table|safe }}
-                <table id="events" class="table is-fullwidth">
-                    <thead>
-                        <th>ชนิด</th>
-                        <th>กิจกรรม</th>
-                        <th>Start-End</th>
-                        <th>จำนวนผู้เข้าร่วม</th>
-                    </thead>
-                    <tbody>
-                    {% for record in event_activity %}
-                        <tr>
-                            <td>{{record.activity}}</td>
-                            <td>{{record.title}}</td>
-                            <td>{{record.start_date|localdate}}-{{record.end_date|localdate}}</td>
-                            <td>{{ record.participants.count() }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
             </div>
         </div>
     </section>
@@ -103,10 +85,6 @@
                 allowClear: true,
                 width: '100%',
                 placeholder: "-- ทุกกิจกรรม --",
-            })
-        });
-        $(document).ready(function () {
-            $('#events').DataTable({
             })
         });
     </script>

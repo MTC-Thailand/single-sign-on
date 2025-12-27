@@ -38,130 +38,31 @@
             <div class="column">
                 <h3 class="title is-3">
                     ที่อนุมัติคะแนนกิจกรรมแล้ว
-                    <span class="tag is-warning is-rounded">{{ all_events.count() }}</span>
                 </h3>
-                <table id="events" class="table is-fullwidth">
-                    <thead>
-                    <th>ชื่อกิจกรรม</th>
-                    <th>เริ่มต้น</th>
-                    <th>สิ้นสุด</th>
-                    <th>สถาบัน</th>
-                    <th>จำนวนผู้เข้าร่วม</th>
-                    </thead>
-                    <tbody>
-                    {% for event in all_events %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
-                                    {{ event.title }}</a>
-                            </td>
-                            <td>{{ event.start_date|localdatetime }}</td>
-                            <td>{{ event.end_date|localdatetime }}</td>
-                            <td>{{ event.sponsor }}</td>
-                            <td>{{ event.participants.count() }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+               {{ all_event_html_table|safe }}
             </div>
             <div class="column">
-
                 <h3 class="title is-3">
                     ที่ยังไม่บันทึกผู้เข้าร่วมกิจกรรม
-                    {% if without_participants %}
-                        <span class="tag is-warning is-rounded">
-                            {{ without_participants.count() }}
-                        </span>
-                    {% endif %}
                 </h3>
-
-                <table id="sponsors" class="table is-fullwidth">
-                    <thead>
-                    <th>ชื่อกิจกรรม</th>
-                    <th>เริ่มต้น</th>
-                    <th>สิ้นสุด</th>
-                    <th>สถาบัน</th>
-                    </thead>
-                    <tbody>
-                    {% for event in without_participants %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
-                                    {{ event.title }}</a>
-                            </td>
-                            <td>{{ event.start_date|localdatetime }}</td>
-                            <td>{{ event.end_date|localdatetime }}</td>
-                            <td>{{ event.sponsor }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                {{ without_participants_html_table|safe }}
             </div>
             <div class="column">
                 <h3 class="title is-3">
                     ที่รออนุมัติคะแนนผู้เข้าร่วมกิจกรรม
-                    {% if event_pending_approve_participants %}
-                        <span class="tag is-warning is-rounded">
-                            {{ event_pending_approve_participants|length or 0 }}
-                        </span>
-                    {% endif %}
                 </h3>
-                <table id="sponsors" class="table is-fullwidth">
-                    <thead>
-                    <th>ชื่อกิจกรรม</th>
-                    <th>เริ่มต้น</th>
-                    <th>สิ้นสุด</th>
-                    <th>สถาบัน</th>
-                    </thead>
-                    <tbody>
-                    {% for event in event_pending_approve_participants %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
-                                    {{ event.title }}</a>
-                            </td>
-                            <td>{{ event.start_date|localdatetime }}</td>
-                            <td>{{ event.end_date|localdatetime }}</td>
-                            <td>{{ event.sponsor }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                {{ pending_approve_participants_table|safe }}
             </div>
             <div class="column">
                 <ul>
                     <li>
                         <h3 class="title is-3">
                             ที่ขอยกเลิก
-                            {% if cancel_events %}
-                                <span class="tag is-warning is-rounded">
-                                {{ cancel_events.count() or 0 }}
-                                </span>
-                            {% endif %}
+
                         </h3>
                     </li>
                 </ul>
-                <table id="sponsors" class="table is-fullwidth">
-                    <thead>
-                    <th>ชื่อกิจกรรม</th>
-                    <th>เริ่มต้น</th>
-                    <th>สิ้นสุด</th>
-                    <th>สถาบัน</th>
-                    </thead>
-                    <tbody>
-                    {% for event in cancel_events %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('cmte.admin_preview_event', event_id=event.id) }}">
-                                    {{ event.title }}</a>
-                            </td>
-                            <td>{{ event.start_date|localdatetime }}</td>
-                            <td>{{ event.end_date|localdatetime }}</td>
-                            <td>{{ event.sponsor }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                {{ cancel_events_table|safe }}
             </div>
         </div>
     </section>
@@ -189,14 +90,6 @@
                 startDate: selectedDates.split(' - ')[0],
                 endDate: selectedDates.split(' - ')[1]
             });
-        });
-    </script>
-    <script>
-        $(document).ready(function () {
-            $('#sponsors').DataTable({})
-        });
-        $(document).ready(function () {
-            $('#events').DataTable({})
         });
     </script>
 {% endblock %}

@@ -3121,44 +3121,134 @@ def report_events_by_sponsor():
     selected_dates = None
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
-    all_events = CMTEEvent.query.filter(
-        CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None, CMTEEvent.sponsor_id != None,
-        func.date(CMTEEvent.start_date) <= today,
-        func.date(CMTEEvent.end_date) >= start_of_year)
-    without_participants = all_events.filter(CMTEEvent.participants == None)
-    cancel_events = CMTEEvent.query.filter(
-        CMTEEvent.cancelled_datetime != None, CMTEEvent.sponsor_id != None,
-        func.date(CMTEEvent.start_date) <= today,
-        func.date(CMTEEvent.end_date) >= start_of_year)
-    event_pending_approve_participants = []
-    for event in all_events:
-        if event.num_pending_participants:
-            event_pending_approve_participants.append(event)
+    dafault_year = start_of_year.year
+    event_query = """
+        SELECT e.title as event, s.name as sponsor
+        FROM cmte_events e
+        INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+        WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+          AND e.approved_datetime IS NOT NULL
+          and e.cancelled_datetime is null
+        GROUP BY e.title, s.name
+        """
+
+    without_participants_query = """
+            SELECT e.title as event, s.name as sponsor
+            FROM cmte_events e
+            INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+            LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+            WHERE ep.event_id IS NULL
+              AND EXTRACT(YEAR FROM e.approved_datetime) = %s
+              AND e.approved_datetime IS NOT NULL
+              and e.cancelled_datetime is null
+            GROUP BY e.title, s.name
+            """
+
+    pending_approve_participants = """
+                SELECT e.title as event, s.name as sponsor
+                FROM cmte_events e
+                INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+                INNER JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+                WHERE ep.approved_date IS NULL
+                  AND EXTRACT(YEAR FROM e.approved_datetime) = %s
+                  AND e.approved_datetime IS NOT NULL
+                  and e.cancelled_datetime IS NULL
+                GROUP BY e.title, s.name
+                """
+
+    cancel_events_query = """
+                    SELECT e.title as event, s.name as sponsor
+                    FROM cmte_events e
+                    INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+                    WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+                      and e.cancelled_datetime IS NOT NULL
+                    GROUP BY e.title, s.name
+                    """
+
+    events = pd.read_sql_query(event_query, con=db.engine, params=(dafault_year,))
+    all_event_html_table = events.to_html(classes='table is-bordered is-fullwidth', index=False)
+    without_participants_events = pd.read_sql_query(without_participants_query, con=db.engine, params=(dafault_year,))
+    without_participants_html_table = \
+        without_participants_events.to_html(classes='table is-bordered is-fullwidth', index=False)
+    pending_approve_participants_events = pd.read_sql_query(pending_approve_participants, con=db.engine,
+                                                            params=(dafault_year,))
+    pending_approve_participants_table = \
+        pending_approve_participants_events.to_html(classes='table is-bordered is-fullwidth', index=False)
+    cancel_events = pd.read_sql_query(cancel_events_query, con=db.engine,
+                                      params=(dafault_year,))
+    cancel_events_table = cancel_events.to_html(classes='table is-bordered is-fullwidth', index=False)
+
     if request.method == 'POST':
         form = request.form
         selected_dates = request.form.get('dates', None)
         start_d, end_d = form.get('dates').split(' - ')
         start = datetime.strptime(start_d, '%d/%m/%Y')
         end = datetime.strptime(end_d, '%d/%m/%Y')
-        query = CMTEEvent.query
         if start:
-            all_events = query.filter(
-                CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None, CMTEEvent.sponsor_id != None,
-                and_(func.date(CMTEEvent.start_date) <= end.date(),
-                    CMTEEvent.end_date >= start.date()))
-            cancel_events = all_events.filter(
-                CMTEEvent.cancelled_datetime != None,
-                and_(func.date(CMTEEvent.start_date) <= end.date(), CMTEEvent.sponsor_id != None,
-                    CMTEEvent.end_date >= start.date()))
-        without_participants = all_events.filter(CMTEEvent.participants == None)
-        event_pending_approve_participants = []
-        for event in all_events:
-            if event.num_pending_participants:
-                event_pending_approve_participants.append(event)
-    return render_template('cmte/admin/report_event_by_sponsor.html', all_events=all_events,
-                           without_participants=without_participants,
-                           event_pending_approve_participants=event_pending_approve_participants,
-                           selected_dates=selected_dates, cancel_events=cancel_events)
+            event_query = """
+                    SELECT e.title as event, s.name as sponsor
+                    FROM cmte_events e
+                    INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+                    WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+                      AND e.start_date >= %s and e.end_date <= %s
+                      AND e.approved_datetime IS NOT NULL
+                      and e.cancelled_datetime is null
+                    GROUP BY e.title, s.name
+                    """
+
+            without_participants_query = """
+                        SELECT e.title as event, s.name as sponsor
+                        FROM cmte_events e
+                        INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+                        LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+                        WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+                          AND ep.event_id IS NULL
+                          AND e.start_date >= %s and e.end_date <= %s
+                          AND e.approved_datetime IS NOT NULL
+                          and e.cancelled_datetime is null
+                        GROUP BY e.title, s.name
+                        """
+
+            pending_approve_participants = """
+                            SELECT e.title as event, s.name as sponsor
+                            FROM cmte_events e
+                            INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+                            INNER JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+                            WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+                              AND ep.approved_date IS NULL
+                              AND e.start_date >= %s and e.end_date <= %s
+                              AND e.approved_datetime IS NOT NULL
+                              and e.cancelled_datetime IS NULL
+                            GROUP BY e.title, s.name
+                            """
+
+            cancel_events_query = """
+                                SELECT e.title as event, s.name as sponsor
+                                FROM cmte_events e
+                                INNER JOIN cmte_event_sponsors as s on e.sponsor_id = s.id
+                                WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+                                  AND e.start_date >= %s and e.end_date <= %s
+                                  AND e.cancelled_datetime IS NOT NULL
+                                GROUP BY e.title, s.name
+                                """
+        events = pd.read_sql_query(event_query, con=db.engine, params=(dafault_year, start, end,))
+        all_event_html_table = events.to_html(classes='table is-bordered is-fullwidth', index=False)
+        without_participants_events = pd.read_sql_query(without_participants_query, con=db.engine, params=(dafault_year, start, end,))
+        without_participants_html_table = \
+            without_participants_events.to_html(classes='table is-bordered is-fullwidth', index=False)
+        pending_approve_participants_events = pd.read_sql_query(pending_approve_participants, con=db.engine,
+                                                                params=(dafault_year, start, end,))
+        pending_approve_participants_table = \
+            pending_approve_participants_events.to_html(classes='table is-bordered is-fullwidth', index=False)
+        cancel_events = pd.read_sql_query(cancel_events_query, con=db.engine,
+                                          params=(dafault_year, start, end,))
+        cancel_events_table = cancel_events.to_html(classes='table is-bordered is-fullwidth', index=False)
+
+    return render_template('cmte/admin/report_event_by_sponsor.html',
+                           all_event_html_table=all_event_html_table,
+                           without_participants_html_table=without_participants_html_table,
+                           pending_approve_participants_table=pending_approve_participants_table,
+                           cancel_events_table=cancel_events_table, selected_dates=selected_dates)
 
 
 @cmte.route('/report/members', methods=['GET', 'POST'])
@@ -3191,16 +3281,34 @@ def report_members_index():
 @login_required
 @cmte_admin_permission.require()
 def report_events_by_activity():
+    selected_dates = None
+    selected_activity = ''
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
+    dafault_year = start_of_year.year
+    query = """
+        SELECT ac.number as ชนิดกิจกรรม, ac.name as กิจกรรม, e.title, COUNT(ep.event_id) AS participant_count
+        FROM cmte_events e
+        JOIN cmte_event_activities as ac on e.activity_id = ac.id
+        LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+        WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+          AND e.approved_datetime IS NOT NULL
+          and e.cancelled_datetime is null
+          and e.activity_id is not null
+        GROUP BY ac.number, ac.name, e.title
+        """
+
+    events = pd.read_sql_query(query, con=db.engine, params=(dafault_year,))
+    event_activity_table = events.to_html(classes='table is-bordered is-fullwidth', index=False)
+
+
     event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None,
                                             CMTEEvent.approved_datetime != None,
                                             CMTEEvent.activity_id != None,
                                             func.date(CMTEEvent.start_date) <= today,
                                             func.date(CMTEEvent.end_date) >= start_of_year)
     all_activity = CMTEEventActivity.query.all()
-    selected_dates = None
-    selected_activity = ''
+
     if request.method == 'POST':
         form = request.form
         selected_dates = request.form.get('dates', None)
@@ -3209,14 +3317,45 @@ def report_events_by_activity():
         end = datetime.strptime(end_d, '%d/%m/%Y')
         selected_activity = request.form.get('activity_id')
         if start:
+            query = """
+                    SELECT ac.number as ชนิดกิจกรรม, ac.name as กิจกรรม, e.title, COUNT(ep.event_id) AS participant_count
+                    FROM cmte_events e
+                    JOIN cmte_event_activities as ac on e.activity_id = ac.id
+                    LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+                    WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+                      AND e.start_date >= %s and e.end_date <= %s
+                      AND e.approved_datetime IS NOT NULL
+                      and e.cancelled_datetime is null
+                      and e.activity_id is not null
+                    GROUP BY ac.number, ac.name, e.title
+                    """
+
+            events = pd.read_sql_query(query, con=db.engine, params=(dafault_year, start, end,))
+
+
             event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None,
                                                     CMTEEvent.approved_datetime != None,
                                                     CMTEEvent.activity_id != None,
                                                     func.date(CMTEEvent.start_date) <= end.date(),
                                                     func.date(CMTEEvent.end_date) >= start.date())
             if selected_activity:
-                event_activity = event_activity.filter_by(activity_id=selected_activity)
+                query = """
+                                    SELECT ac.number as ชนิดกิจกรรม, ac.name as กิจกรรม, e.title, COUNT(ep.event_id) AS participant_count
+                                    FROM cmte_events e
+                                    JOIN cmte_event_activities as ac on e.activity_id = ac.id
+                                    LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+                                    WHERE e.activity_id = %s
+                                      AND EXTRACT(YEAR FROM e.approved_datetime) = %s
+                                      AND e.start_date >= %s and e.end_date <= %s
+                                      AND e.approved_datetime IS NOT NULL
+                                      and e.cancelled_datetime is null
+                                      and e.activity_id is not null
+                                    GROUP BY ac.number, ac.name, e.title
+                                    """
 
+                events = pd.read_sql_query(query, con=db.engine, params=(selected_activity, dafault_year, start, end,))
+                event_activity = event_activity.filter_by(activity_id=selected_activity)
+            event_activity_table = events.to_html(classes='table is-bordered is-fullwidth', index=False)
     # event_activities = []
     # for event in event_activity:
     #     event_activities.append({
@@ -3227,7 +3366,6 @@ def report_events_by_activity():
     #
     # event_activity_df = pd.DataFrame(event_activities)
     # event_activity_table = event_activity_df.pivot(index=['activity'], columns=['title', 'participants']).to_html()
-    event_activity_table = None
 
     return render_template('cmte/admin/report_events_by_activity.html', selected_dates=selected_dates,
                            event_activity=event_activity, all_activity=all_activity, selected_activity=selected_activity,
