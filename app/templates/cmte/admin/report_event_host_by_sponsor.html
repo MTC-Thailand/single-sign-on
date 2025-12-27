@@ -9,8 +9,8 @@
         <div class="column">
             <div class="is-flex is-justify-content-center is-align-items-center">
                 <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button">สถาบัน</a>
-                <a href="{{ url_for('cmte.report_events_index') }}" class="button is-link ml-3">กิจกรรมกลุ่ม</a>
-                <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button ml-3">ทะเบียนกิจกรรม</a>
+                <a href="{{ url_for('cmte.report_events_index') }}" class="button ml-3">กิจกรรมกลุ่ม</a>
+                <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button is-link ml-3">ทะเบียนกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่ 1</a>
                 <a href="{{url_for('cmte.report_members_index')}}" class="button ml-3">สมาชิก</a>
                 <a href="{{ url_for('cmte.report_events_by_activity') }}" class="button ml-3">ชนิดกิจกรรม</a>
@@ -18,7 +18,7 @@
                 <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมกลุ่มบุคคล</a>
             </div>
             <br>
-            <h1 class="title has-text-centered">จำนวนกิจกรรมที่สถาบันฝึกอบรมการศึกษาต่อเนื่องจัดขึ้น</h1>
+            <h1 class="title has-text-centered">ทะเบียนกิจกรรมที่สถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์จัด</h1>
             <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="columns">
                     <div class="column">
@@ -32,23 +32,10 @@
                             <button class="button is-info ml-3">ค้นหา</button>
                         </div>
                     </div>
-                    {#                <div class="column">#}
-                    {#                    <p>ชื่อสถาบัน</p>#}
-                    {#                    <select id="sponsor-select" name="sponsor_id">#}
-                    {#                       <option value="" {% if not selected_sponsor %}selected{% endif %}>-- ทุกสถาบัน --</option>#}
-                    {#                        {% for sponsor in list_sponsors %}#}
-                    {#                        <option value="{{ sponsor.id }}" {% if sponsor.id|string == selected_sponsor %}selected{% endif %}>#}
-                    {#                            {{ sponsor.name }}#}
-                    {#                        </option>#}
-                    {#                        {% endfor %}#}
-                    {#                    </select>#}
-                    {#                </div>#}
                 </div>
             </form>
             <hr>
             <div class="column">
-                <div class="is-flex is-justify-content-space-between is-align-items-center">
-                </div>
                 {{ event_html_table|safe }}
             </div>
         </div>
@@ -78,10 +65,6 @@
                 startDate: selectedDates.split(' - ')[0],
                 endDate: selectedDates.split(' - ')[1]
             });
-            {#$('#sponsor-select').select2({#}
-            {#    placeholder: "ค้นหา Sponsor...",#}
-            {#    allowClear: true,#}
-            {#    width: '100%'#}
         });
     </script>
 {% endblock %}

@@ -3024,57 +3024,94 @@ def report_events_index():
     selected_dates = None
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
-    all_events = CMTEEvent.query.filter(
-        CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None, CMTEEvent.sponsor_id != None,
-        func.date(CMTEEvent.start_date) <= today,
-        func.date(CMTEEvent.end_date) >= start_of_year)
-    count_events = all_events.count()
-    without_participants = all_events.filter(CMTEEvent.participants == None)
-    cancel_events = CMTEEvent.query.filter(
-        CMTEEvent.cancelled_datetime != None, CMTEEvent.sponsor_id != None,
-        func.date(CMTEEvent.start_date) <= today,
-        func.date(CMTEEvent.end_date) >= start_of_year)
-    count_pending_approve_participants = 0
-    sponsor_events = {}
-    event_pending_approve_participants = []
-    for event in all_events:
-        sponsor_id = event.sponsor_id
-        sponsor_events.setdefault(sponsor_id, []).append(event)
-        if event.num_pending_participants:
-            count_pending_approve_participants += 1
-            event_pending_approve_participants.append(event)
+    dafault_year = start_of_year.year
+    query = """
+    SELECT * FROM cmte_events inner join cmte_event_sponsors on cmte_events.sponsor_id=cmte_event_sponsors.id 
+    where extract(year from cmte_events.approved_datetime) = %s and cmte_events.approved_datetime is not null
+    """
+
+    events = pd.read_sql_query(query,con=db.engine, params=(dafault_year,))
+    event_html_table = \
+    pd.pivot_table(events, index=events.name, columns=[events.approved_datetime.dt.year], aggfunc='count')[
+        'approved_datetime'].to_html(classes='table is-bordered is-fullwidth')
     if request.method == 'POST':
         form = request.form
         selected_dates = request.form.get('dates', None)
         start_d, end_d = form.get('dates').split(' - ')
         start = datetime.strptime(start_d, '%d/%m/%Y')
         end = datetime.strptime(end_d, '%d/%m/%Y')
-        query = CMTEEvent.query
         if start:
-            query = query.filter(
-                CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None, CMTEEvent.sponsor_id != None,
-                and_(func.date(CMTEEvent.start_date) <= end.date(),
-                    CMTEEvent.end_date >= start.date()))
-            cancel_events = query.filter(
-                CMTEEvent.cancelled_datetime != None,
-                and_(func.date(CMTEEvent.start_date) <= end.date(), CMTEEvent.sponsor_id != None,
-                    CMTEEvent.end_date >= start.date()))
-        count_events = query.count()
-        without_participants = query.filter(CMTEEvent.participants == None)
-        all_events = query
-        sponsor_events = {}
-        for event in query:
-            sponsor_id = event.sponsor_id
-            sponsor_events.setdefault(sponsor_id, []).append(event)
-            if event.num_pending_participants:
-                count_pending_approve_participants += 1
-                event_pending_approve_participants.append(event)
-    return render_template('cmte/admin/report_event_index.html', all_events=all_events,
-                           sponsor_events=sponsor_events,
-                           count_events=count_events, without_participants=without_participants,
-                           event_pending_approve_participants=event_pending_approve_participants,
-                           count_pending_approve_participants=count_pending_approve_participants,
-                           selected_dates=selected_dates, cancel_events=cancel_events)
+            query = """
+                        SELECT es.name, COUNT(e.id) AS events_count 
+                        FROM cmte_event_sponsors es left join cmte_events e
+                        on e.sponsor_id=es.id 
+                        where 
+                         start_date >= %s and end_date <= %s and 
+                         extract(year from e.approved_datetime) = %s and 
+                        e.approved_datetime is not null
+                        GROUP BY es.name
+                            """
+            events = pd.read_sql_query(query, con=db.engine, params=(start, end, dafault_year, ))
+            event_html_table = \
+                pd.pivot_table(events, index=events.name, aggfunc={'events_count': 'sum'}).to_html(classes='table is-bordered is-fullwidth')
+    return render_template('cmte/admin/report_event_index.html', event_html_table=event_html_table,
+                           selected_dates=selected_dates)
+
+
+@cmte.route('/report/event-host-by-sponsor', methods=['GET', 'POST'])
+@login_required
+@cmte_admin_permission.require()
+def report_event_host_by_sponsor():
+    selected_dates = None
+    today = datetime.now().date()
+    start_of_year = datetime(today.year, 1, 1).date()
+    dafault_year = start_of_year.year
+    query = """
+    SELECT e.title, e.approved_datetime, COUNT(ep.event_id) AS participant_count
+    FROM cmte_events e
+    LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+    WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+      AND e.approved_datetime IS NOT NULL
+      and e.cancelled_datetime is null
+      and e.sponsor_id is not null
+    GROUP BY e.title, e.approved_datetime
+    """
+
+    events = pd.read_sql_query(query,con=db.engine, params=(dafault_year,))
+    event_html_table = \
+    pd.pivot_table(events, index=events.title, columns=[events.approved_datetime.dt.year],
+                   aggfunc={'participant_count': 'sum'}).to_html(classes='table is-bordered is-fullwidth')
+
+    all_events = CMTEEvent.query.filter(
+        CMTEEvent.approved_datetime != None, CMTEEvent.cancelled_datetime == None, CMTEEvent.sponsor_id != None,
+        func.date(CMTEEvent.start_date) <= today,
+        func.date(CMTEEvent.end_date) >= start_of_year)
+    if request.method == 'POST':
+        form = request.form
+        selected_dates = request.form.get('dates', None)
+        start_d, end_d = form.get('dates').split(' - ')
+        start = datetime.strptime(start_d, '%d/%m/%Y')
+        end = datetime.strptime(end_d, '%d/%m/%Y')
+        if start:
+            query = """
+                SELECT e.title, e.approved_datetime, COUNT(ep.event_id) AS participant_count
+                FROM cmte_events e
+                LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
+                WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
+                  AND e.approved_datetime IS NOT NULL
+                  and e.cancelled_datetime is null
+                  and e.sponsor_id is not null
+                  and e.start_date >= %s and e.end_date <= %s
+                GROUP BY e.title, e.approved_datetime
+                """
+
+            events = pd.read_sql_query(query, con=db.engine, params=(dafault_year,start, end,))
+            event_html_table = \
+                pd.pivot_table(events, index=events.title,
+                               aggfunc={'participant_count': 'sum'}).to_html(classes='table is-bordered is-fullwidth')
+
+    return render_template('cmte/admin/report_event_host_by_sponsor.html', all_events=all_events, event_html_table=event_html_table,
+                           selected_dates=selected_dates)
 
 
 @cmte.route('/report/event-by-sponsor', methods=['GET', 'POST'])
