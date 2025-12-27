@@ -10,16 +10,15 @@
             <div class="is-flex is-justify-content-center is-align-items-center">
                 <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button">สถาบัน</a>
                 <a href="{{ url_for('cmte.report_events_index') }}" class="button ml-3">กิจกรรมกลุ่ม</a>
-                <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button ml-3">ทะเบียนกิจกรรม</a>
-                <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button is-link ml-3">กิจกรรมประเภทที่
-                    1</a>
+                <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button is-link ml-3">ทะเบียนกิจกรรม</a>
+                <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่ 1</a>
                 <a href="{{url_for('cmte.report_members_index')}}" class="button ml-3">สมาชิก</a>
                 <a href="{{ url_for('cmte.report_events_by_activity') }}" class="button ml-3">ชนิดกิจกรรม</a>
                 <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมส่วนบุคคล</a>
                 <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมกลุ่มบุคคล</a>
             </div>
             <br>
-            <h1 class="title has-text-centered">กิจกรรมที่สถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์จัด</h1>
+            <h1 class="title has-text-centered">ทะเบียนกิจกรรมที่สถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์จัด</h1>
             <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="columns">
                     <div class="column">
@@ -28,47 +27,23 @@
                             <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
                                    style="width: auto;">
                             <span class="icon is-small is-left">
-                                <i class="far fa-calendar-alt"></i>
-                            </span>
+                            <i class="far fa-calendar-alt"></i>
+                        </span>
                             <button class="button is-info ml-3">ค้นหา</button>
                         </div>
                     </div>
                 </div>
             </form>
+            <hr>
             <div class="column">
-                <h3 class="title is-3">
-                    ที่อนุมัติคะแนนกิจกรรมแล้ว
-                </h3>
-               {{ all_event_html_table|safe }}
-            </div>
-            <div class="column">
-                <h3 class="title is-3">
-                    ที่ยังไม่บันทึกผู้เข้าร่วมกิจกรรม
-                </h3>
-                {{ without_participants_html_table|safe }}
-            </div>
-            <div class="column">
-                <h3 class="title is-3">
-                    ที่รออนุมัติคะแนนผู้เข้าร่วมกิจกรรม
-                </h3>
-                {{ pending_approve_participants_table|safe }}
-            </div>
-            <div class="column">
-                <ul>
-                    <li>
-                        <h3 class="title is-3">
-                            ที่ขอยกเลิก
-
-                        </h3>
-                    </li>
-                </ul>
-                {{ cancel_events_table|safe }}
+                {{ event_html_table|safe }}
             </div>
         </div>
     </section>
 {% endblock %}
 {% block scripts %}
     {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="text/javascript"
             src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
