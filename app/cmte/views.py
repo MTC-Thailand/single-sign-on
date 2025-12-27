@@ -3378,6 +3378,53 @@ def report_events_by_activity():
 def report_individual_scores():
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
+    dafault_year = start_of_year.year
+    approved_query = """
+                SELECT members.th_firstname as ชื่อ, members.th_lastname as นามสกุล,
+                li.number as เลขทน, ep.start_date, ep.end_date, ep.score 
+                FROM cmte_event_participation_records as ep
+                JOIN licenses as li on ep.license_number = li.number
+                LEFT JOIN members on li.member_id=members.id
+                WHERE EXTRACT(YEAR FROM ep.approved_date) = %s
+                  AND ep.individual = TRUE
+                  AND ep.approved_date IS NOT NULL
+                  AND ep.create_datetime IS NOT NULL
+                """
+    approved_status = pd.read_sql_query(approved_query, con=db.engine, params=(dafault_year,))
+    approved_status_table = approved_status.to_html(classes='table is-bordered is-fullwidth', index=False)
+
+    rejected_query = """
+                    SELECT members.th_firstname as ชื่อ, members.th_lastname as นามสกุล,
+                    li.number as เลขทน, ep.start_date, ep.end_date, ep.score 
+                    FROM cmte_event_participation_records as ep
+                    JOIN licenses as li on ep.license_number = li.number
+                    LEFT JOIN members on li.member_id=members.id
+                    WHERE EXTRACT(YEAR FROM ep.approved_date) = %s
+                      AND ep.individual = TRUE
+                      AND ep.closed_date IS NOT NULL
+                      AND ep.approved_date IS NOT NULL
+                      AND ep.create_datetime IS NOT NULL 
+                    """
+    rejected_status = pd.read_sql_query(rejected_query, con=db.engine, params=(dafault_year,))
+    rejected_status_table = rejected_status.to_html(classes='table is-bordered is-fullwidth', index=False)
+
+
+    waiting_query = """
+                        SELECT members.th_firstname as ชื่อ, members.th_lastname as นามสกุล,
+                        li.number as เลขทน, ep.start_date, ep.end_date, ep.score 
+                        FROM cmte_event_participation_records as ep
+                        JOIN licenses as li on ep.license_number = li.number
+                        LEFT JOIN members on li.member_id=members.id
+                        WHERE EXTRACT(YEAR FROM ep.approved_date) = %s
+                          AND ep.individual = TRUE
+                          AND ep.closed_date IS NULL
+                          AND ep.approved_date IS NULL
+                          AND ep.create_datetime IS NOT NULL
+                        GROUP BY members.th_firstname ,members.th_lastname ,li.number, ep.start_date,ep.end_date,ep.score   
+                        HAVING count(ep.id)>0  
+                        """
+    waiting_status = pd.read_sql_query(waiting_query, con=db.engine, params=(dafault_year,))
+    waiting_status_table = waiting_status.to_html(classes='table is-bordered is-fullwidth', index=False)
     query = CMTEEventParticipationRecord.query.filter_by(individual=True) \
         .filter(CMTEEventParticipationRecord.create_datetime != None,
                 func.date(CMTEEventParticipationRecord.start_date) <= today,
@@ -3391,6 +3438,55 @@ def report_individual_scores():
         start = datetime.strptime(start_d, '%d/%m/%Y')
         end = datetime.strptime(end_d, '%d/%m/%Y')
         if start:
+            approved_query = """
+                            SELECT members.th_firstname as ชื่อ, members.th_lastname as นามสกุล,
+                            li.number as เลขทน, ep.start_date, ep.end_date, ep.score 
+                            FROM cmte_event_participation_records as ep
+                            JOIN licenses as li on ep.license_number = li.number
+                            LEFT JOIN members on li.member_id=members.id
+                            WHERE EXTRACT(YEAR FROM ep.approved_date) = %s
+                              AND ep.start_date >= %s and ep.end_date <= %s
+                              AND ep.individual = TRUE
+                              AND ep.approved_date IS NOT NULL
+                              AND ep.create_datetime IS NOT NULL
+                            """
+            approved_status = pd.read_sql_query(approved_query, con=db.engine, params=(dafault_year,start, end,))
+            approved_status_table = approved_status.to_html(classes='table is-bordered is-fullwidth', index=False)
+
+            rejected_query = """
+                                SELECT members.th_firstname as ชื่อ, members.th_lastname as นามสกุล,
+                                li.number as เลขทน, ep.start_date, ep.end_date, ep.score 
+                                FROM cmte_event_participation_records as ep
+                                JOIN licenses as li on ep.license_number = li.number
+                                LEFT JOIN members on li.member_id=members.id
+                                WHERE EXTRACT(YEAR FROM ep.approved_date) = %s
+                                  AND ep.start_date >= %s and ep.end_date <= %s
+                                  AND ep.individual = TRUE
+                                  AND ep.closed_date IS NOT NULL
+                                  AND ep.approved_date IS NOT NULL
+                                  AND ep.create_datetime IS NOT NULL 
+                                """
+            rejected_status = pd.read_sql_query(rejected_query, con=db.engine, params=(dafault_year,start, end,))
+            rejected_status_table = rejected_status.to_html(classes='table is-bordered is-fullwidth', index=False)
+
+            waiting_query = """
+                                    SELECT members.th_firstname as ชื่อ, members.th_lastname as นามสกุล,
+                                    li.number as เลขทน, ep.start_date, ep.end_date, ep.score
+                                    FROM cmte_event_participation_records as ep
+                                    JOIN licenses as li on ep.license_number = li.number
+                                    LEFT JOIN members on li.member_id=members.id
+                                    WHERE EXTRACT(YEAR FROM ep.approved_date) = %s
+                                      AND ep.start_date >= %s and ep.end_date <= %s
+                                      AND ep.individual = TRUE
+                                      AND ep.closed_date IS NULL
+                                      AND ep.approved_date IS NULL
+                                      AND ep.create_datetime IS NOT NULL
+                                    GROUP BY members.th_firstname ,members.th_lastname ,li.number, ep.start_date,ep.end_date,ep.score   
+                                    HAVING count(ep.id)>0  
+                                    """
+            waiting_status = pd.read_sql_query(waiting_query, con=db.engine, params=(dafault_year,start, end,))
+            waiting_status_table = waiting_status.to_html(classes='table is-bordered is-fullwidth', index=False)
+
             query = CMTEEventParticipationRecord.query.filter_by(individual=True) \
                 .filter(CMTEEventParticipationRecord.create_datetime != None,
                         func.date(CMTEEventParticipationRecord.start_date) <= end.date(),
@@ -3407,6 +3503,8 @@ def report_individual_scores():
 
 
     return render_template('cmte/admin/report_individual_scores.html', selected_dates=selected_dates,
+                           approved_status_table=approved_status_table, rejected_status_table=rejected_status_table,
+                           waiting_status_table=waiting_status_table,
                            approved_status=approved_status, rejected_status=rejected_status,
                            waiting_status=waiting_status)
 
