@@ -37,76 +37,18 @@
                     กิจกรรมกลุ่มบุคคลที่อนุมัติ
                 </h3>
                 {{ approved_status_table|safe }}
-                <table id="approved" class="table is-fullwidth">
-                    <thead>
-                        <th>ประเภทกิจกรรม</th>
-                        <th>ชนิดกิจกรรม</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>รายละเอียด</th>
-                    </thead>
-                    <tbody>
-                    {% for group_record in approved_status %}
-                        <tr>
-                            <td>{{group_record.record.event_type.name}}</td>
-                            <td>{{group_record.record.activity}}</td>
-                            <td>{{group_record.record.start_date|localdate}}</td>
-                            <td>{{group_record.record.end_date|localdate}}</td>
-                            <td>{{group_record.record.desc }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
             </div>
             <div class="column">
                 <h3 class="title is-3">
                     กิจกรรมกลุ่มบุคคลที่ไม่อนุมัติ
                 </h3>
-                <table id="rejected" class="table is-fullwidth">
-                    <thead>
-                        <th>ประเภทกิจกรรม</th>
-                        <th>ชนิดกิจกรรม</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>รายละเอียด</th>
-                    </thead>
-                    <tbody>
-                    {% for group_record in rejected_status %}
-                        <tr>
-                            <td>{{group_record.record.event_type.name}}</td>
-                            <td>{{group_record.record.activity}}</td>
-                            <td>{{group_record.record.start_date|localdate}}</td>
-                            <td>{{group_record.record.end_date|localdate}}</td>
-                            <td>{{group_record.record.desc }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                {{ rejected_status_table|safe }}
             </div>
             <div class="column">
                 <h3 class="title is-3">
                     กิจกรรมกลุ่มบุคคลที่ขอข้อมูล/เอกสารเพิ่ม
                 </h3>
-                <table id="waiting" class="table is-fullwidth">
-                    <thead>
-                        <th>ประเภทกิจกรรม</th>
-                        <th>ชนิดกิจกรรม</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>รายละเอียด</th>
-                    </thead>
-                    <tbody>
-                    {% for group_record in waiting_status %}
-                        <tr>
-                            <td>{{group_record.record.event_type.name}}</td>
-                            <td>{{group_record.record.activity}}</td>
-                            <td>{{group_record.record.start_date|localdate}}</td>
-                            <td>{{group_record.record.end_date|localdate}}</td>
-                            <td>{{group_record.record.desc }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                {{ waiting_status_table|safe }}
             </div>
         </div>
     </section>
@@ -135,14 +77,6 @@
                 startDate: selectedDates.split(' - ')[0],
                 endDate: selectedDates.split(' - ')[1]
             });
-        });
-        $(document).ready(function () {
-            $('#approved').DataTable({
-            })
-            $('#rejected').DataTable({
-            })
-            $('#waiting').DataTable({
-            })
         });
     </script>
 {% endblock %}
