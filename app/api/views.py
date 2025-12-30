@@ -27,6 +27,51 @@ MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
 
 class Login(Resource):
     def post(self):
+        """
+        This endpoint returns an access token.
+        ---
+        tags:
+            -   Authentication
+        summary: Authenticate user and issue access token.
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        parameters:
+            -   in: body
+                required: true
+                schema:
+                    type: object
+                    required: true
+                        - client_id
+                        - client_secret
+                    properties:
+                        client_id:
+                            type: string
+                        client_secret:
+                            type: string
+        responses:
+            200:
+                description: Token issued successfully
+                schema:
+                    type: object
+                    required:
+                        - access_token
+                        - refresh_token
+                    properties:
+                        access_token:
+                            type: string
+                        refresh_token:
+                            type: string
+                examples:
+                    application/json:
+                        access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                        refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            400:
+                description: Missing or invalid request body
+            401:
+                description: Unauthorized client ID or secret
+        """
         from app.models import Client
         client_id = request.json.get('client_id')
         secret = request.json.get('client_secret')
@@ -45,6 +90,49 @@ class Login(Resource):
 class RefreshToken(Resource):
     @jwt_required(refresh=True)
     def post(self):
+        """
+        Refresh access token using a refresh token.
+        ---
+        tags:
+            -   Authentication
+        summary: Refresh access token
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        parameters:
+            -   in: body
+                name: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        refresh_token:
+                            type: string
+                            description: Refresh token previously issued by the token endpoint
+        responses:
+            200:
+                description: Token refreshed successfully
+                schema:
+                    type: object
+                    required:
+                        -   access_token
+                    properties:
+                        access_token:
+                            type: string
+                            description: New JWT access token
+                        refresh_token:
+                            type: string
+                            description: New refresh token (present only if rotation is enabled)
+                examples:
+                    application/json:
+                        access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                        refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            400:
+                description: Missing or invalid request body
+            401:
+                description: Invalid or expired refresh token
+        """
         identity = get_jwt_identity()
         access_token = create_access_token(identity=identity)
         return jsonify(access_token=access_token)
