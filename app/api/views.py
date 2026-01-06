@@ -420,8 +420,8 @@ class MemberPID(Resource):
         """
         member = Member.query.filter_by(pid=pid).first()
         if member:
-            cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
-            valid_score = member.license.valid_cmte_scores
+            # cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
+            # valid_score = member.license.valid_cmte_scores
 
             data = {
                 'license': {
@@ -437,10 +437,6 @@ class MemberPID(Resource):
                     'telephone': member.tel,
                     'status': member.status or 'ปกติ',
                 },
-                'cmte': {
-                    'active_cmte_payment': cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {},
-                    'valid_score': valid_score,
-                }
             }
             if member.license:
                 data['license'] = {
@@ -452,7 +448,8 @@ class MemberPID(Resource):
             else:
                 data['license'] = {}
             return jsonify(data=data)
-        return jsonify(data={}), 404
+        else:
+            return jsonify({'message': 'Member not found.'}), 404
 
 
 class MemberLicense(Resource):
