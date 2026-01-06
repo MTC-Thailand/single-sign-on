@@ -402,21 +402,6 @@ class MemberPID(Resource):
                                 status:
                                     type: string
                                     description: สถานะใบอนุญาต
-                        cmte_score:
-                            type: object
-                            properties:
-                                valid:
-                                    type: number
-                                    description: คะแนนสำหรับต่ออายุใบอนุญาตในรอบปัจจุบัน
-                                active_cmte_payment:
-                                    type: object
-                                    properties:
-                                        end_date:
-                                            type: string
-                                            description: วันที่หมดอายุ mock up
-                                        start_date:
-                                            type: string
-                                            description: วันที่เริ่มต้น mock up
         """
         member = Member.query.filter_by(pid=pid).first()
         if member:
