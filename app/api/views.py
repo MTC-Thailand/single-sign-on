@@ -447,9 +447,8 @@ class MemberPID(Resource):
                 }
             else:
                 data['license'] = {}
-            return jsonify(data=data)
-        else:
-            return jsonify({'message': 'Member not found.'}), 404
+            return {'data': data}
+        return {'message': 'Member not found.'}, 404
 
 
 class MemberLicense(Resource):
@@ -696,6 +695,8 @@ class MemberInfo(Resource):
                                             type: string
         """
         member = Member.query.filter_by(pid=pin).first()
+        if not member:
+            return {'message': 'Member not found.'}, 404
 
         engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
         engine.connect()
@@ -773,7 +774,7 @@ class MemberInfo(Resource):
         data['lic_exp_date'] = member.license.end_date.strftime('%Y-%m-%d')
 
         data['cmte_score'] = {'total': total_score, 'valid': valid_score}
-        return jsonify({'data': data})
+        return {'data': data}
 
 
 class CMTEEventResource(Resource):
