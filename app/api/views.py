@@ -96,20 +96,6 @@ class RefreshToken(Resource):
         tags:
             -   Authentication
         summary: Refresh access token
-        consumes:
-            -   application/json
-        produces:
-            -   application/json
-        parameters:
-            -   in: body
-                name: body
-                required: true
-                schema:
-                    type: object
-                    properties:
-                        refresh_token:
-                            type: string
-                            description: Refresh token previously issued by the token endpoint
         responses:
             200:
                 description: Token refreshed successfully
