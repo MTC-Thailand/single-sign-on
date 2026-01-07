@@ -744,7 +744,7 @@ class MemberInfo(Resource):
         data['lic_b_date'] = member.license.start_date.strftime('%Y-%m-%d')
         data['lic_exp_date'] = member.license.end_date.strftime('%Y-%m-%d')
 
-        data['cmte_score'] = {'total': total_score, 'valid': valid_score}
+        data['cmte_score'] = {'total': float(total_score), 'valid': float(valid_score)}
         return {'data': data}
 
 
