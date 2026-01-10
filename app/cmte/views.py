@@ -3024,37 +3024,34 @@ def report_events_index():
     selected_dates = None
     today = datetime.now().date()
     start_of_year = datetime(today.year, 1, 1).date()
-    dafault_year = start_of_year.year
-    query = """
-    SELECT * FROM cmte_events inner join cmte_event_sponsors on cmte_events.sponsor_id=cmte_event_sponsors.id 
-    where extract(year from cmte_events.approved_datetime) = %s and cmte_events.approved_datetime is not null
+    default_year = start_of_year.year
+    default_year = 2025
+    query = f"""
+    SELECT *,extract(YEAR FROM cmte_events.approved_datetime) AS approved_year FROM cmte_events inner join cmte_event_sponsors on cmte_events.sponsor_id=cmte_event_sponsors.id 
+    WHERE cmte_events.approved_datetime IS NOT NULL AND cmte_events.approved_datetime >= TIMESTAMPTZ '{int(default_year)}-01-01 00:00:00 Asia/Bangkok'
+    AND cmte_events.approved_datetime < TIMESTAMPTZ '{int(default_year) + 1}-01-01 00:00:00 Asia/Bangkok' 
     """
+    print(query)
 
-    events = pd.read_sql_query(query,con=db.engine, params=(dafault_year,))
-    event_html_table = \
-    pd.pivot_table(events, index=events.name, columns=[events.approved_datetime.dt.year], aggfunc='count')[
-        'approved_datetime'].to_html(classes='table is-bordered is-fullwidth')
     if request.method == 'POST':
         form = request.form
         selected_dates = request.form.get('dates', None)
         start_d, end_d = form.get('dates').split(' - ')
-        start = datetime.strptime(start_d, '%d/%m/%Y')
-        end = datetime.strptime(end_d, '%d/%m/%Y')
-        if start:
-            query = """
-                        SELECT es.name, COUNT(e.id) AS events_count 
-                        FROM cmte_event_sponsors es left join cmte_events e
-                        on e.sponsor_id=es.id 
-                        where 
-                         start_date >= %s and end_date <= %s and 
-                         extract(year from e.approved_datetime) = %s and 
-                        e.approved_datetime is not null
-                        GROUP BY es.name
-                            """
-            events = pd.read_sql_query(query, con=db.engine, params=(start, end, dafault_year, ))
-            event_html_table = \
-                pd.pivot_table(events, index=events.name, aggfunc={'events_count': 'sum'}).to_html(classes='table is-bordered is-fullwidth')
-    return render_template('cmte/admin/report_event_index.html', event_html_table=event_html_table,
+        start_date = datetime.strptime(start_d, '%d/%m/%Y').strftime('%Y-%m-%d')
+        end_date = datetime.strptime(end_d, '%d/%m/%Y').strftime('%Y-%m-%d')
+        if start_date:
+            query = f"""
+            SELECT *,extract(YEAR FROM cmte_events.approved_datetime) AS approved_year FROM cmte_events inner join cmte_event_sponsors on cmte_events.sponsor_id=cmte_event_sponsors.id 
+            WHERE cmte_events.approved_datetime IS NOT NULL AND cmte_events.approved_datetime >= TIMESTAMPTZ '{start_date} 00:00:00 Asia/Bangkok' AND cmte_events.approved_datetime < TIMESTAMPTZ '{end_date} 00:00:00 Asia/Bangkok' 
+            """
+            flash('No start and end date specified.', 'danger')
+            print('post request::\t', query)
+
+    events = pd.read_sql_query(query, con=db.engine)
+    print(events)
+    event_html_table = pd.pivot_table(events, index=['approved_year', 'name'], values='title', aggfunc='count').to_html(classes='table is-bordered is-fullwidth')
+    return render_template('cmte/admin/report_event_index.html',
+                           event_html_table=event_html_table,
                            selected_dates=selected_dates)
 
 
