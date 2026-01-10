@@ -10,6 +10,7 @@
             <div class="is-flex is-justify-content-center is-align-items-center">
                 <a href="{{url_for('cmte.report_sponsors_index')}}" class="button ml-3">สถาบัน</a>
                 <a href="{{url_for('cmte.report_events_index')}}" class="button ml-3">กิจกรรมกลุ่ม</a>
+                <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button ml-3">ทะเบียนกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่
                     1</a>
                 <a href="{{url_for('cmte.report_members_index')}}" class="button ml-3">สมาชิก</a>
@@ -52,24 +53,6 @@
                     จำนวนผู้เข้าร่วมกิจกรรม
                 </h3>
                 {{ event_activity_table|safe }}
-                <table id="events" class="table is-fullwidth">
-                    <thead>
-                        <th>ชนิด</th>
-                        <th>กิจกรรม</th>
-                        <th>Start-End</th>
-                        <th>จำนวนผู้เข้าร่วม</th>
-                    </thead>
-                    <tbody>
-                    {% for record in event_activity %}
-                        <tr>
-                            <td>{{record.activity}}</td>
-                            <td>{{record.title}}</td>
-                            <td>{{record.start_date|localdate}}-{{record.end_date|localdate}}</td>
-                            <td>{{ record.participants.count() }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
             </div>
         </div>
     </section>
@@ -102,10 +85,6 @@
                 allowClear: true,
                 width: '100%',
                 placeholder: "-- ทุกกิจกรรม --",
-            })
-        });
-        $(document).ready(function () {
-            $('#events').DataTable({
             })
         });
     </script>
