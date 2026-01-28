@@ -500,8 +500,8 @@ def test_cmte_score_endpoint(base_url, license_no):
 @click.argument('pid')
 def test_member_pid_local_endpoint(pid):
     import requests
-    client_id = os.environ.get('CLIENT_ID')
-    client_secret = os.environ.get('CLIENT_SECRET')
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
     base_url = 'http://127.0.0.1:5000'
     print('Getting an access token..')
     resp = requests.post(f'{base_url}/api/auth/login',
@@ -511,9 +511,8 @@ def test_member_pid_local_endpoint(pid):
     resp = requests.get(f'{base_url}/api/members/pids/{pid}',
                         headers={'Authorization': f'Bearer {token}'})
     if resp.status_code != 200:
-        print(f'Error! {resp.status_code}')
-    else:
-        pprint(resp.json())
+        print(f'Error!')
+    print(resp.json(), resp.status_code)
 
 
 @app.cli.command('test-member-pid-endpoint')
@@ -533,7 +532,7 @@ def test_member_pid_endpoint(pid):
     if resp.status_code != 200:
         print(f'Error! {resp.status_code}')
     else:
-        pprint(resp.json())
+        print(resp.json())
 
 
 @app.cli.command('test-member-license-local-endpoint')
@@ -601,17 +600,18 @@ def test_member_info_endpoint(pid):
 def test_member_info_endpoint_local(pid):
     import requests
     base_url = 'http://127.0.0.1:5000'
-    client_id = os.environ.get('CLIENT_ID')
-    client_secret = os.environ.get('CLIENT_SECRET')
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
     print('Getting an access token..')
     resp = requests.post(f'{base_url}/api/auth/login',
                          json={'client_id': client_id,
                                'client_secret': client_secret})
+    print(resp.status_code)
     token = resp.json().get('access_token')
     print('Fetching data..')
     resp = requests.get(f'{base_url}/api/members/{pid}/info',
                         headers={'Authorization': f'Bearer {token}'})
-    pprint(resp.text)
+    pprint(resp.json())
 
 
 @app.cli.command('test-cmte-upcoming-events')
@@ -705,3 +705,64 @@ def fetch_addresses_from_list(infile, outfile):
         data.to_excel(outfile, index=False)
         # print(data.head())
 
+
+@app.cli.command('fetch-addresses-from-list-pids')
+@click.argument('infile')
+@click.argument('outfile')
+def fetch_addresses_from_list_pids(infile, outfile):
+    import pandas as pd
+    from bs4 import BeautifulSoup
+
+    def remove_html_tags_bs4(html_doc):
+        if pd.isnull(html_doc):
+            return html_doc
+        else:
+            soup = BeautifulSoup(html_doc, 'html.parser')
+            return soup.get_text()
+
+    df = pd.read_excel(infile, converters={'PID': str})
+    pids = df['PID'].tolist()
+    pid_list = f'({",".join(pids)})'
+
+    MYSQL_HOST = os.environ.get('MYSQL_HOST')
+    MYSQL_USER = os.environ.get('MYSQL_USER')
+    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
+    MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
+    engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
+    engine.connect()
+    query = f'''
+    SELECT member.persion_id,member.fname,member.lname,add_id,add1,moo,soi,road,zipcode,province.PROVINCE_NAME,amphur.AMPHUR_NAME,district.DISTRICT_NAME
+    FROM member_add
+    LEFT JOIN province ON province.PROVINCE_ID=member_add.PROVINCE_ID
+    LEFT JOIN amphur ON amphur.AMPHUR_ID=member_add.AMPHUR_ID
+    LEFT JOIN district ON district.DISTRICT_ID=member_add.DISTRICT_ID
+    JOIN member ON member_add.mem_id=member.mem_id
+    WHERE member.persion_id IN {pid_list} AND add_id=1
+    '''
+    try:
+        data = pd.read_sql_query(query, con=engine)
+    except Exception as e:
+        data = {}
+        raise e
+    else:
+        data['add1'] = data['add1'].apply(remove_html_tags_bs4)
+        data.to_excel(outfile, index=False)
+        # print(data.head())
+
+
+@app.cli.command('test-refresh-token')
+def test_refresh_token_endpoint():
+    import requests
+    client_id = os.environ.get('MTC_CLIENT_ID')
+    client_secret = os.environ.get('MTC_CLIENT_SECRET')
+    base_url = 'https://mtc-webservices.herokuapp.com'
+    print('Getting an access token..')
+    resp = requests.post(f'{base_url}/api/auth/login',
+                         json={'client_id': client_id, 'client_secret': client_secret})
+    refresh_token = resp.json().get('refresh_token')
+    print('Getting a refreshed token..')
+    resp = requests.post(f'{base_url}/api/auth/refresh',
+                         headers={'Authorization': f'Bearer {refresh_token}'})
+    if resp.status_code != 200:
+        print(f'Error! {resp.json()}')
+    pprint(resp.json())

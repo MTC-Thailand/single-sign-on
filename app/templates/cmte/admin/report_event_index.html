@@ -9,7 +9,7 @@
         <div class="column">
             <div class="is-flex is-justify-content-center is-align-items-center">
                 <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button">สถาบัน</a>
-                <a href="{{ url_for('cmte.report_events_index') }}" class="button is-link ml-3">กิจกรรมกลุ่ม</a>
+                <a href="{{ url_for('cmte.report_events_index') }}" class="button is-link ml-3">จำนวนกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button ml-3">ทะเบียนกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่ 1</a>
                 <a href="{{url_for('cmte.report_members_index')}}" class="button ml-3">สมาชิก</a>
@@ -18,6 +18,7 @@
                 <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมกลุ่มบุคคล</a>
             </div>
             <br>
+            {% include "messages.html" %}
             <h1 class="title has-text-centered">จำนวนกิจกรรมที่สถาบันฝึกอบรมการศึกษาต่อเนื่องจัดขึ้น</h1>
             <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="columns">
@@ -71,7 +72,7 @@
             $('#dates').daterangepicker({
                 timePicker: false,
                 showDropdowns: true,
-                linkedCalendars: false,
+                linkedCalendars: true,
                 locale: {
                     format: 'DD/MM/YYYY'
                 },

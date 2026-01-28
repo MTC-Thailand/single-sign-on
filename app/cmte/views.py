@@ -5,9 +5,7 @@ import os
 import uuid
 from functools import wraps
 from io import BytesIO
-
 import pandas as pd
-
 import arrow
 import boto3
 from flask import (render_template, flash, redirect,
@@ -17,15 +15,15 @@ from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from itsdangerous import TimedJSONWebSignatureSerializer
-from openpyxl.pivot.record import Record
 from sqlalchemy import or_, func, and_
 
-from app import db, sponsor_event_management_permission, send_mail
+from app import sponsor_event_management_permission, send_mail
 from app.cmte import cmte_bp as cmte
 from app.cmte.forms import *
-from app.members.models import License, Member
+from app.members.models import Member
 from app.cmte.models import *
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
+
 bangkok = timezone('Asia/Bangkok')
 
 
@@ -3037,18 +3035,20 @@ def report_events_index():
         form = request.form
         selected_dates = request.form.get('dates', None)
         start_d, end_d = form.get('dates').split(' - ')
-        start_date = datetime.strptime(start_d, '%d/%m/%Y').strftime('%Y-%m-%d')
-        end_date = datetime.strptime(end_d, '%d/%m/%Y').strftime('%Y-%m-%d')
+        start = datetime.strptime(start_d, '%d/%m/%Y')
+        start_date = start.strftime('%Y-%m-%d')
+        end = datetime.strptime(end_d, '%d/%m/%Y')
+        end_date = end.strftime('%Y-%m-%d')
         if start_date:
             query = f"""
             SELECT *,extract(YEAR FROM cmte_events.approved_datetime) AS approved_year FROM cmte_events inner join cmte_event_sponsors on cmte_events.sponsor_id=cmte_event_sponsors.id 
             WHERE cmte_events.approved_datetime IS NOT NULL AND cmte_events.approved_datetime >= TIMESTAMPTZ '{start_date} 00:00:00 Asia/Bangkok' AND cmte_events.approved_datetime < TIMESTAMPTZ '{end_date} 00:00:00 Asia/Bangkok' 
             """
+            flash(f"Queried data from {start.strftime('%d/%m/%Y')} - {end.strftime('%d/%m/%Y')}.", 'success')
+        else:
             flash('No start and end date specified.', 'danger')
-            print('post request::\t', query)
 
     events = pd.read_sql_query(query, con=db.engine)
-    print(events)
     event_html_table = pd.pivot_table(events, index=['approved_year', 'name'], values='title', aggfunc='count').to_html(classes='table is-bordered is-fullwidth')
     return render_template('cmte/admin/report_event_index.html',
                            event_html_table=event_html_table,
@@ -3276,23 +3276,26 @@ def report_events_by_activity():
     selected_dates = None
     selected_activity = ''
     today = datetime.now().date()
-    start_of_year = datetime(today.year, 1, 1).date()
-    dafault_year = start_of_year.year
-    query = """
-        SELECT ac.number as ชนิดกิจกรรม, ac.name as กิจกรรม, e.title, COUNT(ep.event_id) AS participant_count
+    start_of_year = datetime(2025, 1, 1)
+    start_year = f'{start_of_year.strftime("%Y-%m-%d 00:00:00 Asia/Bangkok")}'
+    end_year = start_of_year + relativedelta(years=1)
+    end_year = f'{end_year.strftime("%Y-%m-%d 00:00:00 Asia/Bangkok")}'
+    query = f"""
+        SELECT ac.number,  ac.name, e.title, COUNT(e.activity_id) AS participants
         FROM cmte_events e
         JOIN cmte_event_activities as ac on e.activity_id = ac.id
         LEFT JOIN cmte_event_participation_records ep ON e.id = ep.event_id
-        WHERE EXTRACT(YEAR FROM e.approved_datetime) = %s
-          AND e.approved_datetime IS NOT NULL
-          and e.cancelled_datetime is null
-          and e.activity_id is not null
-        GROUP BY ac.number, ac.name, e.title
+        WHERE e.approved_datetime >= TIMESTAMPTZ '{start_year}'
+            AND e.approved_datetime < TIMESTAMPTZ '{end_year}'
+            AND e.approved_datetime IS NOT NULL
+            AND e.cancelled_datetime is null
+            AND e.activity_id is not null
+            GROUP BY ac.number, ac.name, e.title
         """
 
-    events = pd.read_sql_query(query, con=db.engine, params=(dafault_year,))
-    event_activity_table = events.to_html(classes='table is-bordered is-fullwidth', index=False)
-
+    events = pd.read_sql_query(query, con=db.engine)
+    print(events)
+    event_activity_table = events.groupby(['number', 'name', 'title']).sum().reset_index(names=['number', 'title']).to_html(classes='table is-bordered is-fullwidth', index=False)
 
     event_activity = CMTEEvent.query.filter(CMTEEvent.cancelled_datetime == None,
                                             CMTEEvent.approved_datetime != None,
@@ -3346,19 +3349,12 @@ def report_events_by_activity():
                 events = pd.read_sql_query(query, con=db.engine, params=(selected_activity, start, end,))
                 event_activity = event_activity.filter_by(activity_id=selected_activity)
             event_activity_table = events.to_html(classes='table is-bordered is-fullwidth', index=False)
-    # event_activities = []
-    # for event in event_activity:
-    #     event_activities.append({
-    #         'title': event.title,
-    #         'activity': event.activity.name,
-    #         'participants': event.participants.count(),
-    #     })
-    #
-    # event_activity_df = pd.DataFrame(event_activities)
-    # event_activity_table = event_activity_df.pivot(index=['activity'], columns=['title', 'participants']).to_html()
 
-    return render_template('cmte/admin/report_events_by_activity.html', selected_dates=selected_dates,
-                           event_activity=event_activity, all_activity=all_activity, selected_activity=selected_activity,
+    return render_template('cmte/admin/report_events_by_activity.html',
+                           selected_dates=selected_dates,
+                           event_activity=event_activity,
+                           all_activity=all_activity,
+                           selected_activity=selected_activity,
                            event_activity_table=event_activity_table)
 
 
