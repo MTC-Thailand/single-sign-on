@@ -94,39 +94,41 @@
                 </table>
             </div>
         </div>
-        {% if active_payments %}
         <div class="columns">
             <div class="column">
                 <h1 class="title is-size-4 has-text-centered">Active Payments</h1>
                 <table id="active-payment-table" class="table is-bordered is-fullwidth">
                     <thead>
-                    <th>Name</th>
-                    <th>License ID</th>
-                    <th>Start</th>
-                    <th>End</th>
-                    <th>Payment Date Time</th>
-                    <th></th>
-                    </thead>
-                    {% for record in active_payments %}
                     <tr>
-                        <td>{{record.license.member}}</td>
-                        <td>{{record.license_number}}</td>
-                        <td>{{record.start_date|localdate}}</td>
-                        <td>{{record.end_date|localdate}}</td>
-                        <td>{{record.payment_datetime|localdatetime}}</td>
-                        <td>
-                            <a class="button" href="{{url_for('cmte.admin_edit_fee_payment_record', record_id=record.id)}}">
-                                <span class="icon">
-                                   <i class="fas fa-pencil-alt"></i>
-                                </span>
-                            </a>
-                        </td>
+                        <th>Name</th>
+                        <th>License ID</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Payment Date Time</th>
+                        <th></th>
                     </tr>
-                    {% endfor %}
+                    </thead>
+                    <tbody>
+                    </tbody>
+{#                    {% for record in active_payments %}#}
+{#                    <tr>#}
+{#                        <td>{{record.license.member}}</td>#}
+{#                        <td>{{record.license_number}}</td>#}
+{#                        <td>{{record.start_date|localdate}}</td>#}
+{#                        <td>{{record.end_date|localdate}}</td>#}
+{#                        <td>{{record.payment_datetime|localdatetime}}</td>#}
+{#                        <td>#}
+{#                            <a class="button" href="{{url_for('cmte.admin_edit_fee_payment_record', record_id=record.id)}}">#}
+{#                                <span class="icon">#}
+{#                                   <i class="fas fa-pencil-alt"></i>#}
+{#                                </span>#}
+{#                            </a>#}
+{#                        </td>#}
+{#                    </tr>#}
+{#                    {% endfor %}#}
                 </table>
             </div>
         </div>
-        {% endif %}
     </div>
 </section>
 {% endblock %}
@@ -136,7 +138,71 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <script>
     $(function() {
-        new DataTable('#active-payment-table');
+        new DataTable('#active-payment-table', {
+            ajax: {
+                url: "{{ url_for('cmte.get_cmte_individual_fee_payment_records') }}"
+            },
+            columns: [
+                { data: 'name', searchable: true },
+                {
+                    data: 'license_number', searchable: true
+                },
+                {
+                    data: 'start_date',
+                    render: function (data) {
+                        if (data !== null) {
+                            return moment(data).format('ll')
+                        } else {
+                            return ''
+                        }
+                    }
+                },
+                {
+                    data: 'end_date',
+                    render: function (data) {
+                        if (data !== null) {
+                            return moment(data).format('ll')
+                        } else {
+                            return ''
+                        }
+                    }
+                },
+                {
+                    data: 'payment_datetime',
+                    render: function (data) {
+                        if (data !== null) {
+                            return moment(data).format('lll')
+                        } else {
+                            return ''
+                        }
+                    }
+                },
+                {
+                    data: 'id',
+                    render: function (value, type, row) {
+                        return `
+                        <div class="buttons">
+                        <a href="/cmte/admin/fee-payment-record-form/${value}" class="button">
+                            <span class="icon">
+                               <i class="fas fa-pencil-alt"></i>
+                            </span>
+                        </a>
+                        <a hx-delete="/cmte/admin/fee-payment-record-form/${value}"
+                            hx-headers='{"X-CSRF-Token": {{ csrf_token()|tojson|safe }} }'
+                            hx-confirm="คุณแน่ใจว่าต้องการลบรายนี้ หากลบแล้วไม่สามารถยกเลิกได้" class="button is-danger">
+                            <span class="icon">
+                                <i class="fa-solid fa-trash"></i>
+                            </span>
+                        </a>
+                        </div>
+                        `
+                    }
+                },
+            ],
+            drawCallback: function () {
+                htmx.process(document.body)
+            }
+        });
         $("input[name='payment_datetime']").daterangepicker({
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',

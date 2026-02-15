@@ -646,10 +646,14 @@ class CMTEFeePaymentRecord(db.Model):
     note = db.Column('note', db.Text, info={'label': 'หมายเหตุ'})
 
     def to_dict(self):
-        return {'end_date': self.end_date.strftime('%Y-%m-%d') if self.end_date else None,
-                'start_date': self.start_date.strftime('%Y-%m-%d') if self.start_date else None,
-                'payment_datetime': self.payment_datetime.isoformat() if self.payment_datetime else None,
-                'license_number': self.license_number}
+        return {
+            'id': self.id,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'payment_datetime': self.payment_datetime.isoformat() if self.payment_datetime else None,
+            'license_number': self.license_number,
+            'name': self.license.member.th_fullname
+        }
 
 
 class CMTEParticipationRecordRequest(db.Model):

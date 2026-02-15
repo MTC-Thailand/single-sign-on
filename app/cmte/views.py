@@ -1075,8 +1075,6 @@ def admin_edit_fee_payment_record(record_id=None):
     else:
         record = None
         form = CMTEFeePaymentForm()
-    today = datetime.today()
-    active_payments = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.end_date >= today).all()
     pending_payments = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.payment_datetime == None).all()
     if request.method == 'DELETE':
         db.session.delete(record)
@@ -1109,8 +1107,22 @@ def admin_edit_fee_payment_record(record_id=None):
             print('form is not valid')
             flash('Error updating fee payment record form.', 'danger')
     return render_template('cmte/admin/fee_payment_form.html',
-                           form=form, active_payments=active_payments, record=record,
+                           form=form,
+                           record=record,
                            pending_payments=pending_payments)
+
+
+@cmte.route('/api/cmte-individual-fee-payment/active-records')
+@login_required
+@cmte_admin_permission.require()
+def get_cmte_individual_fee_payment_records():
+    today = datetime.today()
+    query = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.end_date >= today)
+    data = []
+    for record in query:
+        data.append(record.to_dict())
+
+    return jsonify(data=data)
 
 
 @cmte.route('/sponsors/members/login', methods=['GET', 'POST'])
