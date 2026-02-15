@@ -1119,10 +1119,25 @@ def get_cmte_individual_fee_payment_records():
     today = datetime.today()
     query = CMTEFeePaymentRecord.query.filter(CMTEFeePaymentRecord.end_date >= today)
     data = []
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    search = request.args.get('search[value]')
+
+    total = query.count()
+
+    if search:
+        query = query.filter(CMTEFeePaymentRecord.license_number.like(f'%{search}%'))
+
+    total_filtered = query.count()
+    query = query.offset(start).limit(length)
     for record in query:
         data.append(record.to_dict())
 
-    return jsonify(data=data)
+    return jsonify({'data': data,
+                    'draw': request.args.get('draw', type=int),
+                    'recordsTotal': total,
+                    'recordsFiltered': total_filtered,
+                    })
 
 
 @cmte.route('/sponsors/members/login', methods=['GET', 'POST'])

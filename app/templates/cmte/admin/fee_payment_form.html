@@ -139,11 +139,13 @@
 <script>
     $(function() {
         new DataTable('#active-payment-table', {
+            serverSide: true,
+            processing: true,
             ajax: {
                 url: "{{ url_for('cmte.get_cmte_individual_fee_payment_records') }}"
             },
             columns: [
-                { data: 'name', searchable: true },
+                { data: 'name', searchable: false },
                 {
                     data: 'license_number', searchable: true
                 },
