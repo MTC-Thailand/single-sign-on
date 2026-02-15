@@ -31,7 +31,7 @@ def upload_renew():
             if license and not pd.isnull(row['renew_end_date']) and not pd.isnull(row['renew_start_date']):
                 license.start_date = row['renew_start_date']
                 license.end_date = row['renew_end_date']
-                license.issue_date = row['renew_start_date']
+                license.issue_date = row['start_date']
                 db.session.add(license)
                 if row['type'] == 'renew_name':
                     member = license.member
