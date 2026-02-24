@@ -100,9 +100,8 @@ def download_file(key):
 @login_required
 @cmte_sponsor_admin_permission.require()
 def cmte_index():
-    sponsor_member_add_pending_requests = CMTESponsorMemberAddRequest.query.filter_by(member=current_user).\
-        filter(CMTESponsorMemberAddRequest.accepted_at != None).\
-        filter(CMTESponsorMemberAddRequest.cancelled_at != None)
+    sponsor_member_add_pending_requests = current_user.get_pending_sponsor_requests()
+    print(sponsor_member_add_pending_requests.all())
     warning_msg = ''
     if cmte_admin_permission:
         return render_template('cmte/index.html', warning_msg=warning_msg)
@@ -1160,7 +1159,7 @@ def sponsor_member_login():
                 else:
                     flash('Wrong password.', 'danger')
             else:
-                return 'Email has not been validated.'
+                return '<h1>Email has not been validated.</h1><p>กรุณาคลิก link ที่ส่งให้ทางอีเมลเพื่อทำการยืนยันอีเมลก่อนเข้าใช้งานระบบ</p>'
         else:
             flash('Your account is not registered.', 'danger')
     return render_template('cmte/sponsor/login_form.html', form=form)

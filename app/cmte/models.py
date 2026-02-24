@@ -134,6 +134,11 @@ class CMTESponsorMember(UserMixin, db.Model):
     def unique_id(self):
         return f'sponsor-member-{self.id}'
 
+    def get_pending_sponsor_requests(self):
+        return self.sponsor_requests\
+            .filter(CMTESponsorMemberAddRequest.cancelled_at == None)\
+            .filter(CMTESponsorMemberAddRequest.accepted_at == None)
+
 
 class CMTESponsorMemberAddRequest(db.Model):
     __versioned__ = {}
@@ -143,7 +148,8 @@ class CMTESponsorMemberAddRequest(db.Model):
     member_id = db.Column('member_id', db.ForeignKey('cmte_sponsor_members.id'))
     requested_at = db.Column('requested_at', db.DateTime(timezone=True))
     member = db.relationship(CMTESponsorMember, backref=db.backref('sponsor_requests',
-                                                                     cascade="all, delete-orphan"))
+                                                                   lazy='dynamic',
+                                                                   cascade="all, delete-orphan"))
     to_sponsor = db.relationship(CMTEEventSponsor)
     accepted_at = db.Column('accepted_at', db.DateTime(timezone=True))
     cancelled_at = db.Column('cancalled_at', db.DateTime(timezone=True))
