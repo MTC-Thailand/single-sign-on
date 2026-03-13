@@ -3170,6 +3170,155 @@ def report_sponsors_breakdown():
     })
 
 
+def _get_event_type_dashboard_filters(source_args):
+    today = datetime.now().date()
+    default_start = datetime(today.year, 1, 1).date()
+    dates_value = source_args.get('dates')
+    if dates_value:
+        start_d, end_d = dates_value.split(' - ')
+        start_date = datetime.strptime(start_d, '%d/%m/%Y').date()
+        end_date = datetime.strptime(end_d, '%d/%m/%Y').date()
+    else:
+        start_date = default_start
+        end_date = today
+        dates_value = f'{start_date.strftime("%d/%m/%Y")} - {end_date.strftime("%d/%m/%Y")}'
+    return start_date, end_date, dates_value
+
+
+@cmte.get('/report/event-types/dashboard')
+@login_required
+@cmte_admin_permission.require()
+def report_event_types_dashboard():
+    _, _, selected_dates = _get_event_type_dashboard_filters(request.args)
+    assumptions = [
+        'สรุปนี้อ้างอิงจากประเภทกิจกรรม CMTE ทั้งหมดในระบบ และนับเฉพาะกิจกรรมที่อนุมัติแล้วและไม่ถูกยกเลิกในช่วงวันที่เลือก',
+        'จำนวนชนิดกิจกรรมคำนวณจากความสัมพันธ์ระหว่างประเภทกิจกรรมและชนิดกิจกรรมในระบบปัจจุบัน',
+        'ตารางสรุปใช้การแบ่งหน้าแบบ AJAX เพื่อหลีกเลี่ยงการโหลดข้อมูลทั้งหมดในครั้งเดียว',
+    ]
+    return render_template('cmte/admin/report_event_types_dashboard.html',
+                           selected_dates=selected_dates,
+                           assumptions=assumptions)
+
+
+@cmte.get('/report/event-types/dashboard/summary')
+@login_required
+@cmte_admin_permission.require()
+def report_event_types_dashboard_summary():
+    start_date, end_date, _ = _get_event_type_dashboard_filters(request.args)
+
+    type_activity_counts = db.session.query(
+        CMTEEventType.id.label('type_id'),
+        func.count(func.distinct(CMTEEventActivity.id)).label('activity_count'),
+    ).outerjoin(CMTEEventActivity, CMTEEventActivity.type_id == CMTEEventType.id)\
+        .group_by(CMTEEventType.id).subquery()
+
+    event_counts = db.session.query(
+        CMTEEvent.event_type_id.label('type_id'),
+        func.count(CMTEEvent.id).label('approved_event_count'),
+    ).filter(CMTEEvent.approved_datetime != None,
+             CMTEEvent.cancelled_datetime == None,
+             func.date(CMTEEvent.approved_datetime) >= start_date,
+             func.date(CMTEEvent.approved_datetime) <= end_date)\
+        .group_by(CMTEEvent.event_type_id).subquery()
+
+    summary_rows = db.session.query(
+        CMTEEventType.id,
+        CMTEEventType.name,
+        func.coalesce(type_activity_counts.c.activity_count, 0).label('activity_count'),
+        func.coalesce(event_counts.c.approved_event_count, 0).label('approved_event_count'),
+    ).outerjoin(type_activity_counts, type_activity_counts.c.type_id == CMTEEventType.id)\
+        .outerjoin(event_counts, event_counts.c.type_id == CMTEEventType.id).all()
+
+    kpi = {
+        'total_event_types': len(summary_rows),
+        'active_event_types': sum(1 for row in summary_rows if (row.approved_event_count or 0) > 0),
+        'total_activities': sum(int(row.activity_count or 0) for row in summary_rows),
+        'approved_events': sum(int(row.approved_event_count or 0) for row in summary_rows),
+    }
+
+    type_chart_rows = [[row.name, int(row.approved_event_count or 0)] for row in summary_rows if (row.approved_event_count or 0) > 0]
+    activity_chart_rows = [[row.name, int(row.activity_count or 0)] for row in summary_rows if (row.activity_count or 0) > 0]
+
+    return jsonify({
+        'kpi': kpi,
+        'type_chart_rows': type_chart_rows[:8],
+        'activity_chart_rows': activity_chart_rows[:8],
+    })
+
+
+@cmte.get('/report/event-types/dashboard/breakdown')
+@login_required
+@cmte_admin_permission.require()
+def report_event_types_dashboard_breakdown():
+    start_date, end_date, _ = _get_event_type_dashboard_filters(request.args)
+    search = request.args.get('search[value]', '')
+    start = request.args.get('start', type=int, default=0)
+    length = request.args.get('length', type=int, default=10)
+    draw = request.args.get('draw', type=int)
+
+    activity_counts = db.session.query(
+        CMTEEventActivity.type_id.label('type_id'),
+        func.count(CMTEEventActivity.id).label('activity_count'),
+    ).group_by(CMTEEventActivity.type_id).subquery()
+
+    event_counts = db.session.query(
+        CMTEEvent.event_type_id.label('type_id'),
+        func.count(CMTEEvent.id).label('approved_event_count'),
+    ).filter(CMTEEvent.approved_datetime != None,
+             CMTEEvent.cancelled_datetime == None,
+             func.date(CMTEEvent.approved_datetime) >= start_date,
+             func.date(CMTEEvent.approved_datetime) <= end_date)\
+        .group_by(CMTEEvent.event_type_id).subquery()
+
+    query = db.session.query(
+        CMTEEventType.id,
+        CMTEEventType.name,
+        CMTEEventType.number,
+        CMTEEventType.for_group,
+        CMTEEventType.is_sponsored,
+        func.coalesce(activity_counts.c.activity_count, 0).label('activity_count'),
+        func.coalesce(event_counts.c.approved_event_count, 0).label('approved_event_count'),
+    ).outerjoin(activity_counts, activity_counts.c.type_id == CMTEEventType.id)\
+     .outerjoin(event_counts, event_counts.c.type_id == CMTEEventType.id)
+
+    if search:
+        query = query.filter(CMTEEventType.name.ilike(f'%{search}%'))
+
+    records_filtered = query.count()
+    records_total = db.session.query(func.count(CMTEEventType.id)).scalar()
+
+    orderable_columns = {
+        0: CMTEEventType.number,
+        1: CMTEEventType.name,
+        2: activity_counts.c.activity_count,
+        3: event_counts.c.approved_event_count,
+    }
+    col_idx = request.args.get('order[0][column]', type=int)
+    direction = request.args.get('order[0][dir]', default='asc')
+    if col_idx in orderable_columns:
+        order_column = orderable_columns[col_idx]
+        query = query.order_by(order_column.desc() if direction == 'desc' else order_column.asc())
+    else:
+        query = query.order_by(CMTEEventType.number.asc(), CMTEEventType.name.asc())
+
+    rows = query.offset(start).limit(length).all()
+    data = [{
+        'number': row.number,
+        'name': row.name,
+        'activity_count': int(row.activity_count or 0),
+        'approved_event_count': int(row.approved_event_count or 0),
+        'for_group': 'ได้' if row.for_group else 'ไม่ได้',
+        'is_sponsored': 'ใช่' if row.is_sponsored else 'ไม่ใช่',
+    } for row in rows]
+
+    return jsonify({
+        'data': data,
+        'recordsFiltered': records_filtered,
+        'recordsTotal': records_total,
+        'draw': draw,
+    })
+
+
 # @cmte.route('/report/eventr', methods=['GET', 'POST'])
 # @login_required
 # @cmte_admin_permission.require()

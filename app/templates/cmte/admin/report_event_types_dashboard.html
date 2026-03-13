@@ -34,51 +34,35 @@
         <div class="container is-max-desktop">
             <div class="is-flex is-flex-wrap-wrap is-justify-content-center is-align-items-center mb-4" style="gap: 0.75rem;">
                 <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button">สถาบัน</a>
-                <a href="{{ url_for('cmte.report_events_dashboard') }}" class="button is-link">Dashboard</a>
-                <a href="{{ url_for('cmte.report_event_types_dashboard') }}" class="button">Dashboard ประเภทกิจกรรม</a>
+                <a href="{{ url_for('cmte.report_events_dashboard') }}" class="button">Dashboard กิจกรรม</a>
+                <a href="{{ url_for('cmte.report_event_types_dashboard') }}" class="button is-link">Dashboard ประเภทกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_events_index') }}" class="button">จำนวนกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button">ทะเบียนกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button">กิจกรรมประเภทที่ 1</a>
                 <a href="{{ url_for('cmte.report_members_index') }}" class="button">สมาชิก</a>
                 <a href="{{ url_for('cmte.report_events_by_activity') }}" class="button">ชนิดกิจกรรม</a>
                 <a href="{{ url_for('cmte.report_individual_scores') }}" class="button">กิจกรรมส่วนบุคคล</a>
-                <a href="{{ url_for('cmte.report_individual_scores') }}" class="button">กิจกรรมกลุ่มบุคคล</a>
             </div>
-
-            {% include "messages.html" %}
 
             <div class="level mb-4">
                 <div class="level-left">
                     <div>
-                        <h1 class="title mb-2">CMTE Events Dashboard</h1>
-                        <p class="subtitle is-6 mb-0">Assumption-driven shell for approved event operations. Extend the data contract as business metrics are finalized.</p>
+                        <h1 class="title mb-2">Dashboard ประเภทกิจกรรม</h1>
+                        <p class="subtitle is-6 mb-0">สรุปภาพรวม CMTEEventType พร้อมจำนวนชนิดกิจกรรมและกิจกรรมที่อนุมัติแล้ว</p>
                     </div>
                 </div>
             </div>
 
-            <form id="dashboard-filters" class="box mb-5">
+            <form id="event-type-dashboard-filters" class="box mb-5">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="columns is-variable is-4 is-multiline">
                     <div class="column is-5">
-                        <label class="label">ช่วงเวลา</label>
+                        <label class="label">ช่วงวันที่อนุมัติกิจกรรม</label>
                         <div class="control has-icons-left">
                             <input name="dates" id="dates" class="input" value="{{ selected_dates }}">
                             <span class="icon is-small is-left">
                                 <i class="far fa-calendar-alt"></i>
                             </span>
-                        </div>
-                    </div>
-                    <div class="column is-5">
-                        <label class="label">ชนิดกิจกรรม</label>
-                        <div class="control">
-                            <select id="activity-select" name="activity_id">
-                                <option value="" {{ 'selected' if not selected_activity else '' }}>-- ทุกกิจกรรม --</option>
-                                {% for activity in all_activity %}
-                                    <option value="{{ activity.id }}" {% if activity.id|string == selected_activity %}selected{% endif %}>
-                                        {{ activity.number or '-' }}. {{ activity.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
                         </div>
                     </div>
                     <div class="column is-2 is-flex is-align-items-flex-end">
@@ -88,7 +72,7 @@
             </form>
 
             <div class="notification is-light mb-5">
-                <strong>Assumptions</strong>
+                <strong>สมมติฐานการแสดงผล</strong>
                 <div class="content mb-0">
                     <ul>
                         {% for assumption in assumptions %}
@@ -101,26 +85,26 @@
             <div class="columns is-multiline mb-2">
                 <div class="column is-3-desktop is-6-tablet">
                     <div class="box kpi-card">
-                        <p class="heading">Approved Events</p>
+                        <p class="heading">ประเภทกิจกรรมทั้งหมด</p>
+                        <p class="kpi-value" id="kpi-total-event-types">-</p>
+                    </div>
+                </div>
+                <div class="column is-3-desktop is-6-tablet">
+                    <div class="box kpi-card">
+                        <p class="heading">ประเภทที่มีการใช้งาน</p>
+                        <p class="kpi-value" id="kpi-active-event-types">-</p>
+                    </div>
+                </div>
+                <div class="column is-3-desktop is-6-tablet">
+                    <div class="box kpi-card">
+                        <p class="heading">ชนิดกิจกรรมทั้งหมด</p>
+                        <p class="kpi-value" id="kpi-total-activities">-</p>
+                    </div>
+                </div>
+                <div class="column is-3-desktop is-6-tablet">
+                    <div class="box kpi-card">
+                        <p class="heading">กิจกรรมที่อนุมัติแล้ว</p>
                         <p class="kpi-value" id="kpi-approved-events">-</p>
-                    </div>
-                </div>
-                <div class="column is-3-desktop is-6-tablet">
-                    <div class="box kpi-card">
-                        <p class="heading">Active Sponsors</p>
-                        <p class="kpi-value" id="kpi-active-sponsors">-</p>
-                    </div>
-                </div>
-                <div class="column is-3-desktop is-6-tablet">
-                    <div class="box kpi-card">
-                        <p class="heading">Participant Records</p>
-                        <p class="kpi-value" id="kpi-participant-records">-</p>
-                    </div>
-                </div>
-                <div class="column is-3-desktop is-6-tablet">
-                    <div class="box kpi-card">
-                        <p class="heading">Pending Approvals</p>
-                        <p class="kpi-value" id="kpi-pending-approvals">-</p>
                     </div>
                 </div>
             </div>
@@ -128,20 +112,14 @@
             <div class="columns is-multiline mb-2">
                 <div class="column is-6-desktop">
                     <div class="chart-card">
-                        <h2 class="title is-5">Approved Events Trend</h2>
-                        <div id="approved-events-trend-chart" class="chart-surface"></div>
+                        <h2 class="title is-5">กิจกรรมที่อนุมัติแล้วตามประเภท</h2>
+                        <div id="approved-events-by-type-chart" class="chart-surface"></div>
                     </div>
                 </div>
                 <div class="column is-6-desktop">
                     <div class="chart-card">
-                        <h2 class="title is-5">Participant Records Trend</h2>
-                        <div id="participant-records-trend-chart" class="chart-surface"></div>
-                    </div>
-                </div>
-                <div class="column is-12-desktop">
-                    <div class="chart-card">
-                        <h2 class="title is-5">Activity Mix</h2>
-                        <div id="activity-chart" class="chart-surface"></div>
+                        <h2 class="title is-5">จำนวนชนิดกิจกรรมต่อประเภท</h2>
+                        <div id="activities-by-type-chart" class="chart-surface"></div>
                     </div>
                 </div>
             </div>
@@ -150,18 +128,19 @@
                 <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
                     <div>
                         <h2 class="title is-5 mb-1">Breakdown Table</h2>
-                        <p class="subtitle is-6 mb-0">Grouped by activity to match the current CMTE taxonomy.</p>
+                        <p class="subtitle is-6 mb-0">สรุปรายประเภทกิจกรรม พร้อม flag สำคัญในโมเดล</p>
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="table is-fullwidth is-striped" id="events-breakdown-table">
+                    <table id="event-type-breakdown-table" class="table is-fullwidth is-striped">
                         <thead>
                         <tr>
-                            <th>Activity</th>
-                            <th>Approved Events</th>
-                            <th>Participant Records</th>
-                            <th>Pending Approvals</th>
-                            <th>Sponsors</th>
+                            <th>ลำดับ</th>
+                            <th>ประเภทกิจกรรม</th>
+                            <th>ชนิดกิจกรรม</th>
+                            <th>กิจกรรมที่อนุมัติแล้ว</th>
+                            <th>ยื่นแบบกลุ่มได้</th>
+                            <th>จัดโดยสถาบัน</th>
                         </tr>
                         </thead>
                         <tbody></tbody>
@@ -174,18 +153,16 @@
 {% block scripts %}
     {{ super() }}
     <script src="https://www.gstatic.com/charts/loader.js"></script>
-    <script type="text/javascript"
-            src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script type="text/javascript" src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
-        let trendRows = [];
+        let typeChartRows = [];
         let activityChartRows = [];
         let chartsReady = false;
         let breakdownTable = null;
 
         function getFilterParams() {
             return {
-                dates: $('#dates').val(),
-                activity_id: $('#activity-select').val() || ''
+                dates: $('#dates').val()
             };
         }
 
@@ -196,81 +173,44 @@
         }
 
         function renderKpi(kpi) {
+            $('#kpi-total-event-types').text(kpi.total_event_types ?? 0);
+            $('#kpi-active-event-types').text(kpi.active_event_types ?? 0);
+            $('#kpi-total-activities').text(kpi.total_activities ?? 0);
             $('#kpi-approved-events').text(kpi.approved_events ?? 0);
-            $('#kpi-active-sponsors').text(kpi.active_sponsors ?? 0);
-            $('#kpi-participant-records').text(kpi.participant_records ?? 0);
-            $('#kpi-pending-approvals').text(kpi.pending_participant_approvals ?? 0);
         }
 
         function drawCharts() {
             if (!chartsReady || !window.google || !google.visualization) {
                 return;
             }
-            const approvedEventsData = new google.visualization.DataTable();
-            approvedEventsData.addColumn('string', 'Month');
-            approvedEventsData.addColumn('number', 'Approved events');
-            approvedEventsData.addRows(
-                trendRows.length
-                    ? trendRows.map((row) => [row[0], row[1]])
-                    : [['No data', 0]]
-            );
 
-            const approvedEventsChart = new google.visualization.ColumnChart(
-                document.getElementById('approved-events-trend-chart')
-            );
-            approvedEventsChart.draw(approvedEventsData, {
-                legend: {position: 'bottom'},
+            const approvedEventsData = new google.visualization.DataTable();
+            approvedEventsData.addColumn('string', 'Event type');
+            approvedEventsData.addColumn('number', 'Approved events');
+            approvedEventsData.addRows(typeChartRows.length ? typeChartRows : [['No data', 0]]);
+            new google.visualization.BarChart(document.getElementById('approved-events-by-type-chart')).draw(approvedEventsData, {
+                legend: {position: 'none'},
                 colors: ['#3273dc'],
-                chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
+                chartArea: {left: 140, top: 24, width: '72%', height: '70%'},
                 height: 320
             });
 
-            const participantRecordsData = new google.visualization.DataTable();
-            participantRecordsData.addColumn('string', 'Month');
-            participantRecordsData.addColumn('number', 'Participant records');
-            participantRecordsData.addRows(
-                trendRows.length
-                    ? trendRows.map((row) => [row[0], row[2]])
-                    : [['No data', 0]]
-            );
-
-            const participantRecordsChart = new google.visualization.LineChart(
-                document.getElementById('participant-records-trend-chart')
-            );
-            participantRecordsChart.draw(participantRecordsData, {
-                legend: {position: 'bottom'},
+            const activitiesData = new google.visualization.DataTable();
+            activitiesData.addColumn('string', 'Event type');
+            activitiesData.addColumn('number', 'Activities');
+            activitiesData.addRows(activityChartRows.length ? activityChartRows : [['No data', 0]]);
+            new google.visualization.ColumnChart(document.getElementById('activities-by-type-chart')).draw(activitiesData, {
+                legend: {position: 'none'},
                 colors: ['#23d160'],
                 chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
-                height: 320,
-                lineWidth: 3,
-                pointSize: 6
-            });
-
-            const activityData = new google.visualization.DataTable();
-            activityData.addColumn('string', 'Activity');
-            activityData.addColumn('number', 'Approved events');
-            activityData.addRows(activityChartRows.length ? activityChartRows : [['No data', 0]]);
-
-            const activityChart = new google.visualization.PieChart(document.getElementById('activity-chart'));
-            activityChart.draw(activityData, {
-                legend: {position: 'bottom'},
-                pieHole: 0.45,
-                chartArea: {left: 16, top: 24, width: '92%', height: '78%'},
-                height: 320,
-                slices: {
-                    0: {color: '#3273dc'},
-                    1: {color: '#48c78e'},
-                    2: {color: '#ffdd57'},
-                    3: {color: '#f14668'},
-                    4: {color: '#7957d5'}
-                }
+                height: 320
             });
         }
 
         function loadSummary() {
-            return $.getJSON('{{ url_for("cmte.report_events_dashboard_summary") }}', getFilterParams())
+            return $.getJSON('{{ url_for("cmte.report_event_types_dashboard_summary") }}', getFilterParams())
                 .done((payload) => {
-                    trendRows = payload.trend_rows || [];
+                    typeChartRows = payload.type_chart_rows || [];
                     activityChartRows = payload.activity_chart_rows || [];
                     renderKpi(payload.kpi || {});
                     drawCharts();
@@ -296,32 +236,26 @@
                 endDate: selectedDates.split(' - ')[1]
             });
 
-            $('#activity-select').select2({
-                allowClear: true,
-                width: '100%',
-                placeholder: "-- ทุกกิจกรรม --"
-            });
-
-            breakdownTable = $('#events-breakdown-table').DataTable({
-                pageLength: 10,
+            breakdownTable = $('#event-type-breakdown-table').DataTable({
                 processing: true,
                 serverSide: true,
                 searchDelay: 350,
+                pageLength: 10,
                 ajax: {
-                    url: '{{ url_for("cmte.report_events_dashboard_activity_breakdown") }}',
+                    url: '{{ url_for("cmte.report_event_types_dashboard_breakdown") }}',
                     data: function (d) {
                         const filters = getFilterParams();
                         d.dates = filters.dates;
-                        d.activity_id = filters.activity_id;
                     }
                 },
-                order: [[1, 'desc']],
+                order: [[0, 'asc']],
                 columns: [
-                    {data: 'activity_name'},
-                    {data: 'event_count'},
-                    {data: 'participant_count'},
-                    {data: 'pending_count'},
-                    {data: 'sponsor_count'}
+                    {data: 'number'},
+                    {data: 'name'},
+                    {data: 'activity_count'},
+                    {data: 'approved_event_count'},
+                    {data: 'for_group'},
+                    {data: 'is_sponsored'}
                 ]
             });
 
@@ -332,7 +266,7 @@
             });
             window.addEventListener('resize', drawCharts);
 
-            $('#dashboard-filters').on('submit', function (event) {
+            $('#event-type-dashboard-filters').on('submit', function (event) {
                 event.preventDefault();
                 syncQueryString();
                 loadSummary();
@@ -340,9 +274,7 @@
             });
 
             syncQueryString();
-            if (chartsReady) {
-                loadSummary();
-            } else {
+            if (!chartsReady) {
                 renderKpi({});
             }
         });
