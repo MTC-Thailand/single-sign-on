@@ -2934,52 +2934,240 @@ def list_event_types():
 @login_required
 @cmte_admin_permission.require()
 def report_sponsors_index():
+    _, _, selected_dates, selected_type = _get_sponsor_dashboard_filters(request.args)
+    sponsor_types = [row[0] for row in db.session.query(CMTEEventSponsor.type)
+                     .filter(CMTEEventSponsor.type != None)
+                     .distinct()
+                     .order_by(CMTEEventSponsor.type)
+                     .all()]
+    assumptions = [
+        'สถิติภาพรวมอ้างอิงตามสถาบันที่อยู่ในระบบทั้งหมด โดยสามารถกรองตามช่วงวันที่ขึ้นทะเบียนและประเภทองค์กรได้',
+        'จำนวนสถาบันใหม่อ้างอิงจากคำขอขึ้นทะเบียนหรือต่ออายุที่อนุมัติแล้วและไม่ถูกยกเลิกภายในช่วงวันที่เลือก',
+        'จำนวนสถาบันที่จะหมดอายุคำนวณจากวันหมดอายุที่อยู่ภายใน 90 วันนับจากวันสิ้นสุดของช่วงวันที่เลือก',
+        'ตารางสรุปแสดงจำนวนผู้ประสานงานและกิจกรรมที่อนุมัติแล้วต่อสถาบัน โดยใช้การแบ่งหน้าแบบ AJAX',
+    ]
+    return render_template('cmte/admin/report_sponsors_index.html',
+                           selected_dates=selected_dates,
+                           selected_type=selected_type,
+                           sponsor_types=sponsor_types,
+                           assumptions=assumptions)
+
+
+def _get_sponsor_dashboard_filters(source_args):
     today = datetime.now().date()
-    start_of_year = datetime(today.year, 1, 1).date()
-    selected_dates = None
-    all_sponsor = CMTEEventSponsor.query.filter(CMTEEventSponsor.expire_date >= today)
-    # new_sponsors = CMTEEventSponsor.query.filter(
-    #         func.date(CMTEEventSponsor.registered_datetime) <= today,
-    #         CMTEEventSponsor.expire_date >= start_of_year
-    #     )
-    expire_sponsor = db.session.query(CMTEEventSponsor).filter(
-            CMTEEventSponsor.expire_date.between(today, today + timedelta(days=90))
-        )
-    new_sponsors = (
-        CMTESponsorRequest.query.filter(
-            CMTESponsorRequest.approved_at != None,
-            CMTESponsorRequest.cancelled_at == None,
-            CMTESponsorRequest.type != 'change')
-        .distinct(CMTESponsorRequest.sponsor_id)
-        .all()
+    default_start = datetime(today.year, 1, 1).date()
+    dates_value = source_args.get('dates')
+    if dates_value:
+        start_d, end_d = dates_value.split(' - ')
+        start_date = datetime.strptime(start_d, '%d/%m/%Y').date()
+        end_date = datetime.strptime(end_d, '%d/%m/%Y').date()
+    else:
+        start_date = default_start
+        end_date = today
+        dates_value = f'{start_date.strftime("%d/%m/%Y")} - {end_date.strftime("%d/%m/%Y")}'
+    selected_type = source_args.get('sponsor_type', '')
+    return start_date, end_date, dates_value, selected_type
+
+
+def _get_sponsor_dashboard_base_query(start_date, end_date, selected_type=''):
+    query = db.session.query(
+        CMTEEventSponsor.id.label('sponsor_id'),
+        CMTEEventSponsor.name.label('sponsor_name'),
+        CMTEEventSponsor.type.label('sponsor_type'),
+        CMTEEventSponsor.affiliation.label('affiliation'),
+        CMTEEventSponsor.registered_datetime.label('registered_datetime'),
+        CMTEEventSponsor.expire_date.label('expire_date'),
     )
-    if request.method == 'POST':
-        form = request.form
-        selected_dates = request.form.get('dates', None)
-        start_d, end_d = form.get('dates').split(' - ')
-        start = datetime.strptime(start_d, '%d/%m/%Y')
-        end = datetime.strptime(end_d, '%d/%m/%Y')
-        query = CMTEEventSponsor.query
-        if start:
-            query = query.filter(
-                and_(
-                    func.date(CMTEEventSponsor.registered_datetime) >= start.date(),
-                    CMTEEventSponsor.expire_date >= end.date()
-                )
-            )
-        new_sponsors = (
-            CMTESponsorRequest.query.filter(
-                CMTESponsorRequest.approved_at != None,
+
+    query = query.filter(
+        or_(CMTEEventSponsor.registered_datetime == None,
+            func.date(CMTEEventSponsor.registered_datetime) >= start_date)
+    ).filter(
+        or_(CMTEEventSponsor.registered_datetime == None,
+            func.date(CMTEEventSponsor.registered_datetime) <= end_date)
+    )
+
+    if selected_type:
+        query = query.filter(CMTEEventSponsor.type == selected_type)
+
+    return query.subquery()
+
+
+@cmte.get('/report/sponsors/summary')
+@login_required
+@cmte_admin_permission.require()
+def report_sponsors_summary():
+    start_date, end_date, _, selected_type = _get_sponsor_dashboard_filters(request.args)
+    sponsor_base = _get_sponsor_dashboard_base_query(start_date, end_date, selected_type)
+    cutoff_date = end_date + timedelta(days=90)
+
+    active_case = case(
+        (and_(sponsor_base.c.expire_date != None, sponsor_base.c.expire_date >= end_date), 1),
+        else_=0
+    )
+    expiring_case = case(
+        (and_(sponsor_base.c.expire_date != None,
+              sponsor_base.c.expire_date >= end_date,
+              sponsor_base.c.expire_date <= cutoff_date), 1),
+        else_=0
+    )
+
+    kpi_row = db.session.query(
+        func.count(sponsor_base.c.sponsor_id).label('total_sponsors'),
+        func.coalesce(func.sum(active_case), 0).label('active_sponsors'),
+        func.coalesce(func.sum(expiring_case), 0).label('expiring_soon'),
+    ).one()
+
+    new_sponsors_count = (
+        db.session.query(func.count(func.distinct(CMTESponsorRequest.sponsor_id)))
+        .join(CMTEEventSponsor, CMTEEventSponsor.id == CMTESponsorRequest.sponsor_id)
+        .filter(CMTESponsorRequest.approved_at != None,
                 CMTESponsorRequest.cancelled_at == None,
                 CMTESponsorRequest.type != 'change')
-            .filter(CMTESponsorRequest.approved_at.between(start, end))
-            .distinct(CMTESponsorRequest.sponsor_id).all())
-        expire_sponsor = query.filter(
-            CMTEEventSponsor.expire_date.between(end, end + timedelta(days=90)))
-    count_new_sponsors = len(new_sponsors)
-    return render_template('cmte/admin/report_sponsors_index.html', all_sponsor=all_sponsor,
-                           new_sponsors=new_sponsors, expire_sponsor=expire_sponsor,
-                           selected_dates=selected_dates, count_new_sponsors=count_new_sponsors)
+        .filter(func.date(CMTESponsorRequest.approved_at) >= start_date,
+                func.date(CMTESponsorRequest.approved_at) <= end_date)
+    )
+    if selected_type:
+        new_sponsors_count = new_sponsors_count.filter(CMTEEventSponsor.type == selected_type)
+    new_sponsors_count = new_sponsors_count.scalar() or 0
+
+    monthly_rows = db.session.query(
+        func.extract('year', sponsor_base.c.registered_datetime).label('year'),
+        func.extract('month', sponsor_base.c.registered_datetime).label('month'),
+        func.count(sponsor_base.c.sponsor_id).label('registered_count'),
+    ).filter(sponsor_base.c.registered_datetime != None)\
+        .group_by(func.extract('year', sponsor_base.c.registered_datetime),
+                  func.extract('month', sponsor_base.c.registered_datetime))\
+        .order_by(func.extract('year', sponsor_base.c.registered_datetime),
+                  func.extract('month', sponsor_base.c.registered_datetime)).all()
+
+    sponsor_type_label = func.coalesce(sponsor_base.c.sponsor_type, 'ไม่ระบุประเภท')
+    type_count = func.count(sponsor_base.c.sponsor_id)
+    type_rows = db.session.query(
+        sponsor_type_label.label('label'),
+        type_count.label('count'),
+    ).group_by(sponsor_type_label)\
+        .order_by(type_count.desc(), sponsor_type_label.asc())\
+        .limit(8).all()
+
+    status_label = case(
+        (sponsor_base.c.expire_date == None, 'ยังไม่ระบุวันหมดอายุ'),
+        (sponsor_base.c.expire_date < end_date, 'หมดอายุแล้ว'),
+        (sponsor_base.c.expire_date <= cutoff_date, 'ใกล้หมดอายุภายใน 90 วัน'),
+        else_='ใช้งานอยู่'
+    )
+    status_count = func.count(sponsor_base.c.sponsor_id)
+    status_rows = db.session.query(
+        status_label.label('status_label'),
+        status_count.label('count'),
+    ).group_by(status_label).order_by(status_count.desc()).all()
+
+    registered_rows = []
+    for row in monthly_rows:
+        year = int(row.year)
+        month = int(row.month)
+        registered_rows.append([f'{calendar.month_abbr[month]} {year}', int(row.registered_count or 0)])
+
+    type_chart_rows = [[row.label, int(row.count or 0)] for row in type_rows]
+    status_chart_rows = [[row.status_label, int(row.count or 0)] for row in status_rows]
+
+    return jsonify({
+        'kpi': {
+            'total_sponsors': int(kpi_row.total_sponsors or 0),
+            'active_sponsors': int(kpi_row.active_sponsors or 0),
+            'new_sponsors': int(new_sponsors_count),
+            'expiring_soon': int(kpi_row.expiring_soon or 0),
+        },
+        'registered_rows': registered_rows,
+        'type_chart_rows': type_chart_rows,
+        'status_chart_rows': status_chart_rows,
+    })
+
+
+@cmte.get('/report/sponsors/breakdown')
+@login_required
+@cmte_admin_permission.require()
+def report_sponsors_breakdown():
+    start_date, end_date, _, selected_type = _get_sponsor_dashboard_filters(request.args)
+    search = request.args.get('search[value]', '')
+    start = request.args.get('start', type=int, default=0)
+    length = request.args.get('length', type=int, default=10)
+    draw = request.args.get('draw', type=int)
+
+    sponsor_base = _get_sponsor_dashboard_base_query(start_date, end_date, selected_type)
+
+    member_counts = db.session.query(
+        CMTESponsorMember.sponsor_id.label('sponsor_id'),
+        func.count(CMTESponsorMember.id).label('member_count'),
+    ).group_by(CMTESponsorMember.sponsor_id).subquery()
+
+    event_counts = db.session.query(
+        CMTEEvent.sponsor_id.label('sponsor_id'),
+        func.count(CMTEEvent.id).label('approved_event_count'),
+    ).filter(CMTEEvent.approved_datetime != None,
+             CMTEEvent.cancelled_datetime == None)\
+        .group_by(CMTEEvent.sponsor_id).subquery()
+
+    query = db.session.query(
+        sponsor_base.c.sponsor_id,
+        sponsor_base.c.sponsor_name,
+        sponsor_base.c.sponsor_type,
+        sponsor_base.c.affiliation,
+        sponsor_base.c.registered_datetime,
+        sponsor_base.c.expire_date,
+        func.coalesce(member_counts.c.member_count, 0).label('member_count'),
+        func.coalesce(event_counts.c.approved_event_count, 0).label('approved_event_count'),
+    ).outerjoin(member_counts, member_counts.c.sponsor_id == sponsor_base.c.sponsor_id)\
+     .outerjoin(event_counts, event_counts.c.sponsor_id == sponsor_base.c.sponsor_id)
+
+    if search:
+        query = query.filter(or_(
+            sponsor_base.c.sponsor_name.ilike(f'%{search}%'),
+            sponsor_base.c.sponsor_type.ilike(f'%{search}%'),
+            sponsor_base.c.affiliation.ilike(f'%{search}%'),
+        ))
+
+    records_filtered = query.count()
+    records_total = db.session.query(func.count()).select_from(sponsor_base).scalar()
+
+    orderable_columns = {
+        0: sponsor_base.c.sponsor_name,
+        1: sponsor_base.c.sponsor_type,
+        2: sponsor_base.c.registered_datetime,
+        3: sponsor_base.c.expire_date,
+        4: member_counts.c.member_count,
+        5: event_counts.c.approved_event_count,
+    }
+    col_idx = request.args.get('order[0][column]', type=int)
+    direction = request.args.get('order[0][dir]', default='asc')
+    if col_idx in orderable_columns:
+        order_column = orderable_columns[col_idx]
+        query = query.order_by(order_column.desc() if direction == 'desc' else order_column.asc())
+    else:
+        query = query.order_by(sponsor_base.c.sponsor_name.asc())
+
+    rows = query.offset(start).limit(length).all()
+    data = [{
+        'name': row.sponsor_name,
+        'type': row.sponsor_type or '-',
+        'affiliation': row.affiliation or '-',
+        'registered_datetime': row.registered_datetime.isoformat() if row.registered_datetime else None,
+        'expire_date': row.expire_date.isoformat() if row.expire_date else None,
+        'member_count': int(row.member_count or 0),
+        'approved_event_count': int(row.approved_event_count or 0),
+        'status': ('ยังไม่ระบุวันหมดอายุ' if row.expire_date is None else
+                   'หมดอายุแล้ว' if row.expire_date < end_date else
+                   'ใกล้หมดอายุภายใน 90 วัน' if row.expire_date <= end_date + timedelta(days=90) else
+                   'ใช้งานอยู่'),
+        'url': url_for('cmte.manage_sponsor', sponsor_id=row.sponsor_id),
+    } for row in rows]
+
+    return jsonify({
+        'data': data,
+        'recordsFiltered': records_filtered,
+        'recordsTotal': records_total,
+        'draw': draw,
+    })
 
 
 # @cmte.route('/report/eventr', methods=['GET', 'POST'])

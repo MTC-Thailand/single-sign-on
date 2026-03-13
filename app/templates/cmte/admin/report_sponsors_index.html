@@ -2,226 +2,259 @@
 {% block head %}
     {{ super() }}
     <link rel="stylesheet" type="text/css" href="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+    <style>
+        .kpi-card {
+            border: 1px solid #dbdbdb;
+            border-radius: 0.75rem;
+            height: 100%;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .chart-card {
+            border: 1px solid #dbdbdb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            background: #fff;
+            height: 100%;
+        }
+
+        .chart-surface {
+            min-height: 320px;
+        }
+    </style>
 {% endblock %}
 {% block content %}
     {% include "cmte/admin_nav.html" %}
     <section class="section">
-{#        <div class="column">
-            <div class="is-flex is-justify-content-center is-align-items-center">
-                <a href="{{ url_for('cmte.report_sponsors_index', tab='all') }}" class="button is-primary">สถาบัน</a>
-                <a href="{{ url_for('cmte.report_events_index') }}" class="button ml-3">กิจกรรมกลุ่ม</a>
-                <a href="{{ url_for('cmte.report_members_index') }}" class="button ml-3">สมาชิก</a>
+        <div class="container is-max-desktop">
+            <div class="is-flex is-flex-wrap-wrap is-justify-content-center is-align-items-center mb-4" style="gap: 0.75rem;">
+                <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button is-link">สถาบัน</a>
+                <a href="{{ url_for('cmte.report_events_dashboard') }}" class="button">Dashboard กิจกรรม</a>
+                <a href="{{ url_for('cmte.report_events_index') }}" class="button">จำนวนกิจกรรม</a>
+                <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button">ทะเบียนกิจกรรม</a>
+                <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button">กิจกรรมประเภทที่ 1</a>
+                <a href="{{ url_for('cmte.report_members_index') }}" class="button">สมาชิก</a>
+                <a href="{{ url_for('cmte.report_events_by_activity') }}" class="button">ชนิดกิจกรรม</a>
+                <a href="{{ url_for('cmte.report_individual_scores') }}" class="button">กิจกรรมส่วนบุคคล</a>
+                <a href="{{ url_for('cmte.report_individual_scores') }}" class="button">กิจกรรมกลุ่มบุคคล</a>
             </div>
-            <div class="column">
-                <h1 class="title has-text-centered">ทะเบียนสถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
-                <p>ช่วงเวลา</p>
-                <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="control has-icons-left" style="display: flex; align-items: center;">
-                        <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
-                               style="width: auto;">
-                        <span class="icon is-small is-left">
-                        <i class="far fa-calendar-alt"></i>
-                    </span>
-                        <button class="button is-info ml-3">ค้นหา</button>
-                    </div>
-                </form>
-            </div>
-            <div class="columns">
-                <div class="column is-one-third">
-                    <div class="box card-hover">
-                        <div class="columns">
-                            <div class="column">
-                                <h2 class="title is-4 has-text-weight-bold mt-2">ทั้งหมด</h2>
-                            </div>
-                            <div class="column is-align-content-flex-end">
-                                <div class="has-text-right">
-                                    <p class="title is-1 has-text-primary">{{ all_sponsor }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="buttons is-centered mt-4">
-                            <a href="{{ url_for('cmte.all_sponsors') }}"
-                               class="button is-rounded is-small is-fullwidth">
-                                ดูทั้งหมด
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="column is-one-third">
-                    <div class="box card-hover">
-                        <div class="columns">
-                            <div class="column">
-                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่ขอต่ออายุ/ขึ้นทะเบียน</h2>
-                            </div>
-                            <div class="column is-align-content-flex-end">
-                                <div class="has-text-right">
-                                    <p class="title is-1 has-text-warning">{{ sponsors or 0 }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="buttons is-centered mt-4">
-                            <a href="{{ url_for('cmte.all_requests') }}"
-                               class="button is-rounded is-small is-fullwidth">
-                                ดูทั้งหมด
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="column is-one-third">
-                    <div class="box card-hover">
-                        <div class="columns">
-                            <div class="column">
-                                <p class="is-size-7 has-text-grey">ใน 90 วัน</p>
-                                <h2 class="title is-4 has-text-weight-bold mt-2">ที่จะหมดอายุ</h2>
-                            </div>
-                            <div class="column is-align-content-flex-end">
-                                <div class="has-text-right">
-                                    <p class="title is-1 has-text-danger">{{ expire_count or 0 }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="buttons is-centered mt-4">
-                            <a href="{{ url_for('cmte.all_sponsors') }}"
-                               class="button is-rounded is-small is-fullwidth">
-                                ดูทั้งหมด
-                            </a>
-                        </div>
-                        <p class="is-size-7 has-text-grey">สถาบันที่จะหมดอายุ 5 อันดับแรก</p>
-                        <div class="column has-text-grey scrollable-list-container">
-                            {% for expire_sponsor in fifth_expire_sponsor %}
-                                <li>{{ expire_sponsor }}</li>
-                            {% endfor %}
-                        </div>
+
+            <div class="level mb-4">
+                <div class="level-left">
+                    <div>
+                        <h1 class="title mb-2">Dashboard สถาบัน</h1>
+                        <p class="subtitle is-6 mb-0">ภาพรวมสถาบันฝึกอบรม การเติบโต และสถานะการหมดอายุในหน้าเดียว</p>
                     </div>
                 </div>
             </div>
-        </div>#}
-        <div class="container">
-            <div class="column">
-                <div class="is-flex is-justify-content-center is-align-items-center">
-                    <a href="{{ url_for('cmte.report_sponsors_index') }}" class="button is-primary">สถาบัน</a>
-                    <a href="{{ url_for('cmte.report_events_index') }}" class="button ml-3">กิจกรรมกลุ่ม</a>
-                    <a href="{{ url_for('cmte.report_event_host_by_sponsor') }}" class="button ml-3">ทะเบียนกิจกรรม</a>
-                    <a href="{{ url_for('cmte.report_events_by_sponsor') }}" class="button ml-3">กิจกรรมประเภทที่ 1</a>
-                    <a href="{{url_for('cmte.report_members_index')}}" class="button ml-3">สมาชิก</a>
-                    <a href="{{ url_for('cmte.report_events_by_activity') }}" class="button ml-3">ชนิดกิจกรรม</a>
-                    <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมส่วนบุคคล</a>
-                    <a href="{{url_for('cmte.report_individual_scores')}}" class="button ml-3">กิจกรรมกลุ่มบุคคล</a>
-                </div>
-                <div class="column">
-                    <h1 class="title has-text-centered">ทะเบียนสถาบันฝึกอบรมการศึกษาต่อเนื่องเทคนิคการแพทย์</h1>
-                    <p>ช่วงเวลา</p>
-                    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="control has-icons-left" style="display: flex; align-items: center;">
-                            <input name="dates" id="dates" class="input" value="{{ selected_dates or '' }}"
-                                   style="width: auto;">
+
+            <form id="sponsor-dashboard-filters" class="box mb-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="columns is-variable is-4 is-multiline">
+                    <div class="column is-5">
+                        <label class="label">ช่วงวันที่ขึ้นทะเบียน</label>
+                        <div class="control has-icons-left">
+                            <input name="dates" id="dates" class="input" value="{{ selected_dates }}">
                             <span class="icon is-small is-left">
-                            <i class="far fa-calendar-alt"></i>
-                        </span>
-                            <button class="button is-info ml-3">ค้นหา</button>
+                                <i class="far fa-calendar-alt"></i>
+                            </span>
                         </div>
-                    </form>
+                    </div>
+                    <div class="column is-5">
+                        <label class="label">ประเภทองค์กร</label>
+                        <div class="control">
+                            <select id="sponsor-type-select" name="sponsor_type">
+                                <option value="" {{ 'selected' if not selected_type else '' }}>-- ทุกประเภท --</option>
+                                {% for sponsor_type in sponsor_types %}
+                                    <option value="{{ sponsor_type }}" {% if sponsor_type == selected_type %}selected{% endif %}>
+                                        {{ sponsor_type }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column is-2 is-flex is-align-items-flex-end">
+                        <button class="button is-info is-fullwidth">อัปเดต</button>
+                    </div>
                 </div>
-            </div>
-            <div class="column">
-                <div class="tabs is-boxed">
+            </form>
+
+            <div class="notification is-light mb-5">
+                <strong>สมมติฐานการแสดงผล</strong>
+                <div class="content mb-0">
                     <ul>
-                        <li>
-                                <span class="icon is-small"><i class="fas fa-list"></i></span>
-                                <span>ทั้งหมด</span>
-                                <span class="tag is-rounded">{{ all_sponsor.count() or 0 }}</span>
-                        </li>
+                        {% for assumption in assumptions %}
+                            <li>{{ assumption }}</li>
+                        {% endfor %}
                     </ul>
                 </div>
-                <table id="sponsors" class="table is-fullwidth">
-                    <thead>
-                    <th>สถาบัน</th>
-                    <th>วันที่ขึ้นทะเบียน</th>
-                    <th>วันที่หมดอายุ</th>
-                    <th>สถานะ</th>
-                    </thead>
-                    <tbody>
-                    {% for sponsor in all_sponsor %}
-                        <tr>
-                            <td><a href={{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}>{{ sponsor.name }}</a></td>
-                            <td>{{ sponsor.registered_datetime|localdate or '' }}</td>
-                            <td>{{ sponsor.expire_date|localdate or '' }}</td>
-                            <td>{{ sponsor.expire_status() }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
             </div>
-            <div class="column">
-                <div class="tabs is-boxed">
-                    <ul>
-                        <li>
-                                <span class="icon is-small"><i class="fas fa-hourglass-half"></i></span>
-                                <span>ขึ้นทะเบียน/ต่ออายุ</span>
-                                <span class="tag is-rounded">{{ count_new_sponsors }}</span>
-                        </li>
-                    </ul>
+
+            <div class="columns is-multiline mb-2">
+                <div class="column is-3-desktop is-6-tablet">
+                    <div class="box kpi-card">
+                        <p class="heading">สถาบันทั้งหมด</p>
+                        <p class="kpi-value" id="kpi-total-sponsors">-</p>
+                    </div>
                 </div>
-                <table id="newsponsors" class="table is-fullwidth">
-                    <thead>
-                    <th>สถาบัน</th>
-                    <th>วันที่ขึ้นทะเบียน</th>
-                    <th>วันที่หมดอายุ</th>
-                    <th>สถานะ</th>
-                    </thead>
-                    <tbody>
-                    {% for req in new_sponsors %}
-                        <tr>
-                            <td><a href={{ url_for('cmte.manage_sponsor', sponsor_id=req.sponsor.id) }}>{{ req.sponsor.name }}</a></td>
-                            <td>{{ req.sponsor.registered_datetime|localdate or '' }}</td>
-                            <td>{{ req.sponsor.expire_date|localdate or '' }}</td>
-                            <td>{{ req.sponsor.expire_status() }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                <div class="column is-3-desktop is-6-tablet">
+                    <div class="box kpi-card">
+                        <p class="heading">สถาบันใช้งานอยู่</p>
+                        <p class="kpi-value" id="kpi-active-sponsors">-</p>
+                    </div>
+                </div>
+                <div class="column is-3-desktop is-6-tablet">
+                    <div class="box kpi-card">
+                        <p class="heading">สถาบันใหม่</p>
+                        <p class="kpi-value" id="kpi-new-sponsors">-</p>
+                    </div>
+                </div>
+                <div class="column is-3-desktop is-6-tablet">
+                    <div class="box kpi-card">
+                        <p class="heading">ใกล้หมดอายุ 90 วัน</p>
+                        <p class="kpi-value" id="kpi-expiring-soon">-</p>
+                    </div>
+                </div>
             </div>
-            <div class="column">
-                <div class="tabs is-boxed">
-                    <ul>
-                        <li>
-                                <span class="icon is-small"><i class="fas fa-pen-fancy"></i></span>
-                                <span>จะหมดอายุ (90 วัน)</span>
-                                <span class="tag is-rounded">{{ expire_sponsor.count() }}</span>
-                        </li>
-                    </ul>
+
+            <div class="columns is-multiline mb-2">
+                <div class="column is-6-desktop">
+                    <div class="chart-card">
+                        <h2 class="title is-5">แนวโน้มการขึ้นทะเบียน</h2>
+                        <div id="registered-trend-chart" class="chart-surface"></div>
+                    </div>
                 </div>
-                <table id="expiresponsors" class="table is-fullwidth">
-                    <thead>
-                    <th>สถาบัน</th>
-                    <th>วันที่ขึ้นทะเบียน</th>
-                    <th>วันที่หมดอายุ</th>
-                    <th>สถานะ</th>
-                    </thead>
-                    <tbody>
-                    {% for sponsor in expire_sponsor %}
+                <div class="column is-6-desktop">
+                    <div class="chart-card">
+                        <h2 class="title is-5">สัดส่วนตามประเภทองค์กร</h2>
+                        <div id="type-mix-chart" class="chart-surface"></div>
+                    </div>
+                </div>
+                <div class="column is-12-desktop">
+                    <div class="chart-card">
+                        <h2 class="title is-5">สถานะการหมดอายุ</h2>
+                        <div id="status-mix-chart" class="chart-surface"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+                    <div>
+                        <h2 class="title is-5 mb-1">Breakdown Table</h2>
+                        <p class="subtitle is-6 mb-0">รายสถาบันพร้อมจำนวนผู้ประสานงานและกิจกรรมที่อนุมัติแล้ว</p>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="sponsor-breakdown-table" class="table is-fullwidth is-striped">
+                        <thead>
                         <tr>
-                            <td><a href={{ url_for('cmte.manage_sponsor', sponsor_id=sponsor.id) }}>{{ sponsor.name }}</a></td>
-                            <td>{{ sponsor.registered_datetime|localdate or '' }}</td>
-                            <td>{{ sponsor.expire_date|localdate or '' }}</td>
-                            <td>{{ sponsor.expire_status() }}</td>
+                            <th>สถาบัน</th>
+                            <th>ประเภท</th>
+                            <th>วันที่ขึ้นทะเบียน</th>
+                            <th>วันหมดอายุ</th>
+                            <th>ผู้ประสานงาน</th>
+                            <th>กิจกรรมที่อนุมัติแล้ว</th>
+                            <th>สถานะ</th>
                         </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </section>
 {% endblock %}
 {% block scripts %}
     {{ super() }}
-    <script type="text/javascript"
-            src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
+        let registeredRows = [];
+        let typeChartRows = [];
+        let statusChartRows = [];
+        let chartsReady = false;
+        let breakdownTable = null;
+
+        function getFilterParams() {
+            return {
+                dates: $('#dates').val(),
+                sponsor_type: $('#sponsor-type-select').val() || ''
+            };
+        }
+
+        function syncQueryString() {
+            const params = new URLSearchParams(getFilterParams());
+            const nextUrl = `${window.location.pathname}?${params.toString()}`;
+            window.history.replaceState({}, '', nextUrl);
+        }
+
+        function renderKpi(kpi) {
+            $('#kpi-total-sponsors').text(kpi.total_sponsors ?? 0);
+            $('#kpi-active-sponsors').text(kpi.active_sponsors ?? 0);
+            $('#kpi-new-sponsors').text(kpi.new_sponsors ?? 0);
+            $('#kpi-expiring-soon').text(kpi.expiring_soon ?? 0);
+        }
+
+        function drawCharts() {
+            if (!chartsReady || !window.google || !google.visualization) {
+                return;
+            }
+
+            const registeredData = new google.visualization.DataTable();
+            registeredData.addColumn('string', 'Month');
+            registeredData.addColumn('number', 'Registered sponsors');
+            registeredData.addRows(registeredRows.length ? registeredRows : [['No data', 0]]);
+            new google.visualization.ColumnChart(document.getElementById('registered-trend-chart')).draw(registeredData, {
+                legend: {position: 'bottom'},
+                colors: ['#3273dc'],
+                chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
+                height: 320
+            });
+
+            const typeData = new google.visualization.DataTable();
+            typeData.addColumn('string', 'Type');
+            typeData.addColumn('number', 'Sponsors');
+            typeData.addRows(typeChartRows.length ? typeChartRows : [['No data', 0]]);
+            new google.visualization.PieChart(document.getElementById('type-mix-chart')).draw(typeData, {
+                legend: {position: 'bottom'},
+                pieHole: 0.45,
+                chartArea: {left: 16, top: 24, width: '92%', height: '78%'},
+                height: 320
+            });
+
+            const statusData = new google.visualization.DataTable();
+            statusData.addColumn('string', 'Status');
+            statusData.addColumn('number', 'Sponsors');
+            statusData.addRows(statusChartRows.length ? statusChartRows : [['No data', 0]]);
+            new google.visualization.BarChart(document.getElementById('status-mix-chart')).draw(statusData, {
+                legend: {position: 'none'},
+                colors: ['#48c78e'],
+                chartArea: {left: 140, top: 24, width: '72%', height: '70%'},
+                height: 320
+            });
+        }
+
+        function loadSummary() {
+            return $.getJSON('{{ url_for("cmte.report_sponsors_summary") }}', getFilterParams())
+                .done((payload) => {
+                    registeredRows = payload.registered_rows || [];
+                    typeChartRows = payload.type_chart_rows || [];
+                    statusChartRows = payload.status_chart_rows || [];
+                    renderKpi(payload.kpi || {});
+                    drawCharts();
+                });
+        }
+
         $(document).ready(() => {
-            var today = moment();
-            var startOfYear = moment().startOf('year');
-            var selectedDates = '{{ selected_dates or "" }}';
+            const today = moment();
+            const startOfYear = moment().startOf('year');
+            let selectedDates = '{{ selected_dates }}';
             if (!selectedDates) {
                 selectedDates = startOfYear.format('DD/MM/YYYY') + ' - ' + today.format('DD/MM/YYYY');
             }
@@ -236,14 +269,71 @@
                 startDate: selectedDates.split(' - ')[0],
                 endDate: selectedDates.split(' - ')[1]
             });
-        });
-        $(document).ready(function () {
-            $('#sponsors').DataTable({
-            })
-            $('#newsponsors').DataTable({
-            })
-            $('#expiresponsors').DataTable({
-            })
+
+            $('#sponsor-type-select').select2({
+                allowClear: true,
+                width: '100%',
+                placeholder: "-- ทุกประเภท --"
+            });
+
+            breakdownTable = $('#sponsor-breakdown-table').DataTable({
+                processing: true,
+                serverSide: true,
+                searchDelay: 350,
+                pageLength: 10,
+                ajax: {
+                    url: '{{ url_for("cmte.report_sponsors_breakdown") }}',
+                    data: function (d) {
+                        const filters = getFilterParams();
+                        d.dates = filters.dates;
+                        d.sponsor_type = filters.sponsor_type;
+                    }
+                },
+                order: [[0, 'asc']],
+                columns: [
+                    {
+                        data: 'name',
+                        render: function (data, type, row) {
+                            return `<a href="${row.url}">${data}</a>`;
+                        }
+                    },
+                    {data: 'type'},
+                    {
+                        data: 'registered_datetime',
+                        render: function (data) {
+                            return data ? moment(data).format('LL') : '-';
+                        }
+                    },
+                    {
+                        data: 'expire_date',
+                        render: function (data) {
+                            return data ? moment(data).format('LL') : '-';
+                        }
+                    },
+                    {data: 'member_count'},
+                    {data: 'approved_event_count'},
+                    {data: 'status', orderable: false}
+                ]
+            });
+
+            google.charts.load('current', {'packages': ['corechart']});
+            google.charts.setOnLoadCallback(() => {
+                chartsReady = true;
+                loadSummary();
+            });
+            window.addEventListener('resize', drawCharts);
+
+            $('#sponsor-dashboard-filters').on('submit', function (event) {
+                event.preventDefault();
+                syncQueryString();
+                loadSummary();
+                breakdownTable.ajax.reload();
+            });
+
+            syncQueryString();
+            if (!chartsReady) {
+                renderKpi({});
+            }
         });
     </script>
 {% endblock %}
