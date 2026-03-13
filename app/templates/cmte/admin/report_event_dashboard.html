@@ -125,13 +125,19 @@
             </div>
 
             <div class="columns is-multiline mb-2">
-                <div class="column is-8-desktop">
+                <div class="column is-6-desktop">
                     <div class="chart-card">
-                        <h2 class="title is-5">Trends</h2>
-                        <div id="trend-chart" class="chart-surface"></div>
+                        <h2 class="title is-5">Approved Events Trend</h2>
+                        <div id="approved-events-trend-chart" class="chart-surface"></div>
                     </div>
                 </div>
-                <div class="column is-4-desktop">
+                <div class="column is-6-desktop">
+                    <div class="chart-card">
+                        <h2 class="title is-5">Participant Records Trend</h2>
+                        <div id="participant-records-trend-chart" class="chart-surface"></div>
+                    </div>
+                </div>
+                <div class="column is-12-desktop">
                     <div class="chart-card">
                         <h2 class="title is-5">Activity Mix</h2>
                         <div id="activity-chart" class="chart-surface"></div>
@@ -199,22 +205,44 @@
             if (!chartsReady || !window.google || !google.visualization) {
                 return;
             }
-            const trendData = new google.visualization.DataTable();
-            trendData.addColumn('string', 'Month');
-            trendData.addColumn('number', 'Approved events');
-            trendData.addColumn('number', 'Participant records');
-            trendData.addRows(trendRows.length ? trendRows : [['No data', 0, 0]]);
+            const approvedEventsData = new google.visualization.DataTable();
+            approvedEventsData.addColumn('string', 'Month');
+            approvedEventsData.addColumn('number', 'Approved events');
+            approvedEventsData.addRows(
+                trendRows.length
+                    ? trendRows.map((row) => [row[0], row[1]])
+                    : [['No data', 0]]
+            );
 
-            const trendChart = new google.visualization.ComboChart(document.getElementById('trend-chart'));
-            trendChart.draw(trendData, {
+            const approvedEventsChart = new google.visualization.ColumnChart(
+                document.getElementById('approved-events-trend-chart')
+            );
+            approvedEventsChart.draw(approvedEventsData, {
                 legend: {position: 'bottom'},
-                seriesType: 'bars',
-                series: {
-                    1: {type: 'line'}
-                },
-                colors: ['#3273dc', '#23d160'],
+                colors: ['#3273dc'],
                 chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
                 height: 320
+            });
+
+            const participantRecordsData = new google.visualization.DataTable();
+            participantRecordsData.addColumn('string', 'Month');
+            participantRecordsData.addColumn('number', 'Participant records');
+            participantRecordsData.addRows(
+                trendRows.length
+                    ? trendRows.map((row) => [row[0], row[2]])
+                    : [['No data', 0]]
+            );
+
+            const participantRecordsChart = new google.visualization.LineChart(
+                document.getElementById('participant-records-trend-chart')
+            );
+            participantRecordsChart.draw(participantRecordsData, {
+                legend: {position: 'bottom'},
+                colors: ['#23d160'],
+                chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
+                height: 320,
+                lineWidth: 3,
+                pointSize: 6
             });
 
             const activityData = new google.visualization.DataTable();
