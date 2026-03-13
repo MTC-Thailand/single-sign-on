@@ -3,6 +3,7 @@ import re
 import time
 import os
 import uuid
+import calendar
 from functools import wraps
 from io import BytesIO
 import pandas as pd
@@ -15,7 +16,7 @@ from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
 from itsdangerous import TimedJSONWebSignatureSerializer
-from sqlalchemy import or_, func, and_
+from sqlalchemy import or_, func, and_, case
 
 from app import sponsor_event_management_permission, send_mail
 from app.cmte import cmte_bp as cmte
@@ -3079,6 +3080,201 @@ def report_events_index():
     return render_template('cmte/admin/report_event_index.html',
                            event_html_table=event_html_table,
                            selected_dates=selected_dates)
+
+
+def _get_dashboard_filters(source_args):
+    today = datetime.now().date()
+    default_start = datetime(today.year, 1, 1).date()
+    dates_value = source_args.get('dates')
+    if dates_value:
+        start_d, end_d = dates_value.split(' - ')
+        start_date = datetime.strptime(start_d, '%d/%m/%Y').date()
+        end_date = datetime.strptime(end_d, '%d/%m/%Y').date()
+    else:
+        start_date = default_start
+        end_date = today
+        dates_value = f'{start_date.strftime("%d/%m/%Y")} - {end_date.strftime("%d/%m/%Y")}'
+    selected_activity = source_args.get('activity_id', '')
+    return start_date, end_date, dates_value, selected_activity
+
+
+def _get_dashboard_event_base_query(start_date, end_date, selected_activity=''):
+    query = (db.session.query(
+        CMTEEvent.id.label('event_id'),
+        CMTEEvent.sponsor_id.label('sponsor_id'),
+        CMTEEvent.activity_id.label('activity_id'),
+        CMTEEvent.approved_datetime.label('approved_datetime'),
+    ).filter(CMTEEvent.approved_datetime != None)
+     .filter(CMTEEvent.cancelled_datetime == None)
+     .filter(func.date(CMTEEvent.approved_datetime) >= start_date)
+     .filter(func.date(CMTEEvent.approved_datetime) <= end_date))
+
+    if selected_activity:
+        query = query.filter(CMTEEvent.activity_id == int(selected_activity))
+
+    return query.subquery()
+
+
+def _get_dashboard_activity_breakdown_query(start_date, end_date, selected_activity=''):
+    event_base = _get_dashboard_event_base_query(start_date, end_date, selected_activity)
+    pending_case = case((CMTEEventParticipationRecord.approved_date == None, 1), else_=0)
+    return (
+        db.session.query(
+            func.coalesce(CMTEEventActivity.name, 'Unassigned activity').label('activity_name'),
+            func.count(func.distinct(event_base.c.event_id)).label('event_count'),
+            func.count(CMTEEventParticipationRecord.id).label('participant_count'),
+            func.coalesce(func.sum(pending_case), 0).label('pending_count'),
+            func.count(func.distinct(event_base.c.sponsor_id)).label('sponsor_count'),
+        )
+        .select_from(event_base)
+        .outerjoin(CMTEEventActivity, CMTEEventActivity.id == event_base.c.activity_id)
+        .outerjoin(CMTEEventParticipationRecord, CMTEEventParticipationRecord.event_id == event_base.c.event_id)
+        .group_by(CMTEEventActivity.name)
+    )
+
+
+@cmte.route('/report/event/dashboard', methods=['GET'])
+@login_required
+@cmte_admin_permission.require()
+def report_events_dashboard():
+    _, _, selected_dates, selected_activity = _get_dashboard_filters(request.args)
+    all_activity = CMTEEventActivity.query.order_by(CMTEEventActivity.number, CMTEEventActivity.name).all()
+
+    assumptions = [
+        'ตัวชี้วัดนี้นับเฉพาะกิจกรรม CMTE ที่อนุมัติแล้วและยังไม่ถูกยกเลิก',
+        'ช่วงเวลาตั้งต้นคือปีปฏิทินปัจจุบัน โดยอ้างอิงจากวันที่อนุมัติกิจกรรม',
+        'จำนวนผู้เข้าร่วมที่แสดงนับตามรายการบันทึกผู้เข้าร่วมที่อัปโหลด ไม่ใช่จำนวนสมาชิกที่ไม่ซ้ำกัน',
+        'ตารางสรุปจัดกลุ่มตามชนิดกิจกรรม และกิจกรรมที่ยังไม่ได้ระบุชนิดจะแสดงเป็น "ยังไม่ระบุชนิดกิจกรรม"',
+    ]
+
+    return render_template(
+        'cmte/admin/report_event_dashboard.html',
+        selected_dates=selected_dates,
+        selected_activity=selected_activity,
+        all_activity=all_activity,
+        assumptions=assumptions,
+    )
+
+
+@cmte.get('/report/event/dashboard/summary')
+@login_required
+@cmte_admin_permission.require()
+def report_events_dashboard_summary():
+    start_date, end_date, _, selected_activity = _get_dashboard_filters(request.args)
+    event_base = _get_dashboard_event_base_query(start_date, end_date, selected_activity)
+
+    kpi_row = (
+        db.session.query(
+            func.count(func.distinct(event_base.c.event_id)).label('approved_events'),
+            func.count(func.distinct(event_base.c.sponsor_id)).label('active_sponsors'),
+            func.count(CMTEEventParticipationRecord.id).label('participant_records'),
+            func.coalesce(func.sum(case((CMTEEventParticipationRecord.approved_date == None, 1), else_=0)), 0)
+            .label('pending_participant_approvals'),
+        )
+        .select_from(event_base)
+        .outerjoin(CMTEEventParticipationRecord, CMTEEventParticipationRecord.event_id == event_base.c.event_id)
+        .one()
+    )
+
+    monthly_rows = (
+        db.session.query(
+            func.extract('year', event_base.c.approved_datetime).label('year'),
+            func.extract('month', event_base.c.approved_datetime).label('month'),
+            func.count(func.distinct(event_base.c.event_id)).label('approved_events'),
+            func.count(CMTEEventParticipationRecord.id).label('participant_records'),
+        )
+        .select_from(event_base)
+        .outerjoin(CMTEEventParticipationRecord, CMTEEventParticipationRecord.event_id == event_base.c.event_id)
+        .group_by(func.extract('year', event_base.c.approved_datetime),
+                  func.extract('month', event_base.c.approved_datetime))
+        .order_by(func.extract('year', event_base.c.approved_datetime),
+                  func.extract('month', event_base.c.approved_datetime))
+        .all()
+    )
+
+    activity_rows = (_get_dashboard_activity_breakdown_query(start_date, end_date, selected_activity)
+                     .order_by(db.text('event_count DESC'),
+                               db.text('activity_name ASC'))
+                     .limit(8)
+                     .all())
+
+    trend_rows = []
+    for row in monthly_rows:
+        year = int(row.year)
+        month = int(row.month)
+        trend_rows.append([
+            f'{calendar.month_abbr[month]} {year}',
+            int(row.approved_events or 0),
+            int(row.participant_records or 0),
+        ])
+
+    activity_chart_rows = [
+        [row.activity_name, int(row.event_count or 0)]
+        for row in activity_rows
+    ]
+
+    return jsonify({
+        'kpi': {
+            'approved_events': int(kpi_row.approved_events or 0),
+            'active_sponsors': int(kpi_row.active_sponsors or 0),
+            'participant_records': int(kpi_row.participant_records or 0),
+            'pending_participant_approvals': int(kpi_row.pending_participant_approvals or 0),
+        },
+        'trend_rows': trend_rows,
+        'activity_chart_rows': activity_chart_rows,
+    })
+
+
+@cmte.get('/report/event/dashboard/activity-breakdown')
+@login_required
+@cmte_admin_permission.require()
+def report_events_dashboard_activity_breakdown():
+    start_date, end_date, _, selected_activity = _get_dashboard_filters(request.args)
+    search = request.args.get('search[value]', '')
+    start = request.args.get('start', type=int, default=0)
+    length = request.args.get('length', type=int, default=10)
+    draw = request.args.get('draw', type=int)
+
+    breakdown_query = _get_dashboard_activity_breakdown_query(start_date, end_date, selected_activity)
+    breakdown_subquery = breakdown_query.subquery()
+
+    query = db.session.query(breakdown_subquery)
+    if search:
+        query = query.filter(breakdown_subquery.c.activity_name.ilike(f'%{search}%'))
+
+    records_filtered = query.count()
+    records_total = db.session.query(func.count()).select_from(breakdown_subquery).scalar()
+
+    orderable_columns = {
+        0: breakdown_subquery.c.activity_name,
+        1: breakdown_subquery.c.event_count,
+        2: breakdown_subquery.c.participant_count,
+        3: breakdown_subquery.c.pending_count,
+        4: breakdown_subquery.c.sponsor_count,
+    }
+    col_idx = request.args.get('order[0][column]', type=int)
+    direction = request.args.get('order[0][dir]', default='desc')
+    if col_idx in orderable_columns:
+        order_column = orderable_columns[col_idx]
+        query = query.order_by(order_column.desc() if direction == 'desc' else order_column.asc())
+    else:
+        query = query.order_by(breakdown_subquery.c.event_count.desc(), breakdown_subquery.c.activity_name.asc())
+
+    rows = query.offset(start).limit(length).all()
+    data = [{
+        'activity_name': row.activity_name,
+        'event_count': int(row.event_count or 0),
+        'participant_count': int(row.participant_count or 0),
+        'pending_count': int(row.pending_count or 0),
+        'sponsor_count': int(row.sponsor_count or 0),
+    } for row in rows]
+
+    return jsonify({
+        'data': data,
+        'recordsFiltered': records_filtered,
+        'recordsTotal': records_total,
+        'draw': draw,
+    })
 
 
 @cmte.route('/report/event-host-by-sponsor', methods=['GET', 'POST'])
