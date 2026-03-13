@@ -31,6 +31,14 @@
                             ท่านต้องสะสมเพิ่มอีก {{50-(total_scores or 0)}} หน่วยคะแนน {{current_user.license.end_date|humanizedate}} เพื่อขอต่ออายุใบอนุญาต
                         </h1>
                     {% endif %}
+                    {% if total_scores %}
+                        <div class="mt-4">
+                            <button class="button is-link is-medium" id="generate-certificate-btn" type="button">
+                                <span class="icon"><i class="fa-solid fa-file-pdf"></i></span>
+                                <span>สร้างใบรับรอง PDF</span>
+                            </button>
+                        </div>
+                    {% endif %}
                 {% else %}
                     {% if total_scores %}
                         <h1 class="title">หน่วยคะแนนรวม {{total_scores}}</h1>
@@ -40,4 +48,234 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block head %}
+{{ super() }}
+{% if filter == 'approved_valid' and total_scores %}
+<style>
+    @font-face {
+        font-family: "TH Sarabun New";
+        src: url("{{ url_for('static', filename='fonts/THSarabunNew.ttf') }}") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+    }
+
+    @font-face {
+        font-family: "TH Sarabun New";
+        src: url("{{ url_for('static', filename='fonts/THSarabunNew Bold.ttf') }}") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+    }
+ </style>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if filter == 'approved_valid' and total_scores %}
+{% set member_name = ([current_user.th_title, current_user.th_firstname, current_user.th_lastname] | select | join(' ')) %}
+{% set member_name_en = ([current_user.en_title, current_user.en_firstname, current_user.en_lastname] | select | join(' ')) %}
+<script>
+    const CERTIFICATE_FONT_FAMILY = '"TH Sarabun New", Tahoma, sans-serif';
+    const certificateData = {{ {
+        'memberName': member_name,
+        'memberNameEn': member_name_en,
+        'licenseNumber': current_user.license_number,
+        'totalScores': total_scores,
+        'licenseEndDate': current_user.license.end_date.isoformat() if current_user.license and current_user.license.end_date else None,
+        'generatedAt': None,
+        'templateUrl': url_for('static', filename='cmte_certificate_template_2025.png'),
+    }|tojson }};
+    let pdfMakeLoaderPromise;
+
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const existingScript = document.querySelector(`script[src="${src}"]`);
+            if (existingScript) {
+                if (existingScript.dataset.loaded === 'true') {
+                    resolve();
+                    return;
+                }
+                existingScript.addEventListener('load', () => resolve(), { once: true });
+                existingScript.addEventListener('error', () => reject(new Error(`โหลดสคริปต์ไม่สำเร็จ: ${src}`)), { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.referrerPolicy = 'no-referrer';
+            script.addEventListener('load', () => {
+                script.dataset.loaded = 'true';
+                resolve();
+            }, { once: true });
+            script.addEventListener('error', () => reject(new Error(`โหลดสคริปต์ไม่สำเร็จ: ${src}`)), { once: true });
+            document.head.appendChild(script);
+        });
+    }
+
+    async function ensurePdfMake() {
+        if (window.pdfMake) {
+            return window.pdfMake;
+        }
+
+        if (!pdfMakeLoaderPromise) {
+            pdfMakeLoaderPromise = (async () => {
+                await loadScript('https://unpkg.com/pdfmake@0.3/build/pdfmake.min.js');
+                await loadScript('https://unpkg.com/pdfmake@0.3/build/vfs_fonts.js');
+
+                if (!window.pdfMake) {
+                    throw new Error('ไม่พบไลบรารีสำหรับสร้าง PDF');
+                }
+
+                return window.pdfMake;
+            })();
+        }
+
+        return pdfMakeLoaderPromise;
+    }
+
+    async function ensureCertificateFont() {
+        if (!document.fonts || !document.fonts.load) {
+            return;
+        }
+
+        try {
+            await Promise.all([
+                document.fonts.load(`700 72px ${CERTIFICATE_FONT_FAMILY}`, certificateData.memberName || certificateData.memberNameEn || 'ทดสอบ'),
+                document.fonts.load(`400 48px ${CERTIFICATE_FONT_FAMILY}`, 'ใบรับรองหน่วยคะแนนการศึกษาต่อเนื่อง'),
+            ]);
+        } catch (error) {
+            console.warn('Certificate font load fallback', error);
+        }
+    }
+
+    function loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('ไม่สามารถโหลดภาพต้นแบบใบรับรองได้'));
+            image.src = src;
+        });
+    }
+
+    function formatThaiDate(dateString) {
+        if (!dateString) {
+            return '-';
+        }
+
+        return new Intl.DateTimeFormat('th-TH', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        }).format(new Date(dateString));
+    }
+
+    function formatScore(value) {
+        const score = Number(value || 0);
+        return Number.isInteger(score) ? score.toString() : score.toFixed(2);
+    }
+
+    function drawCenteredText(ctx, text, x, y, options = {}) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = options.color || '#3b342d';
+        ctx.font = options.font || `700 84px ${CERTIFICATE_FONT_FAMILY}`;
+        ctx.fillText(text, x, y);
+        ctx.restore();
+    }
+
+    function drawFittedCenteredText(ctx, text, x, y, options = {}) {
+        const family = options.family || CERTIFICATE_FONT_FAMILY;
+        const weight = options.weight || 700;
+        const minSize = options.minSize || 48;
+        let fontSize = options.fontSize || 84;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = options.color || '#3b342d';
+
+        do {
+            ctx.font = `${weight} ${fontSize}px ${family}`;
+            fontSize -= 4;
+        } while (ctx.measureText(text).width > (options.maxWidth || 2600) && fontSize > minSize);
+
+        ctx.fillText(text, x, y);
+        ctx.restore();
+    }
+
+    async function buildCertificatePage() {
+        await ensureCertificateFont();
+        const templateImage = await loadImage(certificateData.templateUrl);
+        const canvas = document.createElement('canvas');
+        canvas.width = templateImage.width;
+        canvas.height = templateImage.height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(templateImage, 0, 0);
+
+        const memberName = certificateData.memberName || certificateData.memberNameEn || '-';
+        drawFittedCenteredText(ctx, memberName, canvas.width / 2, 1025, {
+            color: '#8b5d21',
+            fontSize: 132,
+            minSize: 80,
+            maxWidth: 2500,
+        });
+
+        const lines = [
+            { text: `เลขที่ใบอนุญาต ${certificateData.licenseNumber || '-'}`, y: 1245, font: `400 74px ${CERTIFICATE_FONT_FAMILY}` },
+            { text: `มีหน่วยคะแนนการศึกษาต่อเนื่องสำหรับต่ออายุใบอนุญาต จำนวน ${formatScore(certificateData.totalScores)} หน่วยคะแนน`, y: 1385, font: `400 74px ${CERTIFICATE_FONT_FAMILY}` },
+            { text: `ข้อมูลคะแนนมีผลถึงวันที่ ${formatThaiDate(certificateData.licenseEndDate)}`, y: 1525, font: `400 74px ${CERTIFICATE_FONT_FAMILY}` },
+            { text: `ออกให้ ณ วันที่ ${formatThaiDate(certificateData.generatedAt || new Date().toISOString())}`, y: 1665, font: `400 64px ${CERTIFICATE_FONT_FAMILY}`, color: '#4f4f4f' },
+        ];
+
+        lines.forEach((line) => drawCenteredText(ctx, line.text, canvas.width / 2, line.y, line));
+
+        return canvas.toDataURL('image/png');
+    }
+
+    async function generateCertificatePdf() {
+        const button = document.getElementById('generate-certificate-btn');
+        const originalContent = button.innerHTML;
+
+        button.classList.add('is-loading');
+        button.disabled = true;
+
+        try {
+            const pdfMake = await ensurePdfMake();
+            const certificateImage = await buildCertificatePage();
+            const filename = `cmte-certificate-${certificateData.licenseNumber || 'member'}.pdf`;
+
+            pdfMake.createPdf({
+                pageSize: 'A4',
+                pageOrientation: 'landscape',
+                pageMargins: [0, 0, 0, 0],
+                content: [
+                    {
+                        image: certificateImage,
+                        width: 841.89,
+                        height: 595.28,
+                    }
+                ],
+            }).download(filename);
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'สร้างไฟล์ไม่สำเร็จ',
+                text: error.message || 'กรุณาลองใหม่อีกครั้ง',
+            });
+        } finally {
+            button.classList.remove('is-loading');
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
+    }
+
+    document.getElementById('generate-certificate-btn')?.addEventListener('click', generateCertificatePdf);
+</script>
+{% endif %}
 {% endblock %}
