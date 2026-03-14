@@ -2294,7 +2294,14 @@ def admin_event_edit(event_id=None):
 
 @cmte.route('/upcoming-events')
 def upcoming_events():
-    return render_template('members/cmte/upcoming_events.html')
+    events = CMTEEvent.query.filter(
+        CMTEEvent.approved_datetime != None,
+        CMTEEvent.start_date >= datetime.today()
+    ).order_by(CMTEEvent.start_date).all()
+    return render_template(
+        'members/cmte/upcoming_events.html',
+        events=[event.to_dict() for event in events],
+    )
 
 
 @cmte.route('/events/<int:event_id>/info')
