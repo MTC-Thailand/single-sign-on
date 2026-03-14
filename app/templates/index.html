@@ -1,40 +1,436 @@
 {% extends "base.html" %}
 
+{% block title %}MTC Portal{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .portal-home {
+        padding: 0 1rem 3rem;
+    }
+
+    .portal-shell {
+        margin: 0 auto;
+        max-width: 1240px;
+    }
+
+    .portal-hero {
+        background:
+            radial-gradient(circle at top right, rgba(198, 58, 52, 0.16), transparent 24%),
+            radial-gradient(circle at left center, rgba(34, 79, 148, 0.18), transparent 34%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.94));
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 34px;
+        box-shadow: 0 24px 60px rgba(24, 49, 79, 0.08);
+        overflow: hidden;
+        padding: 2.15rem 2.25rem;
+        position: relative;
+    }
+
+    .portal-hero::before,
+    .portal-hero::after {
+        border-radius: 999px;
+        content: "";
+        position: absolute;
+        z-index: 0;
+    }
+
+    .portal-hero::before {
+        background: rgba(255, 255, 255, 0.55);
+        height: 220px;
+        right: -60px;
+        top: -70px;
+        width: 220px;
+    }
+
+    .portal-hero::after {
+        background: rgba(198, 58, 52, 0.07);
+        bottom: -100px;
+        height: 260px;
+        left: -90px;
+        width: 260px;
+    }
+
+    .portal-hero-grid,
+    .portal-card-grid {
+        position: relative;
+        z-index: 1;
+    }
+
+    .portal-hero-grid {
+        align-items: flex-start;
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .portal-hero-copy {
+        max-width: none;
+        width: 100%;
+    }
+
+    .portal-brand-lockup {
+        align-items: center;
+        display: inline-flex;
+        gap: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .portal-brand-mark {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.86);
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 20px;
+        box-shadow: 0 10px 24px rgba(24, 49, 79, 0.08);
+        display: inline-flex;
+        height: 5.75rem;
+        justify-content: center;
+        padding: 0.6rem 1rem;
+    }
+
+    .portal-brand-mark img {
+        display: block;
+        height: 100%;
+        object-fit: contain;
+        width: auto;
+    }
+
+    .portal-brand-copy {
+        line-height: 1.1;
+    }
+
+    .portal-brand-copy strong {
+        color: var(--theme-text);
+        display: block;
+        font-size: 1.3rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .portal-brand-copy span {
+        color: var(--theme-muted);
+        display: block;
+        font-size: 1rem;
+    }
+
+    .portal-kicker {
+        color: var(--theme-accent);
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+    }
+
+    .portal-title {
+        color: var(--theme-text);
+        font-size: clamp(2.2rem, 5vw, 4.25rem);
+        letter-spacing: -0.03em;
+        line-height: 0.98;
+        margin-bottom: 1rem;
+        max-width: none;
+    }
+
+    .portal-subtitle {
+        color: var(--theme-muted);
+        font-size: 1.05rem;
+        line-height: 1.75;
+        margin-bottom: 1.5rem;
+        max-width: none;
+    }
+
+    .portal-highlights {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .portal-pill {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 999px;
+        color: var(--theme-text);
+        display: inline-flex;
+        gap: 0.6rem;
+        padding: 0.65rem 1rem;
+    }
+
+    .portal-pill .icon {
+        align-items: center;
+        background: var(--theme-primary-soft);
+        border-radius: 999px;
+        color: var(--theme-primary);
+        display: inline-flex;
+        height: 1.9rem;
+        justify-content: center;
+        width: 1.9rem;
+    }
+
+    .portal-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+    }
+
+    .portal-actions .button.is-light {
+        background: rgba(255, 255, 255, 0.78);
+    }
+
+    .portal-section {
+        margin-top: 1.75rem;
+    }
+
+    .portal-section-heading {
+        align-items: flex-end;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .portal-section-heading h2 {
+        color: var(--theme-text);
+        font-size: clamp(1.5rem, 2vw, 2rem);
+        margin: 0;
+    }
+
+    .portal-section-heading p {
+        color: var(--theme-muted);
+        margin: 0.2rem 0 0;
+    }
+
+    .portal-card-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .portal-card {
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 28px;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+        padding: 1.35rem;
+        position: relative;
+        text-decoration: none;
+        transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+
+    .portal-card:hover {
+        border-color: rgba(34, 79, 148, 0.22);
+        box-shadow: 0 22px 40px rgba(24, 49, 79, 0.1);
+        transform: translateY(-4px);
+    }
+
+    .portal-card.is-member {
+        background: linear-gradient(180deg, rgba(232, 240, 255, 0.96), rgba(255, 255, 255, 0.94));
+    }
+
+    .portal-card.is-cmte {
+        background: linear-gradient(180deg, rgba(255, 241, 239, 0.96), rgba(255, 255, 255, 0.94));
+    }
+
+    .portal-card.is-admin {
+        background: linear-gradient(180deg, rgba(245, 248, 253, 0.98), rgba(255, 255, 255, 0.94));
+    }
+
+    .portal-card-media {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+    }
+
+    .portal-card-icon {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 20px;
+        display: inline-flex;
+        height: 4.5rem;
+        justify-content: center;
+        padding: 0.6rem;
+        width: 4.5rem;
+    }
+
+    .portal-card-icon img {
+        height: 100%;
+        object-fit: contain;
+        width: 100%;
+    }
+
+    .portal-card-tag {
+        background: rgba(24, 49, 79, 0.08);
+        border-radius: 999px;
+        color: var(--theme-text);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        padding: 0.45rem 0.7rem;
+        text-transform: uppercase;
+    }
+
+    .portal-card h3 {
+        color: var(--theme-text);
+        font-size: 1.35rem;
+        line-height: 1.2;
+        margin-bottom: 0.6rem;
+    }
+
+    .portal-card p {
+        color: var(--theme-muted);
+        line-height: 1.7;
+        margin-bottom: 1.25rem;
+    }
+
+    .portal-card-footer {
+        align-items: center;
+        color: var(--theme-primary);
+        display: flex;
+        font-weight: 700;
+        gap: 0.65rem;
+        margin-top: auto;
+    }
+
+    @media screen and (max-width: 1023px) {
+        .portal-hero-grid,
+        .portal-card-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .portal-hero {
+            padding: 1.75rem;
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+        .portal-home {
+            padding: 0 0.75rem 2.5rem;
+        }
+
+        .portal-hero {
+            border-radius: 28px;
+            padding: 1.35rem;
+        }
+
+        .portal-brand-lockup {
+            align-items: flex-start;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .portal-actions {
+            flex-direction: column;
+        }
+
+        .portal-actions .button {
+            justify-content: center;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include "nav.html" %}
-<section class="hero is-medium is-link">
-  <div class="hero-body">
-    <p class="title">ระบบสารสนเทศสภาเทคนิคการแพทย์</p>
-    <div class="grid">
-      <div class="cell box has-text-centered">
-        <a href="{{url_for('member.index')}}">
-        <figure class="image is-128x128 is-inline-block">
-            <img src="{{url_for('static', filename='study.png')}}" />
-        </figure>
-        </a>
-        <h1 class="title is-size-4 has-text-dark mt-4">สมาชิก</h1>
-      </div>
-      <div class="cell box has-text-centered">
-        <a href="{{url_for('cmte.cmte_index')}}">
-        <figure class="image is-128x128 is-inline-block">
-            <img src="{{url_for('static', filename='education.png')}}" />
-        </figure>
-        </a>
-        <h1 class="title is-size-4 has-text-dark mt-4">
-          สถาบันจัดฝึกอบรมการศึกษาต่อเนื่อง
-        </h1>
-      </div>
-      <div class="cell box has-text-centered">
-        <a href="{{url_for('users.admin_index')}}">
-        <figure class="image is-128x128 is-inline-block">
-          <img src="{{url_for('static', filename='classroom.png')}}" />
-        </figure>
-        </a>
-        <h1 class="title is-size-4 has-text-dark mt-4">
-          เจ้าหน้าที่
-        </h1>
-      </div>
+<section class="section portal-home">
+    <div class="portal-shell">
+        {% include "messages.html" %}
+
+        <div class="portal-hero">
+            <div class="portal-hero-grid">
+                <div class="portal-hero-copy">
+                    <div class="portal-brand-lockup">
+                        <span class="portal-brand-mark">
+                            <img src="{{ url_for('static', filename='logo-small.png') }}" alt="MTC logo">
+                        </span>
+                        <div class="portal-brand-copy">
+                            <strong>MTC Portal</strong>
+                            <span>Medical Technology Council</span>
+                        </div>
+                    </div>
+
+                    <p class="portal-kicker">Medical Technology Council</p>
+                    <h1 class="portal-title">ระบบสารสนเทศสภาเทคนิคการแพทย์</h1>
+                    <p class="portal-subtitle">
+                        ศูนย์กลางสำหรับสมาชิก สถาบันจัดฝึกอบรมการศึกษาต่อเนื่อง และเจ้าหน้าที่
+                        เพื่อเข้าถึงงานบริการสำคัญได้จากหน้าเดียวด้วยโครงสร้างที่ชัดเจนและทันสมัยขึ้น
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="portal-services" class="portal-section">
+            <div class="portal-section-heading">
+                <div>
+                    <h2>เลือกส่วนงานที่ต้องการใช้งาน</h2>
+                </div>
+            </div>
+
+            <div class="portal-card-grid">
+                <a class="portal-card is-member" href="{{ url_for('member.index') }}">
+                    <div class="portal-card-media">
+                        <span class="portal-card-icon">
+                            <img src="{{ url_for('static', filename='study.png') }}" alt="Member portal">
+                        </span>
+                        <span class="portal-card-tag">Member</span>
+                    </div>
+                    <h3>สมาชิก</h3>
+                    <p>
+                        สำหรับสมาชิกที่ต้องการตรวจสอบข้อมูลส่วนตัว ใบอนุญาต
+                        และเข้าถึงบริการหลักของระบบสมาชิก
+                    </p>
+                    <div class="portal-card-footer">
+                        <span>เข้าสู่ระบบสมาชิก</span>
+                        <span class="icon"><i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                </a>
+
+                <a class="portal-card is-cmte" href="{{ url_for('cmte.cmte_index') }}">
+                    <div class="portal-card-media">
+                        <span class="portal-card-icon">
+                            <img src="{{ url_for('static', filename='education.png') }}" alt="CMTE portal">
+                        </span>
+                        <span class="portal-card-tag">CMTE</span>
+                    </div>
+                    <h3>สถาบันจัดฝึกอบรมการศึกษาต่อเนื่อง</h3>
+                    <p>
+                        สำหรับหน่วยงานผู้จัดกิจกรรมหรือหลักสูตรที่เกี่ยวข้องกับการศึกษาต่อเนื่อง
+                        และการจัดการข้อมูลกิจกรรม
+                    </p>
+                    <div class="portal-card-footer">
+                        <span>เข้าสู่ระบบสถาบัน</span>
+                        <span class="icon"><i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                </a>
+
+                <a class="portal-card is-admin" href="{{ url_for('users.admin_index') }}">
+                    <div class="portal-card-media">
+                        <span class="portal-card-icon">
+                            <img src="{{ url_for('static', filename='classroom.png') }}" alt="Admin portal">
+                        </span>
+                        <span class="portal-card-tag">Staff</span>
+                    </div>
+                    <h3>เจ้าหน้าที่</h3>
+                    <p>
+                        สำหรับเจ้าหน้าที่ผู้ดูแลระบบ งานตรวจสอบ และเครื่องมือบริหารจัดการข้อมูล
+                        ภายในหน่วยงาน
+                    </p>
+                    <div class="portal-card-footer">
+                        <span>เข้าสู่ระบบเจ้าหน้าที่</span>
+                        <span class="icon"><i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                </a>
+            </div>
+
+        </div>
     </div>
-  </div>
 </section>
 {% endblock %}
