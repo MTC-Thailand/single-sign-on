@@ -1,27 +1,49 @@
-<nav class="navbar is-link">
+<nav class="navbar app-navbar">
     <div class="container">
         <div class="navbar-brand">
-            <a class="navbar-item" href="{{ url_for('index') }}">
+            <a class="navbar-item app-navbar-brand" href="{{ url_for('webadmin.index') }}">
+                <span class="app-navbar-brand-mark">
+                    <img src="{{ url_for('static', filename='logo-small.png') }}" alt="Logo">
+                </span>
+                <span class="app-navbar-brand-copy">
+                    <strong>Admin Console</strong>
+                    <small>จัดการระบบและข้อมูลผู้ใช้งาน</small>
+                </span>
+            </a>
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="adminNavbarMenu">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+        <div id="adminNavbarMenu" class="navbar-menu">
+            <div class="navbar-start app-navbar-links">
+                <a class="navbar-item" href="{{ url_for('index') }}">
                     <span class="icon">
                         <i class="fas fa-house-user"></i>
                     </span>
-                <span>Home</span>
-            </a>
-            <span class="navbar-burger burger" data-target="navbarMenuHeroA">
-                <span></span>
-                <span></span>
-                <span></span>
-            </span>
-        </div>
-        <div id="navbarMenuHeroA" class="navbar-menu">
-            <div class="navbar-end">
-                <a class="navbar-item" href="{{url_for('webadmin.index')}}">
+                    <span>Home</span>
+                </a>
+                <a class="navbar-item" href="{{ url_for('webadmin.index') }}">
                     <span class="icon">
                         <i class="fas fa-bars"></i>
                     </span>
                     <span>เมนูหลัก</span>
                 </a>
+            </div>
+            <div class="navbar-end app-navbar-user">
                 {% if current_user.is_authenticated %}
+                <div class="navbar-item">
+                    <span class="app-navbar-user-chip">
+                        <span class="icon">
+                            <i class="fas fa-user-shield"></i>
+                        </span>
+                        <span>
+                            <strong>ผู้ดูแลระบบ</strong>
+                            <small>Signed in</small>
+                        </span>
+                    </span>
+                </div>
                 <a class="navbar-item" href="{{ url_for('users.logout') }}">
                     <span class="icon">
                         <i class="fas fa-sign-out-alt"></i>
@@ -29,12 +51,6 @@
                     <span>ออกจากระบบ</span>
                 </a>
                 {% endif %}
-<!--                <a class="navbar-item" href="/">-->
-<!--                       <span class="icon">-->
-<!--                           <i class="fa-solid fa-circle-info"></i>-->
-<!--                       </span>-->
-<!--                    <span>แจ้งปัญหา/ขอความช่วยเหลือ</span>-->
-<!--                </a>-->
             </div>
         </div>
     </div>

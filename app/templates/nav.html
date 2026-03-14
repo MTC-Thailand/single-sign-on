@@ -1,28 +1,40 @@
-<nav class="navbar is-light">
+<nav class="navbar app-navbar">
     <div class="container">
         <div class="navbar-brand">
-            <a class="navbar-item" href="{{ url_for('index') }}">
-                <img src="{{url_for('static', filename='logo.png')}}">
+            <a class="navbar-item app-navbar-brand" href="{{ url_for('index') }}">
+                <span class="app-navbar-brand-mark">
+                    <img src="{{ url_for('static', filename='logo-small.png') }}" alt="Logo">
+                </span>
+                <span class="app-navbar-brand-copy">
+                    <strong>MTC Portal</strong>
+                    <small>Medical Technology Council</small>
+                </span>
             </a>
-            <span class="navbar-burger burger" data-target="navbarMenuHeroA">
-                <span></span>
-                <span></span>
-                <span></span>
-            </span>
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="siteNavbarMenu">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
         </div>
-        <div id="navbarMenuHeroA" class="navbar-menu">
-            <div class="navbar-end">
+        <div id="siteNavbarMenu" class="navbar-menu">
+            <div class="navbar-start app-navbar-links"></div>
+            <div class="navbar-end app-navbar-user">
                 {% if current_user.is_authenticated %}
-                <a class="navbar-item">
-                    <span class="icon">
-                        {% if session.get('login_as') != 'member' %}
-                        <i class="fas fa-user-cog"></i>
-                        {% else %}
-                        <i class="fas fa-user-circle"></i>
-                        {% endif %}
+                <div class="navbar-item">
+                    <span class="app-navbar-user-chip">
+                        <span class="icon">
+                            {% if session.get('login_as') != 'member' %}
+                            <i class="fas fa-user-cog"></i>
+                            {% else %}
+                            <i class="fas fa-user-circle"></i>
+                            {% endif %}
+                        </span>
+                        <span>
+                            <strong>{{ current_user }}</strong>
+                            <small>Signed in</small>
+                        </span>
                     </span>
-                    <span>{{current_user}}</span>
-                </a>
+                </div>
                 <a class="navbar-item" href="{{ url_for('users.logout') }}">
                     <span class="icon">
                         <i class="fas fa-sign-out-alt"></i>
@@ -31,20 +43,12 @@
                 </a>
                 {% else %}
                 <a class="navbar-item" href="{{ url_for('users.register_user') }}">
-                    <button class="button is-link">
-                        <span class="icon">
-                            <i class="fas fa-user-cog"></i>
-                        </span>
-                        <span>Register Admin</span>
-                    </button>
+                    <span class="icon">
+                        <i class="fas fa-user-cog"></i>
+                    </span>
+                    <span>Register Admin</span>
                 </a>
                 {% endif %}
-<!--                <a class="navbar-item" href="/">-->
-<!--                       <span class="icon">-->
-<!--                           <i class="fa-solid fa-circle-info"></i>-->
-<!--                       </span>-->
-<!--                    <span>แจ้งปัญหา/ขอความช่วยเหลือ</span>-->
-<!--                </a>-->
             </div>
         </div>
     </div>
