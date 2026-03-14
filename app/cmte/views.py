@@ -6,6 +6,8 @@ import uuid
 import calendar
 from functools import wraps
 from io import BytesIO
+from pprint import pprint
+
 import pandas as pd
 import arrow
 import boto3
@@ -3310,6 +3312,172 @@ def report_event_types_dashboard_breakdown():
         'for_group': 'ได้' if row.for_group else 'ไม่ได้',
         'is_sponsored': 'ใช่' if row.is_sponsored else 'ไม่ใช่',
     } for row in rows]
+
+    return jsonify({
+        'data': data,
+        'recordsFiltered': records_filtered,
+        'recordsTotal': records_total,
+        'draw': draw,
+    })
+
+
+def _get_participant_record_filters(source_args):
+    today = datetime.now().date()
+    default_start = datetime(today.year, 1, 1).date()
+    dates_value = source_args.get('dates')
+    if dates_value:
+        start_d, end_d = dates_value.split(' - ')
+        start_date = datetime.strptime(start_d, '%d/%m/%Y').date()
+        end_date = datetime.strptime(end_d, '%d/%m/%Y').date()
+    else:
+        start_date = default_start
+        end_date = today
+        dates_value = f'{start_date.strftime("%d/%m/%Y")} - {end_date.strftime("%d/%m/%Y")}'
+    status = source_args.get('status', '')
+    return start_date, end_date, dates_value, status
+
+
+@cmte.get('/report/participant-records')
+@login_required
+@cmte_admin_permission.require()
+def report_participant_records():
+    _, _, selected_dates, selected_status = _get_participant_record_filters(request.args)
+    assumptions = [
+        'ช่วงวันที่ใช้กรองจากวันที่บันทึกรายการผู้เข้าร่วมเพื่อให้ครอบคลุมทั้งรายการที่ยังไม่อนุมัติและรายการที่อนุมัติแล้ว',
+        'สถานะแบ่งเป็น รออนุมัติ, อนุมัติแล้ว, และไม่อนุมัติ',
+    ]
+    return render_template('cmte/admin/report_participant_records.html',
+                           selected_dates=selected_dates,
+                           selected_status=selected_status,
+                           assumptions=assumptions)
+
+
+@cmte.get('/report/participant-records/data')
+@login_required
+@cmte_admin_permission.require()
+def report_participant_records_data():
+    start_date, end_date, _, status = _get_participant_record_filters(request.args)
+    search = request.args.get('search[value]', '')
+    start = request.args.get('start', type=int, default=0)
+    length = request.args.get('length', type=int, default=10)
+    draw = request.args.get('draw', type=int)
+
+    def build_record_id_query(include_search=False, include_join_for_order=False):
+        query = (db.session.query(CMTEEventParticipationRecord.id)
+                 .select_from(CMTEEventParticipationRecord)
+                 .filter(CMTEEventParticipationRecord.create_datetime != None)
+                 .filter(func.date(CMTEEventParticipationRecord.create_datetime) >= start_date)
+                 .filter(func.date(CMTEEventParticipationRecord.create_datetime) <= end_date))
+
+        if status == 'approved':
+            query = query.filter(CMTEEventParticipationRecord.approved_date != None)
+        elif status == 'pending':
+            query = query.filter(CMTEEventParticipationRecord.approved_date == None,
+                                 CMTEEventParticipationRecord.closed_date == None)
+        elif status == 'rejected':
+            query = query.filter(CMTEEventParticipationRecord.closed_date != None)
+
+        if include_search or include_join_for_order:
+            query = (query
+                     .outerjoin(CMTEEvent, CMTEEvent.id == CMTEEventParticipationRecord.event_id)
+                     .outerjoin(CMTEEventSponsor, CMTEEventSponsor.id == CMTEEvent.sponsor_id)
+                     .outerjoin(License, License.number == CMTEEventParticipationRecord.license_number)
+                     .outerjoin(Member, Member.id == License.member_id))
+
+        if include_search and search:
+            query = query.filter(or_(
+                CMTEEventParticipationRecord.license_number.ilike(f'%{search}%'),
+                CMTEEventParticipationRecord.submitted_name.ilike(f'%{search}%'),
+                CMTEEvent.title.ilike(f'%{search}%'),
+                CMTEEventSponsor.name.ilike(f'%{search}%'),
+                Member.th_firstname.ilike(f'%{search}%'),
+                Member.th_lastname.ilike(f'%{search}%'),
+            )).distinct()
+
+        return query
+
+    records_total = build_record_id_query().order_by(None).count()
+    records_filtered = build_record_id_query(include_search=bool(search)).order_by(None).count()
+
+    orderable_columns = {
+        0: CMTEEventParticipationRecord.create_datetime,
+        1: Member.th_firstname,
+        2: CMTEEventParticipationRecord.license_number,
+        3: CMTEEvent.title,
+        4: CMTEEventSponsor.name,
+        5: CMTEEventParticipationRecord.score,
+        6: CMTEEventParticipationRecord.approved_date,
+    }
+    col_idx = request.args.get('order[0][column]', type=int)
+    direction = request.args.get('order[0][dir]', default='desc')
+
+    needs_join_for_order = col_idx in {1, 3, 4}
+    ordered_ids_query = build_record_id_query(
+        include_search=bool(search),
+        include_join_for_order=needs_join_for_order
+    )
+
+    if col_idx in orderable_columns:
+        order_column = orderable_columns[col_idx]
+        ordered_ids_query = ordered_ids_query.order_by(order_column.desc() if direction == 'desc' else order_column.asc())
+    else:
+        ordered_ids_query = ordered_ids_query.order_by(CMTEEventParticipationRecord.create_datetime.desc())
+
+    paged_ids = [row.id for row in ordered_ids_query.offset(start).limit(length).all()]
+
+    if not paged_ids:
+        return jsonify({
+            'data': [],
+            'recordsFiltered': records_filtered,
+            'recordsTotal': records_total,
+            'draw': draw,
+        })
+
+    query = (db.session.query(
+        CMTEEventParticipationRecord.id,
+        CMTEEventParticipationRecord.submitted_name,
+        CMTEEventParticipationRecord.license_number,
+        CMTEEventParticipationRecord.score,
+        CMTEEventParticipationRecord.create_datetime,
+        CMTEEventParticipationRecord.approved_date,
+        CMTEEventParticipationRecord.closed_date,
+        CMTEEvent.title.label('event_title'),
+        CMTEEventSponsor.name.label('sponsor_name'),
+        Member.th_firstname.label('member_firstname'),
+        Member.th_lastname.label('member_lastname'),
+    )
+    .select_from(CMTEEventParticipationRecord)
+    .outerjoin(CMTEEvent, CMTEEvent.id == CMTEEventParticipationRecord.event_id)
+    .outerjoin(CMTEEventSponsor, CMTEEventSponsor.id == CMTEEvent.sponsor_id)
+    .outerjoin(License, License.number == CMTEEventParticipationRecord.license_number)
+    .outerjoin(Member, Member.id == License.member_id)
+    .filter(CMTEEventParticipationRecord.id.in_(paged_ids)))
+
+    rows_by_id = {row.id: row for row in query.all()}
+    rows = [rows_by_id[row_id] for row_id in paged_ids if row_id in rows_by_id]
+    data = []
+    for row in rows:
+        if row.closed_date:
+            status_label = 'ไม่อนุมัติ'
+        elif row.approved_date:
+            status_label = 'อนุมัติแล้ว'
+        else:
+            status_label = 'รออนุมัติ'
+
+        full_name = ' '.join(filter(None, [row.member_firstname, row.member_lastname])).strip()
+        data.append({
+            'created_at': row.create_datetime.isoformat() if row.create_datetime else None,
+            'member_name': full_name or row.submitted_name or '-',
+            'submitted_name': row.submitted_name or '-',
+            'license_number': row.license_number or '-',
+            'event_title': row.event_title or '-',
+            'sponsor_name': row.sponsor_name or '-',
+            'score': float(row.score) if row.score is not None else None,
+            'approved_at': row.approved_date.isoformat() if row.approved_date else None,
+            'status': status_label,
+        })
+
+    pprint(data)
 
     return jsonify({
         'data': data,

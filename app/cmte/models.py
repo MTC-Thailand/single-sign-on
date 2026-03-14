@@ -478,7 +478,10 @@ class CMTEEventGroupParticipationRecord(db.Model):
 
     @property
     def record(self):
-        return self.records.all()[0]
+        if self.records.all():
+            return self.records.all()[0]
+        else:
+            return None
 
     @property
     def detail(self):

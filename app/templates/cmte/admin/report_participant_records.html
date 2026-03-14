@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+{% endblock %}
+{% block content %}
+    {% include "cmte/admin_nav.html" %}
+    <section class="section">
+        <div class="container is-max-desktop">
+            <div class="level mb-4">
+                <div class="level-left">
+                    <div>
+                        <h1 class="title mb-2">รายการผู้เข้าร่วมกิจกรรม CMTE</h1>
+                        <p class="subtitle is-6 mb-0">สำหรับตรวจสอบรายการคะแนนที่บันทึกในช่วงวันที่กำหนด</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="participant-record-filters" class="box mb-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="columns is-variable is-4 is-multiline">
+                    <div class="column is-5">
+                        <label class="label">ช่วงวันที่บันทึกรายการ</label>
+                        <div class="control has-icons-left">
+                            <input name="dates" id="dates" class="input" value="{{ selected_dates }}">
+                            <span class="icon is-small is-left">
+                                <i class="far fa-calendar-alt"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="column is-5">
+                        <label class="label">สถานะ</label>
+                        <div class="control">
+                            <div class="select is-fullwidth">
+                                <select id="status-select" name="status">
+                                    <option value="" {{ 'selected' if not selected_status else '' }}>ทั้งหมด</option>
+                                    <option value="pending" {{ 'selected' if selected_status == 'pending' else '' }}>รออนุมัติ</option>
+                                    <option value="approved" {{ 'selected' if selected_status == 'approved' else '' }}>อนุมัติแล้ว</option>
+                                    <option value="rejected" {{ 'selected' if selected_status == 'rejected' else '' }}>ไม่อนุมัติ</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-2 is-flex is-align-items-flex-end">
+                        <button class="button is-info is-fullwidth">อัปเดต</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="notification is-light mb-5">
+                <strong>สมมติฐานการแสดงผล</strong>
+                <div class="content mb-0">
+                    <ul>
+                        {% for assumption in assumptions %}
+                            <li>{{ assumption }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="table-container">
+                    <table id="participant-record-table" class="table is-fullwidth is-striped">
+                        <thead>
+                        <tr>
+                            <th>วันที่บันทึก</th>
+                            <th>สมาชิก</th>
+                            <th>ท.น.</th>
+                            <th>กิจกรรม</th>
+                            <th>สถาบัน</th>
+                            <th>คะแนน</th>
+                            <th>วันที่อนุมัติ</th>
+                            <th>สถานะ</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript" src="https://fastly.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        let participantTable = null;
+
+        function getFilterParams() {
+            return {
+                dates: $('#dates').val(),
+                status: $('#status-select').val() || ''
+            };
+        }
+
+        function syncQueryString() {
+            const params = new URLSearchParams(getFilterParams());
+            const nextUrl = `${window.location.pathname}?${params.toString()}`;
+            window.history.replaceState({}, '', nextUrl);
+        }
+
+        $(document).ready(() => {
+            const today = moment();
+            const startOfYear = moment().startOf('year');
+            let selectedDates = '{{ selected_dates }}';
+            if (!selectedDates) {
+                selectedDates = startOfYear.format('DD/MM/YYYY') + ' - ' + today.format('DD/MM/YYYY');
+            }
+
+            $('#dates').daterangepicker({
+                timePicker: false,
+                showDropdowns: true,
+                linkedCalendars: false,
+                locale: {
+                    format: 'DD/MM/YYYY'
+                },
+                startDate: selectedDates.split(' - ')[0],
+                endDate: selectedDates.split(' - ')[1]
+            });
+
+            participantTable = $('#participant-record-table').DataTable({
+                processing: true,
+                serverSide: true,
+                searchDelay: 350,
+                pageLength: 25,
+                ajax: {
+                    url: '{{ url_for("cmte.report_participant_records_data") }}',
+                    data: function (d) {
+                        const filters = getFilterParams();
+                        d.dates = filters.dates;
+                        d.status = filters.status;
+                    }
+                },
+                order: [[0, 'desc']],
+                columns: [
+                    {
+                        data: 'created_at',
+                        render: function (data) {
+                            return data ? moment(data).format('LLL') : '-';
+                        }
+                    },
+                    {data: 'member_name'},
+                    {data: 'license_number'},
+                    {data: 'event_title'},
+                    {data: 'sponsor_name'},
+                    {
+                        data: 'score',
+                        render: function (data) {
+                            return data !== null ? data : '-';
+                        }
+                    },
+                    {
+                        data: 'approved_at',
+                        render: function (data) {
+                            return data ? moment(data).format('LL') : '-';
+                        }
+                    },
+                    {data: 'status', orderable: false}
+                ]
+            });
+
+            $('#participant-record-filters').on('submit', function (event) {
+                event.preventDefault();
+                syncQueryString();
+                participantTable.ajax.reload();
+            });
+
+            syncQueryString();
+        });
+    </script>
+{% endblock %}
