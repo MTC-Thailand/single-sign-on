@@ -3487,6 +3487,184 @@ def report_participant_records_data():
     })
 
 
+def _get_overview_dashboard_filters(source_args):
+    today = datetime.now().date()
+    default_start = datetime(today.year, 1, 1).date()
+    dates_value = source_args.get('dates')
+    if dates_value:
+        start_d, end_d = dates_value.split(' - ')
+        start_date = datetime.strptime(start_d, '%d/%m/%Y').date()
+        end_date = datetime.strptime(end_d, '%d/%m/%Y').date()
+    else:
+        start_date = default_start
+        end_date = today
+        dates_value = f'{start_date.strftime("%d/%m/%Y")} - {end_date.strftime("%d/%m/%Y")}'
+    return start_date, end_date, dates_value
+
+
+def _get_overview_event_base_query(start_date, end_date):
+    return (db.session.query(
+        CMTEEvent.id.label('event_id'),
+        CMTEEvent.sponsor_id.label('sponsor_id'),
+        CMTEEvent.activity_id.label('activity_id'),
+        CMTEEvent.approved_datetime.label('approved_datetime'),
+    )
+    .filter(CMTEEvent.approved_datetime != None)
+    .filter(CMTEEvent.cancelled_datetime == None)
+    .filter(func.date(CMTEEvent.approved_datetime) >= start_date)
+    .filter(func.date(CMTEEvent.approved_datetime) <= end_date)
+    ).subquery()
+
+
+@cmte.get('/report/overview-dashboard')
+@login_required
+@cmte_admin_permission.require()
+def report_overview_dashboard():
+    _, _, selected_dates = _get_overview_dashboard_filters(request.args)
+    return render_template('cmte/admin/report_overview_dashboard.html',
+                           selected_dates=selected_dates)
+
+
+@cmte.get('/report/overview-dashboard/summary')
+@login_required
+@cmte_admin_permission.require()
+def report_overview_dashboard_summary():
+    start_date, end_date, _ = _get_overview_dashboard_filters(request.args)
+    event_base = _get_overview_event_base_query(start_date, end_date)
+
+    summary_row = (db.session.query(
+        func.count(func.distinct(event_base.c.sponsor_id)).label('sponsors'),
+        func.count(func.distinct(event_base.c.activity_id)).label('activities'),
+        func.count(func.distinct(event_base.c.event_id)).label('events'),
+        func.count(CMTEEventParticipationRecord.id).label('participation_records'),
+        func.count(func.distinct(License.member_id)).label('participating_members'),
+    )
+    .select_from(event_base)
+    .outerjoin(CMTEEventParticipationRecord, CMTEEventParticipationRecord.event_id == event_base.c.event_id)
+    .outerjoin(License, License.number == CMTEEventParticipationRecord.license_number)
+    .one())
+
+    monthly_rows = (db.session.query(
+        func.extract('year', event_base.c.approved_datetime).label('year'),
+        func.extract('month', event_base.c.approved_datetime).label('month'),
+        func.count(func.distinct(event_base.c.event_id)).label('events'),
+        func.count(CMTEEventParticipationRecord.id).label('participation_records'),
+    )
+    .select_from(event_base)
+    .outerjoin(CMTEEventParticipationRecord, CMTEEventParticipationRecord.event_id == event_base.c.event_id)
+    .group_by(func.extract('year', event_base.c.approved_datetime),
+              func.extract('month', event_base.c.approved_datetime))
+    .order_by(func.extract('year', event_base.c.approved_datetime),
+              func.extract('month', event_base.c.approved_datetime))
+    .all())
+
+    sponsor_rows = (db.session.query(
+        func.coalesce(CMTEEventSponsor.name, 'ไม่ระบุสถาบัน').label('label'),
+        func.count(func.distinct(event_base.c.event_id)).label('event_count'),
+    )
+    .select_from(event_base)
+    .outerjoin(CMTEEventSponsor, CMTEEventSponsor.id == event_base.c.sponsor_id)
+    .group_by(CMTEEventSponsor.name)
+    .order_by(db.text('event_count DESC'), db.text('label ASC'))
+    .limit(8)
+    .all())
+
+    activity_rows = (db.session.query(
+        func.coalesce(CMTEEventActivity.name, 'ไม่ระบุชนิดกิจกรรม').label('label'),
+        func.count(CMTEEventParticipationRecord.id).label('record_count'),
+    )
+    .select_from(event_base)
+    .outerjoin(CMTEEventActivity, CMTEEventActivity.id == event_base.c.activity_id)
+    .outerjoin(CMTEEventParticipationRecord, CMTEEventParticipationRecord.event_id == event_base.c.event_id)
+    .group_by(CMTEEventActivity.name)
+    .order_by(db.text('record_count DESC'), db.text('label ASC'))
+    .limit(8)
+    .all())
+
+    trend_rows = []
+    for row in monthly_rows:
+        trend_rows.append([
+            f'{calendar.month_abbr[int(row.month)]} {int(row.year)}',
+            int(row.events or 0),
+            int(row.participation_records or 0),
+        ])
+
+    return jsonify({
+        'kpi': {
+            'sponsors': int(summary_row.sponsors or 0),
+            'activities': int(summary_row.activities or 0),
+            'events': int(summary_row.events or 0),
+            'participation_records': int(summary_row.participation_records or 0),
+            'participating_members': int(summary_row.participating_members or 0),
+        },
+        'trend_rows': trend_rows,
+        'sponsor_chart_rows': [[row.label, int(row.event_count or 0)] for row in sponsor_rows],
+        'activity_chart_rows': [[row.label, int(row.record_count or 0)] for row in activity_rows],
+    })
+
+
+@cmte.get('/report/overview-dashboard/breakdown')
+@login_required
+@cmte_admin_permission.require()
+def report_overview_dashboard_breakdown():
+    start_date, end_date, _ = _get_overview_dashboard_filters(request.args)
+    search = request.args.get('search[value]', '')
+    start = request.args.get('start', type=int, default=0)
+    length = request.args.get('length', type=int, default=10)
+    draw = request.args.get('draw', type=int)
+    event_base = _get_overview_event_base_query(start_date, end_date)
+
+    breakdown_query = (db.session.query(
+        func.coalesce(CMTEEventSponsor.name, 'ไม่ระบุสถาบัน').label('sponsor_name'),
+        func.count(func.distinct(event_base.c.event_id)).label('event_count'),
+        func.count(CMTEEventParticipationRecord.id).label('participation_record_count'),
+        func.count(func.distinct(License.member_id)).label('participating_member_count'),
+    )
+    .select_from(event_base)
+    .outerjoin(CMTEEventSponsor, CMTEEventSponsor.id == event_base.c.sponsor_id)
+    .outerjoin(CMTEEventParticipationRecord, CMTEEventParticipationRecord.event_id == event_base.c.event_id)
+    .outerjoin(License, License.number == CMTEEventParticipationRecord.license_number)
+    .group_by(CMTEEventSponsor.name))
+
+    breakdown_subquery = breakdown_query.subquery()
+    query = db.session.query(breakdown_subquery)
+
+    if search:
+        query = query.filter(breakdown_subquery.c.sponsor_name.ilike(f'%{search}%'))
+
+    records_total = db.session.query(func.count()).select_from(breakdown_subquery).scalar()
+    records_filtered = query.count()
+
+    orderable_columns = {
+        0: breakdown_subquery.c.sponsor_name,
+        1: breakdown_subquery.c.event_count,
+        2: breakdown_subquery.c.participation_record_count,
+        3: breakdown_subquery.c.participating_member_count,
+    }
+    col_idx = request.args.get('order[0][column]', type=int)
+    direction = request.args.get('order[0][dir]', default='desc')
+    if col_idx in orderable_columns:
+        order_column = orderable_columns[col_idx]
+        query = query.order_by(order_column.desc() if direction == 'desc' else order_column.asc())
+    else:
+        query = query.order_by(breakdown_subquery.c.event_count.desc(), breakdown_subquery.c.sponsor_name.asc())
+
+    rows = query.offset(start).limit(length).all()
+    data = [{
+        'sponsor_name': row.sponsor_name,
+        'event_count': int(row.event_count or 0),
+        'participation_record_count': int(row.participation_record_count or 0),
+        'participating_member_count': int(row.participating_member_count or 0),
+    } for row in rows]
+
+    return jsonify({
+        'data': data,
+        'recordsFiltered': records_filtered,
+        'recordsTotal': records_total,
+        'draw': draw,
+    })
+
+
 def _get_dashboard_filters(source_args):
     today = datetime.now().date()
     default_start = datetime(today.year, 1, 1).date()
