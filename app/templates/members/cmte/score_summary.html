@@ -21,25 +21,36 @@
                         <li {% if filter=='all' %}class="is-active"{% endif %}><a href="{{url_for('member.summarize_cmte_scores', filter='all')}}">ทั้งหมด</a></li>
                     </ul>
                 </div>
-                {{score_table|safe}}
                 {% if filter=='approved_valid' %}
-                    {% if total_scores and total_scores >= 50 %}
-                        <h1 class="title has-text-success">หน่วยคะแนนรวม {{total_scores}}</h1>
+                    {% if no_license_message %}
+                        <article class="message is-warning">
+                            <div class="message-body">
+                                {{ no_license_message }}
+                            </div>
+                        </article>
                     {% else %}
-                        <h1 class="title">หน่วยคะแนนรวม {{total_scores or ''}}</h1>
-                        <h1 class="subtitle">
-                            ท่านต้องสะสมเพิ่มอีก {{50-(total_scores or 0)}} หน่วยคะแนน {{current_user.license.end_date|humanizedate}} เพื่อขอต่ออายุใบอนุญาต
-                        </h1>
-                    {% endif %}
-                    {% if total_scores %}
-                        <div class="mt-4">
-                            <button class="button is-link is-medium" id="generate-certificate-btn" type="button">
-                                <span class="icon"><i class="fa-solid fa-file-pdf"></i></span>
-                                <span>สร้างใบรับรอง PDF</span>
-                            </button>
-                        </div>
+                        {{score_table|safe}}
+                        {% if total_scores and total_scores >= 50 %}
+                            <h1 class="title has-text-success">หน่วยคะแนนรวม {{total_scores}}</h1>
+                        {% else %}
+                            <h1 class="title">หน่วยคะแนนรวม {{total_scores or ''}}</h1>
+                            {% if current_user.license %}
+                                <h1 class="subtitle">
+                                    ท่านต้องสะสมเพิ่มอีก {{50-(total_scores or 0)}} หน่วยคะแนน {{current_user.license.end_date|humanizedate}} เพื่อขอต่ออายุใบอนุญาต
+                                </h1>
+                            {% endif %}
+                        {% endif %}
+                        {% if total_scores %}
+                            <div class="mt-4">
+                                <button class="button is-link is-medium" id="generate-certificate-btn" type="button">
+                                    <span class="icon"><i class="fa-solid fa-file-pdf"></i></span>
+                                    <span>สร้างใบรับรอง PDF</span>
+                                </button>
+                            </div>
+                        {% endif %}
                     {% endif %}
                 {% else %}
+                    {{score_table|safe}}
                     {% if total_scores %}
                         <h1 class="title">หน่วยคะแนนรวม {{total_scores}}</h1>
                     {% endif %}

@@ -785,6 +785,8 @@ def delete_individual_score_record(record_id):
 def summarize_cmte_scores():
     filter = request.args.get('filter', 'approved_valid')
     records = []
+    no_license_message = None
+    has_license = current_user.license is not None
     query = CMTEEventParticipationRecord.query.filter_by(license_number=current_user.license_number)
     pending_query = query.filter(or_(
         and_(CMTEEventParticipationRecord.individual == True,
@@ -797,8 +799,12 @@ def summarize_cmte_scores():
     elif filter == 'approved':
         query = query.filter(CMTEEventParticipationRecord.approved_date != None)
     elif filter == 'approved_valid':
-        query = query.filter(CMTEEventParticipationRecord.approved_date != None,
-                             CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date)
+        if has_license:
+            query = query.filter(CMTEEventParticipationRecord.approved_date != None,
+                                 CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date)
+        else:
+            no_license_message = 'ท่านยังไม่ได้ขึ้นทะเบียนเพื่อรับใบอนุญาต'
+            query = query.filter(False)
     query = query.order_by(CMTEEventParticipationRecord.create_datetime.desc())
 
     for record in query:
@@ -830,11 +836,12 @@ def summarize_cmte_scores():
     #     pending_record_counts = current_user.license.pending_cmte_records.count()
     # else:
     #     pending_record_counts = 0
-    score_table = df.to_html(index=False, classes='table table-striped')
+    score_table = df.to_html(index=False, classes='table table-striped') if not df.empty else ''
     return render_template('members/cmte/score_summary.html',
                            pending_record_counts=pending_query.count(),
                            score_table=score_table, filter=filter,
-                           total_scores=total_scores)
+                           total_scores=total_scores,
+                           no_license_message=no_license_message)
 
 
 @member.route('/api/members')

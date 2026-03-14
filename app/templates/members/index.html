@@ -1,236 +1,320 @@
 {% extends "base.html" %}
 
+{% block title %}Member Dashboard{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='member-dashboard.css') }}">
+{% endblock %}
+
 {% block content %}
 {% include "members/nav.html" %}
-<section class="section">
-    <div class="container">
+<section class="section member-dashboard">
+    <div class="member-shell">
         {% include "messages.html" %}
-        <div class="columns">
-            <div class="column is-one-fifth">
-                <aside class="menu">
-                    <p class="menu-label">Profile</p>
-                    <ul class="menu-list">
-                        <li>
-                            <a href="{{url_for('member.edit_member_info')}}"
-                               class="button is-danger"
-                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                               hx-indicator="this"
-                               hx-post="{{url_for('member.update_member_info')}}">
-                                <span class="icon">
-                                    <i class="fa-solid fa-user"></i>
-                                </span>
-                                <span>
-                                    แก้ไขข้อมูลส่วนตัว
-                                </span>
-                            </a>
-                        </li>
-                    </ul>
-                    <p class="menu-label">CMTE</p>
-                    <ul class="menu-list">
-                        <li><a href="{{ url_for('cmte.list_event_types') }}">รายการกิจกรรม</a></li>
-                        <li><a href="{{ url_for('member.cmte_overdue_events') }}">รายการกิจกรรมที่เกินกำหนดยื่นขอคะแนน</a></li>
-                        <li><a href="{{url_for('member.summarize_cmte_scores', filter='approved_valid')}}">ตรวจสอบหน่วยคะแนน</a></li>
-                        <li><a href="{{url_for('member.individual_score_index')}}">ยื่นขออนุมัติคะแนนรายบุคคล
-                        <div id="individual-score-requests"></div>
-                        </a></li>
-                        <li><a href="{{url_for('member.individual_score_group_index')}}">ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม
-                            <div id="individual-group-score-requests"></div>
-                        </a></li>
-                        <li><a href="{{url_for('member.list_cmte_payments')}}">รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</a></li>
-                        <li><a href="{{url_for('cmte.upcoming_events')}}">รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></a></li>
-                        <li><a href="https://mtc-cmte.one.th">ระบบ e-learning (ทำข้อสอบออนไลน์) <span class="tag is-rounded is-success">new</span></a></li>
-                    </ul>
-                </aside>
 
-            </div>
-            <div class="column is-two-fifths">
-                <div class="box">
-                    <div class="has-text-centered">
-                        <figure class="image is-128x128 is-inline-block">
-                            {% if not image_base64 %}
-                            <img class="is-rounded" src="{{url_for('static', filename='doctor.png')}}">
-                            {% else %}
-                            <img src="data:image/jpeg;base64, {{image_base64}}">
-                            {% endif %}
-                        </figure>
+        {% set fee_payment = current_user.license.get_active_cmte_fee_payment() %}
+        <div class="member-hero">
+            <div class="member-hero-content">
+                <p class="member-kicker">Member Center</p>
+                <h1 class="member-title">ข้อมูลสมาชิกและบริการ</h1>
+                <p class="member-subtitle">
+                    ตรวจสอบสถานะใบอนุญาต หน่วยคะแนน ข้อมูลติดต่อและบริการสำคัญ
+                </p>
+                <div class="member-stat-grid">
+                    <div class="member-stat">
+                        <span class="member-stat-label">ชื่อสมาชิก</span>
+                        <span class="member-stat-value">{{ current_user.th_fullname }}</span>
                     </div>
-                    <br><br>
-                    <table class="table is-fullwidth mt-4">
-                        <tr>
-                            <td><strong>ชื่อ</strong></td>
-                            <td>{{current_user.th_fullname}}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>หมายเลขใบอนุญาต</strong></td>
-                            <td>{{current_user.license.number}}</td>
-                        </tr>
+                    <div class="member-stat">
+                        <span class="member-stat-label">หมายเลขใบอนุญาต</span>
+                        <span class="member-stat-value">{{ current_user.license.number }}</span>
+                    </div>
+                    <div class="member-stat">
+                        <span class="member-stat-label">สถานะใบอนุญาต</span>
+                        <span class="member-stat-value">
+                            {{ current_user.license.status or 'ปกติ' }}{% if current_user.license.is_expired %} (หมดอายุ){% endif %}
+                        </span>
+                    </div>
+                    <div class="member-stat">
+                        <span class="member-stat-label">หน่วยคะแนน CMTE</span>
+                        <span class="member-stat-value">{{ current_user.license.valid_cmte_scores }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="columns is-variable is-5 member-main-columns">
+            <div class="column is-12-tablet is-8-desktop">
+                <div class="member-card is-profile">
+                    <p class="member-card-title">
+                        <span class="icon has-text-link"><i class="fa-solid fa-id-card"></i></span>
+                        <span>ภาพรวมสมาชิก</span>
+                    </p>
+
+                    <div class="member-profile">
+                        <div class="member-avatar">
+                            <figure class="image is-128x128">
+                                {% if not image_base64 %}
+                                <img class="is-rounded" src="{{ url_for('static', filename='doctor.png') }}">
+                                {% else %}
+                                <img class="is-rounded" src="data:image/jpeg;base64, {{ image_base64 }}">
+                                {% endif %}
+                            </figure>
+                        </div>
+                        <div class="member-profile-copy">
+                            <h2 class="member-profile-name">{{ current_user.th_fullname }}</h2>
+                            <p class="mb-4 has-text-grey">
+                                หมายเลขใบอนุญาต {{ current_user.license.number }} พร้อมข้อมูลสถานะใบอนุญาต หน่วยคะแนน และค่าธรรมเนียมที่จำเป็นในมุมมองเดียว
+                            </p>
+                            <div class="member-action-buttons">
+                                <a href="{{ url_for('member.edit_member_info') }}" class="button member-cta">
+                                    <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                    <span>แก้ไขข้อมูลส่วนตัว</span>
+                                </a>
+{#                                <a href="{{ url_for('member.summarize_cmte_scores') }}" class="button is-light">#}
+{#                                    <span class="icon"><i class="fa-solid fa-chart-line"></i></span>#}
+{#                                    <span>ดูรายละเอียดคะแนน</span>#}
+{#                                </a>#}
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="table is-fullwidth member-table">
                         <tr>
                             <td><strong>วันเริ่มใบอนุญาต</strong></td>
-                            <td>{{current_user.license.start_date|localdate}} ({{current_user.license.start_date|humanizedate}})</td>
+                            <td>{{ current_user.license.start_date|localdate }} ({{ current_user.license.start_date|humanizedate }})</td>
                         </tr>
                         <tr>
                             <td><strong>ใบอนุญาตหมดอายุ</strong></td>
-                            <td>{{current_user.license.end_date|localdate}} ({{current_user.license.end_date|humanizedate}})</td>
+                            <td>{{ current_user.license.end_date|localdate }} ({{ current_user.license.end_date|humanizedate }})</td>
                         </tr>
                         <tr>
                             <td><strong>สถานะใบอนุญาต</strong></td>
                             <td>
-                                {{current_user.license.status or 'ปกติ'}} {% if current_user.license.is_expired %} (หมดอายุ) {% endif %}
+                                {{ current_user.license.status or 'ปกติ' }} {% if current_user.license.is_expired %}(หมดอายุ){% endif %}
                             </td>
                         </tr>
                         <tr>
                             <td><strong>หน่วยคะแนน CMTE</strong></td>
                             <td>
-                                <a href="{{url_for('member.summarize_cmte_scores')}}">
-                                    <h1 {% if current_user.license.valid_cmte_scores >= 50 %} class="title has-text-success" {% else %} class="title" {% endif %}>
-                                        {{current_user.license.valid_cmte_scores}}
-                                    </h1>
+                                <a href="{{ url_for('member.summarize_cmte_scores') }}">
+                                    <div class="member-score-box">
+                                        <p class="member-score-value {% if current_user.license.valid_cmte_scores >= 50 %}has-text-success{% endif %}">
+                                            {{ current_user.license.valid_cmte_scores }}
+                                        </p>
+                                        <p class="member-score-caption mb-0">กดเพื่อดูสรุปหน่วยคะแนนทั้งหมด</p>
+                                    </div>
                                 </a>
                             </td>
                         </tr>
                         <tr>
+                            <td><strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong></td>
                             <td>
-                                <strong>ค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong>
-                            </td>
-                            <td>
-                                {% set fee_payment = current_user.license.get_active_cmte_fee_payment() %}
                                 {% if fee_payment and fee_payment.payment_datetime %}
-                                ทำรายการเมื่อ {{fee_payment.payment_datetime|localdatetime}}
+                                ทำรายการเมื่อ {{ fee_payment.payment_datetime|localdatetime }}
                                 {% else %}
-                                ไม่มีรายการ <a href="{{url_for('member.cmte_fee_payment_form')}}">ทำรายการที่นี่</a>
+                                ไม่มีรายการ <a href="{{ url_for('member.cmte_fee_payment_form') }}">ทำรายการที่นี่</a>
                                 {% endif %}
                             </td>
                         </tr>
                         <tr>
                             <td colspan="2">
-                                <div class="notification">
-                                    <p class="help">ค่าธรรมเนียมสำหรับการยื่นขออนุมัติคะแนนรายบุคคล 500 บาทต่อรอบใบอนุญาต 5 ปี ไม่ใช่ค่าทำข้อสอบออนไลน์เท่านั้นแต่ยังสามารถยื่นขอกิจกรรมส่วนบุคคลอื่น ๆ ได้อีกมากมาย <strong>และไม่ใช่ค่าธรรมเนียมการต่อใบอนุญาต</strong></p>
+                                <div class="notification member-notice">
+                                    <p class="help">
+                                        ค่าธรรมเนียมสำหรับการยื่นขออนุมัติคะแนนรายบุคคล 500 บาทต่อรอบใบอนุญาต 5 ปี ไม่ใช่ค่าทำข้อสอบออนไลน์เท่านั้นแต่ยังสามารถยื่นขอกิจกรรมส่วนบุคคลอื่น ๆ ได้อีกมากมาย <strong>และไม่ใช่ค่าธรรมเนียมการต่อใบอนุญาต</strong>
+                                    </p>
                                 </div>
                             </td>
                         </tr>
                     </table>
                 </div>
             </div>
-            <div class="column">
-                <div class="box">
-                    <h1 class="title is-size-4">ข้อมูลติดต่อ</h1>
-                    <table class="table">
-                        <tbody>
-                        <tr>
-                            <td>
-                                <span class="icon">
-                                    <i class="fa-solid fa-phone"></i>
-                                </span>
-                            </td>
-                            <td>{{current_user.tel}}</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <span class="icon">
-                                    <i class="fa-solid fa-envelope"></i>
-                                </span>
-                            </td>
-                            <td>{{current_user.email}}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <div id="info-update-datetime" class="mb-2">
-                        <small class="tag is-rounded">
-                            Last update {{current_user.updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
+
+            <div class="column is-12-tablet is-4-desktop">
+                <div class="member-card">
+                    <p class="member-card-title">
+                        <span class="icon has-text-link"><i class="fa-solid fa-address-book"></i></span>
+                        <span>ข้อมูลติดต่อ</span>
+                    </p>
+
+                    <div class="member-contact-row">
+                        <span class="member-contact-icon"><i class="fa-solid fa-phone"></i></span>
+                        <div>
+                            <p class="has-text-grey mb-1">โทรศัพท์</p>
+                            <p>{{ current_user.tel }}</p>
+                        </div>
+                    </div>
+                    <div class="member-contact-row">
+                        <span class="member-contact-icon"><i class="fa-solid fa-envelope"></i></span>
+                        <div>
+                            <p class="has-text-grey mb-1">อีเมล</p>
+                            <p>{{ current_user.email }}</p>
+                        </div>
+                    </div>
+
+                    <div id="info-update-datetime" class="mt-4">
+                        <small class="member-meta-tag">
+                            Last update {{ current_user.updated_at|localdatetime }} {{ current_user.updated_at|humanizedate }}
                         </small>
                     </div>
-                    <div class="field has-addons">
-                        <p class="control">
-                            <a class="button is-rounded is-small"
-                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                               hx-indicator="this"
-                               hx-post="{{url_for('member.update_member_info')}}">
-                                <span class="icon">
-                                    <i class="fa-solid fa-pencil"></i>
-                                </span>
-                                <span>แก้ไข</span>
-                            </a>
-                        </p>
-                        <p class="control">
-                            <a class="button is-rounded is-small"
-                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                               hx-target="#info-update-datetime"
-                               hx-indicator="this"
-                               hx-post="{{url_for('member.verify_member_info')}}">
-                                <span class="icon">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                </span>
-                                <span>รับรองข้อมูล</span>
-                            </a>
-                        </p>
+
+                    <div class="member-action-buttons">
+                        <a class="button is-light"
+                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                           hx-indicator="this"
+                           hx-post="{{ url_for('member.update_member_info') }}">
+                            <span class="icon">
+                                <i class="fa-solid fa-pencil"></i>
+                            </span>
+                            <span>แก้ไข</span>
+                        </a>
+                        <a class="button is-light"
+                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                           hx-target="#info-update-datetime"
+                           hx-indicator="this"
+                           hx-post="{{ url_for('member.verify_member_info') }}">
+                            <span class="icon">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </span>
+                            <span>รับรองข้อมูล</span>
+                        </a>
                     </div>
                 </div>
+
                 {% if current_user.addresses %}
-                <div class="box">
-                    <h1 class="title is-size-4">ที่อยู่จัดส่งเอกสาร</h1>
-                    <table class="table">
-                        <tbody>
-                        <tr>
-                            <td>
-                                <span class="icon">
-                                    <i class="fa-solid fa-envelopes-bulk"></i>
-                                </span>
-                            </td>
-                            <td>{{current_user.addresses[0]}}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <div id="mailing-address-update-datetime" class="mb-2">
-                        <small class="tag is-rounded">
-                            Last update {{current_user.addresses[0].updated_at|localdatetime}} {{current_user.updated_at|humanizedate}}
+                <div class="member-card">
+                    <p class="member-card-title">
+                        <span class="icon has-text-link"><i class="fa-solid fa-envelopes-bulk"></i></span>
+                        <span>ที่อยู่จัดส่งเอกสาร</span>
+                    </p>
+
+                    <div class="member-contact-row">
+                        <span class="member-contact-icon"><i class="fa-solid fa-location-dot"></i></span>
+                        <div>
+                            <p class="has-text-grey mb-1">ที่อยู่ปัจจุบัน</p>
+                            <p>{{ current_user.addresses[0] }}</p>
+                        </div>
+                    </div>
+
+                    <div id="mailing-address-update-datetime" class="mt-4">
+                        <small class="member-meta-tag">
+                            Last update {{ current_user.addresses[0].updated_at|localdatetime }} {{ current_user.updated_at|humanizedate }}
                         </small>
                     </div>
-                    <div class="field has-addons">
-                        <p class="control">
-                            <a class="button is-rounded is-small"
-                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                               hx-indicator="this"
-                               hx-post="{{url_for('member.update_member_info')}}">
-                                <span class="icon">
-                                    <i class="fa-solid fa-pencil"></i>
-                                </span>
-                                <span>แก้ไข</span>
-                            </a>
-                        </p>
-                        <p class="control">
-                            <a class="button is-rounded is-small"
-                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                               hx-target="#mailing-address-update-datetime"
-                               hx-indicator="this"
-                               hx-post="{{url_for('member.verify_member_mailing_address')}}">
-                                <span class="icon">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                </span>
-                                <span>รับรองข้อมูล</span>
-                            </a>
-                        </p>
+
+                    <div class="member-action-buttons">
+                        <a class="button is-light"
+                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                           hx-indicator="this"
+                           hx-post="{{ url_for('member.update_member_info') }}">
+                            <span class="icon">
+                                <i class="fa-solid fa-pencil"></i>
+                            </span>
+                            <span>แก้ไข</span>
+                        </a>
+                        <a class="button is-light"
+                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                           hx-target="#mailing-address-update-datetime"
+                           hx-indicator="this"
+                           hx-post="{{ url_for('member.verify_member_mailing_address') }}">
+                            <span class="icon">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </span>
+                            <span>รับรองข้อมูล</span>
+                        </a>
                     </div>
                 </div>
                 {% endif %}
             </div>
         </div>
+
+        <div class="member-section-heading">
+            <span class="icon"><i class="fa-solid fa-graduation-cap"></i></span>
+            <div>
+                <h2>บริการ CMTE</h2>
+                <p>รวมเมนูที่เกี่ยวข้องกับคะแนน กิจกรรม และการยื่นขออนุมัติคะแนน</p>
+            </div>
+        </div>
+
+        <div class="member-panel">
+            <div class="member-action-list member-compact-actions">
+                <a class="member-action-link" href="{{ url_for('cmte.list_event_types') }}">
+                    <span class="member-action-icon"><i class="fa-solid fa-list-check"></i></span>
+                    <span>
+                        <strong>รายการกิจกรรม</strong>
+                        <small>ดูหมวดหมู่กิจกรรมและรายละเอียดที่เกี่ยวข้อง</small>
+                    </span>
+                </a>
+                <a class="member-action-link" href="{{ url_for('member.cmte_overdue_events') }}">
+                    <span class="member-action-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                    <span>
+                        <strong>รายการกิจกรรมที่เกินกำหนดยื่นขอคะแนน</strong>
+                        <small>ตรวจสอบรายการที่เลยกำหนดเพื่อจัดการต่อ</small>
+                    </span>
+                </a>
+                <a class="member-action-link" href="{{ url_for('member.summarize_cmte_scores', filter='approved_valid') }}">
+                    <span class="member-action-icon"><i class="fa-solid fa-square-poll-vertical"></i></span>
+                    <span>
+                        <strong>ตรวจสอบหน่วยคะแนน</strong>
+                        <small>สรุปคะแนนที่ได้รับการอนุมัติและยังใช้งานได้</small>
+                    </span>
+                </a>
+                <a class="member-action-link" href="{{ url_for('member.individual_score_index') }}">
+                    <span class="member-action-icon"><i class="fa-solid fa-file-circle-plus"></i></span>
+                    <span>
+                        <strong>ยื่นขออนุมัติคะแนนรายบุคคล</strong>
+                        <small>ส่งคำขอสำหรับกิจกรรมรายบุคคล</small>
+                        <div id="individual-score-requests"></div>
+                    </span>
+                </a>
+                <a class="member-action-link" href="{{ url_for('member.individual_score_group_index') }}">
+                    <span class="member-action-icon"><i class="fa-solid fa-people-group"></i></span>
+                    <span>
+                        <strong>ยื่นขออนุมัติคะแนนรายบุคคลแบบกลุ่ม</strong>
+                        <small>จัดการคำขอที่ส่งพร้อมกันหลายรายการ</small>
+                        <div id="individual-group-score-requests"></div>
+                    </span>
+                </a>
+                <a class="member-action-link" href="{{ url_for('member.list_cmte_payments') }}">
+                    <span class="member-action-icon"><i class="fa-solid fa-receipt"></i></span>
+                    <span>
+                        <strong>รายการชำระค่าธรรมเนียมกิจกรรม CMTE รายบุคคล</strong>
+                        <small>ดูประวัติการชำระค่าธรรมเนียมและสถานะล่าสุด</small>
+                    </span>
+                </a>
+                <a class="member-action-link" href="{{ url_for('cmte.upcoming_events') }}">
+                    <span class="member-action-icon"><i class="fa-solid fa-calendar-days"></i></span>
+                    <span>
+                        <strong>รายการกิจกรรม CMTE ที่จะเกิดขึ้น <span class="tag is-rounded is-success">new</span></strong>
+                        <small>ดูตารางกิจกรรมล่วงหน้าที่กำลังจะเปิดหรือจัดขึ้น</small>
+                    </span>
+                </a>
+                <a class="member-action-link" href="https://mtc-cmte.one.th">
+                    <span class="member-action-icon"><i class="fa-solid fa-laptop-file"></i></span>
+                    <span>
+                        <strong>ระบบ e-learning (ทำข้อสอบออนไลน์) <span class="tag is-rounded is-success">new</span></strong>
+                        <small>เข้าใช้งานระบบเรียนออนไลน์และทำข้อสอบ</small>
+                    </span>
+                </a>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}
+
 {% block scripts %}
     {{ super() }}
     <script>
-    $(document).ready(()=>{
-        htmx.ajax('GET', {{ url_for('member.alerts', item='individual-score-requests')|tojson|safe }},
-                {
-                    target: "#individual-score-requests",
-                    swap: "innerHTML",
-                })
-        htmx.ajax('GET', {{ url_for('member.alerts', item='individual-group-score-requests')|tojson|safe }},
-            {
-                target: "#individual-group-score-requests",
-                swap: "innerHTML",
-            })
+    $(document).ready(() => {
+        htmx.ajax('GET', {{ url_for('member.alerts', item='individual-score-requests')|tojson|safe }}, {
+            target: "#individual-score-requests",
+            swap: "innerHTML",
+        })
+        htmx.ajax('GET', {{ url_for('member.alerts', item='individual-group-score-requests')|tojson|safe }}, {
+            target: "#individual-group-score-requests",
+            swap: "innerHTML",
+        })
     })
     </script>
 {% endblock %}
