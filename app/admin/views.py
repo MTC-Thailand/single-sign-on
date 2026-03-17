@@ -14,6 +14,31 @@ from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm
 from app.members.models import License, Member, MemberAddress
 
 
+def _parse_excel_date(value):
+    if pd.isna(value):
+        return None
+    if isinstance(value, pd.Timestamp):
+        return value.date()
+    if isinstance(value, datetime):
+        return value.date()
+    if hasattr(value, 'year') and hasattr(value, 'month') and hasattr(value, 'day'):
+        return value
+
+    parsed = pd.to_datetime(value, errors='coerce')
+    if pd.isna(parsed):
+        return None
+    return parsed.date()
+
+
+def _get_row_value(row, column_name, default=None):
+    if column_name not in row.index:
+        return default
+    value = row[column_name]
+    if pd.isna(value):
+        return default
+    return value
+
+
 @webadmin.route('/')
 @login_required
 def index():
@@ -50,6 +75,9 @@ def upload_new():
         f = request.files['file']
         df = pd.read_excel(f, engine='openpyxl', dtype={'telephone_number': str})
         for idx, row in df.iterrows():
+            dob = _parse_excel_date(_get_row_value(row, 'dob', _get_row_value(row, 'birthday')))
+            has_traditional_fee = _get_row_value(row, 'form_tradition') == 1
+            payment_date = _get_row_value(row, 'payment_date')
             member = Member.query.filter_by(pid=str(int(row['idcardnumber']))).first()
             if not member:
                 member = Member(pid=str(row['idcardnumber']),
@@ -60,10 +88,10 @@ def upload_new():
                                 en_lastname=row['lastnameEN'],
                                 number=row['mem_id_txt'],
                                 email=row['email'],
-                                tel=row['telephone_number']
+                                tel=row['telephone_number'],
+                                dob=dob
                                 )
                 db.session.add(member)
-                print('adding new member: {}'.format(member.number))
                 license = License.query.filter_by(number=str(int(row['license_no']))).first()
                 if not license:
                     license = License(start_date=row['license_begin_date'],
@@ -76,7 +104,26 @@ def upload_new():
                     license.end_date = row['license_exp_date']
                     license.issue_date = row['approve_date']
                 db.session.add(license)
-            if row['form_tradition'] == 1 and not pd.isna(row['payment_date']):
+            else:
+                member_updates = {
+                    'prefix': 'th_title',
+                    'firstnameTH': 'th_firstname',
+                    'lastnameTH': 'th_lastname',
+                    'firstnameEN': 'en_firstname',
+                    'lastnameEN': 'en_lastname',
+                    'mem_id_txt': 'number',
+                    'email': 'email',
+                    'telephone_number': 'tel',
+                }
+                for column_name, attr_name in member_updates.items():
+                    value = _get_row_value(row, column_name)
+                    if value is not None:
+                        setattr(member, attr_name, value)
+                if dob is not None:
+                    member.dob = dob
+                db.session.add(member)
+            # The source spreadsheet uses form_tradition as a fee-paid flag for the traditional fee flow.
+            if has_traditional_fee and payment_date is not None:
                 cmte_payment_record = member.license.cmte_fee_payment_records.filter_by(
                     start_date=member.license.start_date,
                     end_date=member.license.end_date,
@@ -85,7 +132,7 @@ def upload_new():
                     cmte_payment_record = CMTEFeePaymentRecord(
                         start_date=member.license.start_date,
                         end_date=member.license.end_date,
-                        payment_datetime=row['payment_date'],
+                        payment_datetime=payment_date,
                         license=member.license,
                     )
                     db.session.add(cmte_payment_record)
