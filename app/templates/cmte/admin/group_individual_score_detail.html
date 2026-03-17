@@ -41,7 +41,7 @@
                                 <th>ไฟล์</th>
                                 </thead>
                                 <tbody>
-                                {% for doc in group_record.record.docs %}
+                                {% for doc in group_record.docs %}
                                     <tr>
                                         <td>{{ doc.note }}</td>
                                         <td>
@@ -55,8 +55,8 @@
                                             </a>
                                         </td>
                                     </tr>
-                                    </tbody>
                                 {% endfor %}
+                                </tbody>
                             </table>
                         </td>
                         </tr>
@@ -87,7 +87,7 @@
                     </table>
                     <div class="buttons is-centered">
                         <a class="button is-danger"
-                           hx-delete="{{ url_for('cmte.admin_individual_score_edit', record_id=group_record.id) }}"
+                           hx-delete="{{ url_for('cmte.admin_group_individual_score_edit', group_record_id=group_record.id) }}"
                            hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
                            hx-confirm="Are you sure to delete this file?"
                            hx-swap="none"
@@ -98,7 +98,7 @@
                             <span>ลบรายการ</span>
                         </a>
                         <a class="button is-link is-outlined"
-                           href="{{ url_for('cmte.admin_individual_score_edit', record_id=group_record.id) }}">
+                           href="{{ url_for('cmte.admin_group_individual_score_edit', group_record_id=group_record.id) }}">
                             <span class="icon">
                               <i class="fa-solid fa-pen"></i>
                             </span>

@@ -2543,6 +2543,77 @@ def admin_group_individual_score_detail(record_id):
                            group_record=group_record, form=form)
 
 
+@cmte.route('/events/group-individuals/<int:group_record_id>/edit', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@cmte_admin_permission.require()
+def admin_group_individual_score_edit(group_record_id):
+    group_record = CMTEEventGroupParticipationRecord.query.get(group_record_id)
+    form = IndividualScoreGroupForm()
+    first_record = group_record.record
+
+    if request.method == 'DELETE':
+        db.session.delete(group_record)
+        db.session.commit()
+        resp = make_response()
+        resp.headers['HX-Redirect'] = url_for('cmte.admin_group_individual_score_index')
+        return resp
+
+    if request.method == 'GET' and first_record:
+        form.desc.data = first_record.desc
+        form.start_date.data = first_record.start_date
+        form.end_date.data = first_record.end_date
+        form.reason.data = group_record.reason
+
+    s3_client = boto3.client('s3', aws_access_key_id=os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID'),
+                             aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+                             region_name=os.environ.get('BUCKETEER_AWS_REGION'))
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            for record in group_record.records:
+                record.desc = form.desc.data
+                record.start_date = form.start_date.data
+                record.end_date = form.end_date.data
+                record.reason = form.reason.data
+                db.session.add(record)
+
+            group_record.reason = form.reason.data
+            db.session.add(group_record)
+
+            for doc_form in form.upload_files:
+                _file = doc_form.upload_file.data
+                if _file:
+                    filename = _file.filename
+                    key = uuid.uuid4()
+                    s3_client.upload_fileobj(_file, os.environ.get('BUCKETEER_BUCKET_NAME'), str(key))
+                    doc = CMTEEventDoc(group_record=group_record, key=key, filename=filename)
+                    doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
+                    doc.note = doc_form.note.data
+                    db.session.add(doc)
+
+            for license_number in request.form.getlist('members'):
+                record = CMTEEventParticipationRecord.query.filter_by(license_number=license_number,
+                                                                      group_id=group_record_id).first()
+                if not record:
+                    record = CMTEEventParticipationRecord(group=group_record)
+                    record.license_number = license_number
+                    record.event_type_id = group_record.activity.type_id
+                    record.activity_id = group_record.activity_id
+                    record.create_datetime = arrow.now('Asia/Bangkok').datetime
+                    record.desc = form.desc.data
+                    record.start_date = form.start_date.data
+                    record.end_date = form.end_date.data
+                    record.reason = form.reason.data
+                    db.session.add(record)
+            db.session.commit()
+            flash('ดำเนินการบันทึกข้อมูลเรียบร้อย', 'success')
+            return redirect(url_for('cmte.admin_group_individual_score_detail', record_id=group_record_id))
+        else:
+            flash(f'{form.errors}', 'danger')
+
+    return render_template('cmte/admin/group_individual_score_form.html',
+                           activity=group_record.activity, form=form, record=group_record)
+
+
 @cmte.route('/events/individuals/docs/<int:doc_id>', methods=['DELETE'])
 @login_required
 @cmte_admin_permission.require()
