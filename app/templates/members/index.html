@@ -160,10 +160,7 @@
                     </div>
 
                     <div class="member-action-buttons">
-                        <a class="button is-light"
-                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                           hx-indicator="this"
-                           hx-post="{{ url_for('member.update_member_info') }}">
+                        <a class="button is-light" href="{{ url_for('member.update_member_info') }}">
                             <span class="icon">
                                 <i class="fa-solid fa-pencil"></i>
                             </span>
@@ -204,17 +201,13 @@
                     </div>
 
                     <div class="member-action-buttons">
-                        <a class="button is-light"
-                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                           hx-indicator="this"
-                           hx-post="{{ url_for('member.update_member_info') }}">
+                        <a class="button is-light" href="{{ url_for('member.update_member_info') }}">
                             <span class="icon">
                                 <i class="fa-solid fa-pencil"></i>
                             </span>
                             <span>แก้ไข</span>
                         </a>
                         <a class="button is-light"
-                           hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
                            hx-target="#mailing-address-update-datetime"
                            hx-indicator="this"
                            hx-post="{{ url_for('member.verify_member_mailing_address') }}">
