@@ -129,9 +129,24 @@ def edit_member_info(member_id):
         (1, 3, 'home'),
         (2, 1, 'mailing'),
     )
-    form = MemberInfoAdminForm(obj=member)
+    form = MemberInfoAdminForm()
 
     if request.method == 'GET':
+        form.pid.data = member.pid
+        form.th_title.data = member.th_title
+        form.th_firstname.data = member.th_firstname
+        form.th_lastname.data = member.th_lastname
+        form.en_title.data = member.en_title
+        form.en_firstname.data = member.en_firstname
+        form.en_lastname.data = member.en_lastname
+        form.dob.data = member.dob
+        form.tel.data = member.tel
+        form.email.data = member.email
+        form.status.data = member.status
+
+        if member.license:
+            form.license.form.process(obj=member.license)
+
         for index, address_type, _ in address_sections:
             address = member.get_address(address_type)
             if address:
@@ -139,8 +154,29 @@ def edit_member_info(member_id):
             form.addresses[index].address_type.data = address_type
 
     if form.validate_on_submit():
-        form.populate_obj(member)
-        existing_addresses = {addr.address_type: addr for addr in member.addresses}
+        member.pid = form.pid.data
+        member.th_title = form.th_title.data
+        member.th_firstname = form.th_firstname.data
+        member.th_lastname = form.th_lastname.data
+        member.en_title = form.en_title.data
+        member.en_firstname = form.en_firstname.data
+        member.en_lastname = form.en_lastname.data
+        member.dob = form.dob.data
+        member.tel = form.tel.data
+        member.email = form.email.data
+        member.status = form.status.data
+
+        if member.license:
+            form.license.populate_obj(member)
+
+        existing_addresses = {}
+        duplicate_addresses = []
+        for addr in member.addresses:
+            if addr.address_type in existing_addresses:
+                duplicate_addresses.append(addr)
+            else:
+                existing_addresses[addr.address_type] = addr
+
         address_fields = (
             'street_number',
             'alley',
@@ -168,6 +204,9 @@ def edit_member_info(member_id):
             address_form.form.populate_obj(address)
             address.address_type = address_type
             db.session.add(address)
+
+        for address in duplicate_addresses:
+            db.session.delete(address)
 
         db.session.add(member)
         db.session.commit()
