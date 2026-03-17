@@ -1,8 +1,10 @@
 from flask_wtf import FlaskForm
+from wtforms import FieldList, FormField
 from wtforms_alchemy import model_form_factory, ModelFormField
 
 from app import db
-from app.members.models import Member, License
+from app.members.forms import MemberAddressForm
+from app.members.models import Member, License, MemberAddress
 
 BaseModelForm = model_form_factory(FlaskForm)
 
@@ -26,3 +28,5 @@ class MemberInfoAdminForm(ModelForm):
         date_format = '%d/%m/%Y'
         exclude = ['number']
     license = ModelFormField(LicenseAdminForm, default=License)
+    addresses = FieldList(FormField(MemberAddressForm, default=MemberAddress),
+                          min_entries=3, max_entries=3)

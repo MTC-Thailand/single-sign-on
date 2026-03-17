@@ -2,141 +2,531 @@
 {% block head %}
 {{super()}}
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<style>
+    .admin-member-page {
+        background:
+            radial-gradient(circle at top right, rgba(36, 123, 160, 0.12), transparent 32%),
+            linear-gradient(180deg, #f4f8fb 0%, #eef3f7 100%);
+    }
+
+    .admin-member-shell {
+        max-width: 1280px;
+        margin: 0 auto;
+    }
+
+    .admin-member-hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+        padding: 1.75rem 2rem;
+        border-radius: 28px;
+        background: linear-gradient(135deg, #12344d 0%, #1f5f8b 100%);
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(18, 52, 77, 0.18);
+        margin-bottom: 1.5rem;
+    }
+
+    .admin-member-hero h1 {
+        color: #fff;
+        margin-bottom: 0.35rem;
+    }
+
+    .admin-member-hero p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.84);
+    }
+
+    .admin-member-chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+
+    .admin-member-chip {
+        padding: 0.75rem 1rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.12);
+        min-width: 150px;
+    }
+
+    .admin-member-chip small {
+        display: block;
+        color: rgba(255, 255, 255, 0.72);
+        margin-bottom: 0.2rem;
+    }
+
+    .admin-member-layout {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .admin-member-sidebar,
+    .admin-member-main {
+        min-width: 0;
+    }
+
+    .admin-member-panel,
+    .admin-member-form-card {
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(18, 52, 77, 0.08);
+        border-radius: 24px;
+        box-shadow: 0 16px 40px rgba(18, 52, 77, 0.08);
+    }
+
+    .admin-member-panel {
+        position: sticky;
+        top: 1.5rem;
+        padding: 1.25rem;
+    }
+
+    .admin-member-panel h2 {
+        font-size: 1.05rem;
+        margin-bottom: 0.85rem;
+        color: #12344d;
+    }
+
+    .admin-member-summary-item {
+        padding: 0.8rem 0;
+        border-bottom: 1px solid rgba(18, 52, 77, 0.08);
+    }
+
+    .admin-member-summary-item:last-child {
+        border-bottom: 0;
+    }
+
+    .admin-member-summary-item small {
+        display: block;
+        color: #6d7a86;
+        margin-bottom: 0.15rem;
+    }
+
+    .admin-member-summary-item strong,
+    .admin-member-summary-item span {
+        color: #12344d;
+        word-break: break-word;
+    }
+
+    .admin-member-main {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .admin-member-form-card {
+        padding: 1.4rem;
+    }
+
+    .admin-member-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .admin-member-card-header h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #12344d;
+    }
+
+    .admin-member-card-header p {
+        margin: 0.25rem 0 0;
+        color: #6d7a86;
+        font-size: 0.95rem;
+    }
+
+    .admin-member-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 999px;
+        background: #eaf4fb;
+        color: #1f5f8b;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .admin-member-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .admin-member-grid.two-col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-member-grid.three-col {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .admin-member-field .label {
+        font-size: 0.88rem;
+        margin-bottom: 0.35rem;
+        color: #415466;
+    }
+
+    .admin-member-field .input,
+    .admin-member-field .select select {
+        border-radius: 14px;
+        border-color: rgba(18, 52, 77, 0.16);
+        box-shadow: none;
+        min-height: 2.9rem;
+    }
+
+    .admin-member-field .input:focus,
+    .admin-member-field .select select:focus {
+        border-color: #1f5f8b;
+        box-shadow: 0 0 0 0.125em rgba(31, 95, 139, 0.12);
+    }
+
+    .admin-member-license-empty {
+        border-radius: 18px;
+        background: #f8fbfd;
+        border: 1px dashed rgba(18, 52, 77, 0.18);
+        padding: 1rem;
+    }
+
+    .admin-member-address-stack {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .admin-address-card {
+        border: 1px solid rgba(18, 52, 77, 0.08);
+        border-radius: 20px;
+        padding: 1.1rem;
+        background: linear-gradient(180deg, rgba(244, 248, 251, 0.9), rgba(255, 255, 255, 0.98));
+    }
+
+    .admin-address-card hr {
+        display: none;
+    }
+
+    .admin-address-card .title {
+        margin-bottom: 1rem;
+        color: #12344d;
+    }
+
+    .admin-member-actions {
+        position: sticky;
+        bottom: 1rem;
+        z-index: 5;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.2rem;
+        border-radius: 20px;
+        background: rgba(18, 52, 77, 0.92);
+        box-shadow: 0 18px 34px rgba(18, 52, 77, 0.18);
+    }
+
+    .admin-member-actions p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.92rem;
+    }
+
+    .admin-member-actions .buttons {
+        margin: 0;
+    }
+
+    @media screen and (max-width: 1023px) {
+        .admin-member-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .admin-member-panel {
+            position: static;
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+        .admin-member-hero {
+            padding: 1.25rem;
+        }
+
+        .admin-member-grid.two-col,
+        .admin-member-grid.three-col {
+            grid-template-columns: 1fr;
+        }
+
+        .admin-member-actions {
+            position: static;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .admin-member-actions .buttons {
+            width: 100%;
+        }
+
+        .admin-member-actions .button {
+            width: 100%;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 {% include "admin_nav.html" %}
-<section class="section">
-    <div class="content">
-        <div class="columns">
-            <div class="column">
+{% from "members/address_macro.html" import render_address_form %}
+<section class="section admin-member-page">
+    <div class="admin-member-shell">
+        <div class="admin-member-hero">
+            <div>
+                <h1 class="title is-size-3">แก้ไขข้อมูลสมาชิก</h1>
+                <p>จัดการข้อมูลส่วนตัว ใบอนุญาต และที่อยู่ทั้งหมดของสมาชิกในหน้าเดียว</p>
+            </div>
+            <div class="admin-member-chip-group">
+                <div class="admin-member-chip">
+                    <small>Member ID</small>
+                    <strong>{{ member.number or '-' }}</strong>
+                </div>
+                <div class="admin-member-chip">
+                    <small>Last update</small>
+                    <strong>{{ member.updated_at|localdatetime }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-member-layout">
+            <aside class="admin-member-sidebar">
+                <div class="admin-member-panel">
+                    <h2>สรุปข้อมูล</h2>
+                    <div class="admin-member-summary-item">
+                        <small>ชื่อสมาชิก</small>
+                        <strong>{{ member.th_fullname }}</strong>
+                    </div>
+                    <div class="admin-member-summary-item">
+                        <small>เลขบัตรประชาชน</small>
+                        <span>{{ member.pid or '-' }}</span>
+                    </div>
+                    <div class="admin-member-summary-item">
+                        <small>โทรศัพท์</small>
+                        <span>{{ member.tel or '-' }}</span>
+                    </div>
+                    <div class="admin-member-summary-item">
+                        <small>อีเมล</small>
+                        <span>{{ member.email or '-' }}</span>
+                    </div>
+                    <div class="admin-member-summary-item">
+                        <small>สถานะสมาชิก</small>
+                        <span>{{ member.status or '-' }}</span>
+                    </div>
+                    <div class="admin-member-summary-item">
+                        <small>เลขใบอนุญาต</small>
+                        <span>{{ member.license.number if member.license else '-' }}</span>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="admin-member-main">
                 {% include "messages.html" %}
-                <h1 class="title has-text-centered is-size-4">แก้ไขข้อมูลทั่วไปของสมาชิก</h1>
-                <h1 class="subtitle has-text-centered is-size-6">Last update {{ member.updated_at|localdatetime }}</h1>
                 <form method="post">
                     {{form.hidden_tag()}}
-                    <div class="field">
-                        <label class="label">{{form.pid.label}}</label>
-                        <div class="control">
-                            {{form.pid(class="input")}}
+                    <div class="admin-member-form-card">
+                        <div class="admin-member-card-header">
+                            <div>
+                                <h2>ข้อมูลส่วนตัว</h2>
+                                <p>ชื่อ เลขบัตร และข้อมูลพื้นฐานของสมาชิก</p>
+                            </div>
+                            <span class="admin-member-badge">
+                                <span class="icon is-small"><i class="fa-solid fa-id-card"></i></span>
+                                <span>Member Profile</span>
+                            </span>
+                        </div>
+                        <div class="admin-member-grid two-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.pid.label}}</label>
+                                <div class="control">
+                                    {{form.pid(class="input")}}
+                                </div>
+                            </div>
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.status.label}}</label>
+                                <div class="select is-fullwidth">
+                                    {{form.status()}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="admin-member-grid three-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.th_title.label}}</label>
+                                <div class="control">
+                                    {{form.th_title(class="input")}}
+                                </div>
+                            </div>
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.th_firstname.label}}</label>
+                                <div class="control">
+                                    {{form.th_firstname(class="input")}}
+                                </div>
+                            </div>
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.th_lastname.label}}</label>
+                                <div class="control">
+                                    {{form.th_lastname(class="input")}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="admin-member-grid three-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.en_title.label}}</label>
+                                <div class="control">
+                                    {{form.en_title(class="input")}}
+                                </div>
+                            </div>
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.en_firstname.label}}</label>
+                                <div class="control">
+                                    {{form.en_firstname(class="input")}}
+                                </div>
+                            </div>
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.en_lastname.label}}</label>
+                                <div class="control">
+                                    {{form.en_lastname(class="input")}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="admin-member-grid two-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.dob.label}}</label>
+                                <div class="control">
+                                    {{form.dob(class="input", autocomplete="off", type="text")}}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="field">
-                        <label class="label">{{form.th_title.label}}</label>
-                        <div class="control">
-                            {{form.th_title(class="input")}}
+
+                    <div class="admin-member-form-card">
+                        <div class="admin-member-card-header">
+                            <div>
+                                <h2>ข้อมูลติดต่อ</h2>
+                                <p>ช่องทางติดต่อหลักที่เจ้าหน้าที่ใช้ติดต่อสมาชิก</p>
+                            </div>
+                            <span class="admin-member-badge">
+                                <span class="icon is-small"><i class="fa-solid fa-address-book"></i></span>
+                                <span>Contact</span>
+                            </span>
+                        </div>
+                        <div class="admin-member-grid two-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.tel.label}}</label>
+                                <div class="control">
+                                    {{form.tel(class="input")}}
+                                </div>
+                            </div>
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.email.label}}</label>
+                                <div class="control">
+                                    {{form.email(class="input")}}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="field">
-                        <label class="label">{{form.th_firstname.label}}</label>
-                        <div class="control">
-                            {{form.th_firstname(class="input")}}
+
+                    <div class="admin-member-form-card">
+                        <div class="admin-member-card-header">
+                            <div>
+                                <h2>ข้อมูลใบอนุญาต</h2>
+                                <p>ตรวจสอบและแก้ไขรายละเอียดใบอนุญาตปัจจุบัน</p>
+                            </div>
+                            <span class="admin-member-badge">
+                                <span class="icon is-small"><i class="fa-solid fa-certificate"></i></span>
+                                <span>License</span>
+                            </span>
                         </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.th_lastname.label}}</label>
-                        <div class="control">
-                            {{form.th_lastname(class="input")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.en_title.label}}</label>
-                        <div class="control">
-                            {{form.en_title(class="input")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.en_firstname.label}}</label>
-                        <div class="control">
-                            {{form.en_firstname(class="input")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.en_lastname.label}}</label>
-                        <div class="control">
-                            {{form.en_lastname(class="input")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.dob.label}}</label>
-                        <div class="control">
-                            {{form.dob(class="input", autocomplete="off", type="text")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.tel.label}}</label>
-                        <div class="control">
-                            {{form.tel(class="input")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.email.label}}</label>
-                        <div class="control">
-                            {{form.email(class="input")}}
-                        </div>
-                    </div>
-                    <div class="field">
-                        <label class="label">{{form.status.label}}</label>
-                        <div class="select">
-                            {{form.status()}}
-                        </div>
-                    </div>
-                    <div class="notification is-light is-success">
-                        <h1 class="title is-size-4">License</h1>
                         {% if form.license.number.data %}
-                        <div class="field">
-                            <label class="label">{{form.license.number.label}}</label>
-                            <div class="control">
-                                {{form.license.number(class="input", readonly=True)}}
+                        <div class="admin-member-grid two-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.license.number.label}}</label>
+                                <div class="control">
+                                    {{form.license.number(class="input", readonly=True)}}
+                                </div>
+                            </div>
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.license.status.label}}</label>
+                                <div class="select is-fullwidth">
+                                    {{form.license.status()}}
+                                </div>
                             </div>
                         </div>
-                        <div class="field">
-                            <label class="label">{{form.license.issue_date.label}}</label>
-                            <div class="control">
-                                {{form.license.issue_date(class="input", type="text")}}
+                        <div class="admin-member-grid three-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.license.issue_date.label}}</label>
+                                <div class="control">
+                                    {{form.license.issue_date(class="input", type="text")}}
+                                </div>
                             </div>
-                        </div>
-                        <div class="field">
-                            <label class="label">{{form.license.start_date.label}}</label>
-                            <div class="control">
-                                {{form.license.start_date(class="input", type="text")}}
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.license.start_date.label}}</label>
+                                <div class="control">
+                                    {{form.license.start_date(class="input", type="text")}}
+                                </div>
                             </div>
-                        </div>
-                        <div class="field">
-                            <label class="label">{{form.license.end_date.label}}</label>
-                            <div class="control">
-                                {{form.license.end_date(class="input", type="text")}}
-                            </div>
-                        </div>
-                        <div class="field">
-                            <label class="label">{{form.license.status.label}}</label>
-                            <div class="select">
-                                {{form.license.status()}}
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.license.end_date.label}}</label>
+                                <div class="control">
+                                    {{form.license.end_date(class="input", type="text")}}
+                                </div>
                             </div>
                         </div>
                         {% else %}
-                        ใบอนุญาตหมดอายุหรือไม่มีใบอนุญาต
-                        <div class="buttons">
-                            <a hx-get="{{url_for('webadmin.edit_license', member_id=member.id, license_action='renew')}}"
-                               hx-target="#license-form"
-                               hx-swap="innerHTML"
-                               class="button is-rounded">ต่ออายุใบอนุญาต</a>
+                        <div class="admin-member-license-empty">
+                            <p>ใบอนุญาตหมดอายุหรือไม่มีใบอนุญาต</p>
+                            <div class="buttons mt-4">
+                                <a hx-get="{{url_for('webadmin.edit_license', member_id=member.id, license_action='renew')}}"
+                                   hx-target="#license-form"
+                                   hx-swap="innerHTML"
+                                   class="button is-link is-light">ต่ออายุใบอนุญาต</a>
+                            </div>
+                            <div id="license-form"></div>
                         </div>
-                        <div id="license-form"></div>
                         {% endif %}
                     </div>
-                    <div class="field is-grouped">
-                        <div class="control">
-                            <a class="button is-light" href="{{url_for('webadmin.index')}}">Cancel</a>
+
+                    <div class="admin-member-form-card">
+                        <div class="admin-member-card-header">
+                            <div>
+                                <h2>จัดการที่อยู่</h2>
+                                <p>แยกที่อยู่ทำงาน ที่อยู่บ้าน และที่อยู่สำหรับส่งเอกสารอย่างชัดเจน</p>
+                            </div>
+                            <span class="admin-member-badge">
+                                <span class="icon is-small"><i class="fa-solid fa-location-dot"></i></span>
+                                <span>Addresses</span>
+                            </span>
                         </div>
-                        <div class="control">
-                            <input type="submit" class="button is-success" value="Save">
+                        <div class="admin-member-address-stack">
+                            <div class="admin-address-card">
+                                {{render_address_form(form.addresses[0], "ที่อยู่ที่ทำงาน")}}
+                            </div>
+                            <div class="admin-address-card">
+                                {{render_address_form(form.addresses[1], "ที่อยู่บ้าน")}}
+                            </div>
+                            <div class="admin-address-card">
+                                {{render_address_form(form.addresses[2], "ที่อยู่สำหรับส่งเอกสาร")}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-member-actions">
+                        <p>ตรวจสอบข้อมูลให้ครบก่อนบันทึก การเปลี่ยนแปลงจะมีผลทันที</p>
+                        <div class="buttons">
+                            <a class="button is-light" href="{{url_for('webadmin.index')}}">Cancel</a>
+                            <input type="submit" class="button is-success" value="Save changes">
                         </div>
                     </div>
                 </form>
             </div>
         </div>
-    </div>
+   </div>
 </section>
 {% endblock %}
 {% block scripts %}

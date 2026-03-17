@@ -11,7 +11,7 @@ from app.admin import webadmin
 from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
 from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm
-from app.members.models import License, Member
+from app.members.models import License, Member, MemberAddress
 
 
 @webadmin.route('/')
@@ -124,9 +124,51 @@ def upload_phone_numbers():
 @admin_permission.require(http_exception=403)
 def edit_member_info(member_id):
     member = Member.query.get(member_id)
+    address_sections = (
+        (0, 2, 'working'),
+        (1, 3, 'home'),
+        (2, 1, 'mailing'),
+    )
     form = MemberInfoAdminForm(obj=member)
+
+    if request.method == 'GET':
+        for index, address_type, _ in address_sections:
+            address = member.get_address(address_type)
+            if address:
+                form.addresses[index].form.process(obj=address)
+            form.addresses[index].address_type.data = address_type
+
     if form.validate_on_submit():
         form.populate_obj(member)
+        existing_addresses = {addr.address_type: addr for addr in member.addresses}
+        address_fields = (
+            'street_number',
+            'alley',
+            'street',
+            'village',
+            'district',
+            'city',
+            'province',
+            'zipcode',
+        )
+
+        for index, address_type, _ in address_sections:
+            address_form = form.addresses[index]
+            has_value = any(address_form[field].data for field in address_fields)
+            address = existing_addresses.get(address_type)
+
+            if not has_value:
+                if address:
+                    db.session.delete(address)
+                continue
+
+            if address is None:
+                address = MemberAddress(member=member, address_type=address_type)
+
+            address_form.form.populate_obj(address)
+            address.address_type = address_type
+            db.session.add(address)
+
         db.session.add(member)
         db.session.commit()
         flash('บันทึกข้อมูลเรียบร้อย', 'success')
