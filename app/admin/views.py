@@ -167,7 +167,7 @@ def edit_member_info(member_id):
         member.status = form.status.data
 
         if member.license:
-            form.license.populate_obj(member)
+            form.license.form.populate_obj(member.license)
 
         existing_addresses = {}
         duplicate_addresses = []
