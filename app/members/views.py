@@ -941,57 +941,59 @@ def verify_member_info():
     return f'<small class="tag is-rounded is-primary">Verified at {current_user.updated_at.astimezone(bangkok).strftime("%d/%m/%Y %H:%M:%S")} {humanized_dt}</small>'
 
 
-@member.post('/members/info/update')
-@login_required
-def update_member_info():
-    if not current_user.addresses:
-        client_id = os.environ.get('MTC_CLIENT_ID')
-        client_secret = os.environ.get('MTC_CLIENT_SECRET')
-        base_url = 'https://mtc-webservices.herokuapp.com'
-        resp = requests.post(f'{base_url}/api/auth/login',
-                             json={'client_id': client_id, 'client_secret': client_secret})
-        token = resp.json().get('access_token')
-        try:
-            response = requests.get(f'{base_url}/api/members/{current_user.pid}/info',
-                                headers={'Authorization': f'Bearer {token}'})
-            if response.status_code == 200:
-                pprint(response.json())
-        except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
-            pass
-        else:
-            try:
-                data_ = response.json().get('data', {})
-            except requests.exceptions.JSONDecodeError as e:
-                pass
-            else:
-                address = MemberAddress(member=current_user)
-                home_addr = data_.get('home_addr')
-                if home_addr:
-                    address.street_number = home_addr.get('add1')
-                    address.district = home_addr.get('DISTRICT_NAME')
-                    address.city = home_addr.get('AMPHUR_NAME')
-                    address.province = home_addr.get('PROVINCE_NAME')
-                    address.village = home_addr.get('moo')
-                    address.alley = home_addr.get('soi')
-                    address.road = home_addr.get('road')
-                    address.zipcode = home_addr.get('zipcode')
-                    db.session.add(address)
-                    db.session.commit()
-    resp = make_response()
-    resp.headers['HX-Redirect'] = url_for('member.edit_member_info')
-    return resp
-
-
 @member.route('/members/info', methods=['GET', 'POST'])
 @login_required
 def edit_member_info():
-    form = MemberInfoForm(obj=current_user)
+    address_sections = (
+        (0, 2, 'working'),
+        (1, 3, 'home'),
+        (2, 1, 'mailing'),
+    )
+    form = MemberInfoForm()
+
+    if request.method == 'GET':
+        form.tel.data = current_user.tel
+        form.email.data = current_user.email
+        for index, address_type, _ in address_sections:
+            address = current_user.get_address(address_type)
+            if address:
+                form.addresses[index].form.process(obj=address)
+            form.addresses[index].address_type.data = address_type
+
     if request.method == 'POST':
         if form.validate_on_submit():
-            # set a mail address.
-            #TODO : add a work address
-            form.addresses[0].address_type.data = 1
-            form.populate_obj(current_user)
+            current_user.tel = form.tel.data
+            current_user.email = form.email.data
+
+            existing_addresses = {addr.address_type: addr for addr in current_user.addresses}
+            address_fields = (
+                'street_number',
+                'alley',
+                'street',
+                'village',
+                'district',
+                'city',
+                'province',
+                'zipcode',
+            )
+
+            for index, address_type, _ in address_sections:
+                address_form = form.addresses[index]
+                has_value = any(address_form[field].data for field in address_fields)
+                address = existing_addresses.get(address_type)
+
+                if not has_value:
+                    if address:
+                        db.session.delete(address)
+                    continue
+
+                if address is None:
+                    address = MemberAddress(member=current_user, address_type=address_type)
+
+                address_form.form.populate_obj(address)
+                address.address_type = address_type
+                db.session.add(address)
+
             db.session.add(current_user)
             db.session.commit()
             flash('บันทึกข้อมูลเรียบร้อยแล้ว', 'success')

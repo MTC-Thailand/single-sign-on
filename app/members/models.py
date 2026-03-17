@@ -52,6 +52,21 @@ class Member(db.Model, UserMixin):
     def unique_id(self):
         return f'mtc-member-{self.id}'
 
+    def get_address(self, address_type):
+        return next((addr for addr in self.addresses if addr.address_type == address_type), None)
+
+    @property
+    def mailing_address(self):
+        return self.get_address(1)
+
+    @property
+    def working_address(self):
+        return self.get_address(2)
+
+    @property
+    def home_address(self):
+        return self.get_address(3)
+
     def check_password(self, password):
         return self.password == password
 
@@ -128,7 +143,8 @@ class MemberAddress(db.Model):
     province = db.Column(db.String(), info={'label': 'จังหวัด'})
     address_type = db.Column(db.Integer, info={'label': 'ชนิด',
                                                'choices': [(1, 'ที่อยู่สำหรับส่งเอกสาร'),
-                                                           (2, 'ที่ทำงาน')]})
+                                                           (2, 'ที่ทำงาน'),
+                                                           (3, 'ที่อยู่บ้าน')]})
     zipcode = db.Column('zipcode', db.Integer, info={'label': 'รหัสไปรษณีย์'})
     member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
     member = db.relationship(Member, backref=db.backref('addresses', cascade='all, delete-orphan'))

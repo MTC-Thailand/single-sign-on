@@ -66,4 +66,4 @@ class MemberInfoForm(ModelForm):
         model = Member
         only = ['tel', 'email']
     addresses = FieldList(FormField(MemberAddressForm, default=MemberAddress),
-                          min_entries=1, max_entries=1)
+                          min_entries=3, max_entries=3)

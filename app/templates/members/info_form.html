@@ -52,7 +52,9 @@
                             </p>
                         </div>
                     </div>
-                    {{render_address_form(form.addresses[0], "ที่อยู่สำหรับส่งเอกสาร")}}
+                    {{render_address_form(form.addresses[0], "ที่อยู่ที่ทำงาน")}}
+                    {{render_address_form(form.addresses[1], "ที่อยู่บ้าน")}}
+                    {{render_address_form(form.addresses[2], "ที่อยู่สำหรับส่งเอกสาร")}}
                     <div class="field is-grouped">
                         <div class="control">
                             <a href="{{url_for('member.index')}}" class="button is-light">
