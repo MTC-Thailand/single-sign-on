@@ -1,0 +1,8 @@
+{% if config['TESTING'] %}
+<div class="app-navbar-banner" role="status" aria-live="polite">
+    <span class="icon" aria-hidden="true">
+        <i class="fas fa-triangle-exclamation"></i>
+    </span>
+    <span>This web server is in testing mode and is not a production server.</span>
+</div>
+{% endif %}

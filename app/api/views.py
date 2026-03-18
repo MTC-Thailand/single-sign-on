@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
 
 from app import db
-from app.members.models import Member, License
+from app.members.models import Member, License, MemberAddress
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
 
 MYSQL_HOST = os.environ.get('MYSQL_HOST')
@@ -28,7 +28,7 @@ MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
 class Login(Resource):
     def post(self):
         """
-        This endpoint returns an access token.
+        Authenticate a client and return JWT tokens.
         ---
         tags:
             -   Authentication
@@ -42,7 +42,7 @@ class Login(Resource):
                 required: true
                 schema:
                     type: object
-                    required: true
+                    required:
                         - client_id
                         - client_secret
                     properties:
@@ -71,6 +71,8 @@ class Login(Resource):
                 description: Missing or invalid request body
             401:
                 description: Unauthorized client ID or secret
+            404:
+                description: Client was not found
         """
         from app.models import Client
         client_id = request.json.get('client_id')
@@ -91,7 +93,7 @@ class RefreshToken(Resource):
     @jwt_required(refresh=True)
     def post(self):
         """
-        Refresh access token using a refresh token.
+        Refresh an access token using a valid refresh token.
         ---
         tags:
             -   Authentication
@@ -107,15 +109,9 @@ class RefreshToken(Resource):
                         access_token:
                             type: string
                             description: New JWT access token
-                        refresh_token:
-                            type: string
-                            description: New refresh token (present only if rotation is enabled)
                 examples:
                     application/json:
                         access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                        refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-            400:
-                description: Missing or invalid request body
             401:
                 description: Invalid or expired refresh token
         """
@@ -128,31 +124,37 @@ class CMTEFeePaymentResource(Resource):
     @jwt_required()
     def get(self, lic_no):
         """
-        This endpoint returns active CMTE fee payment.
+        Return the active CMTE fee payment record for a license.
         ---
+        tags:
+            -   CMTE
         parameters:
-            -   lic_no: license no.
+            -   name: lic_no
                 in: path
                 type: string
                 required: true
+                description: License number
         responses:
             200:
                 description: Active CMTE fee payment of the individual
                 schema:
-                    id: CMTEFeePaymentRecord
+                    type: object
                     properties:
-                        license_number:
-                            type: string
-                            description: license no.
-                        start_date:
-                            type: string
-                            description: Start date
-                        end_date:
-                            type: string
-                            description: End date
-                        payment_datetime:
-                            type: string
-                            description: Payment date
+                        data:
+                            type: object
+                            properties:
+                                license_number:
+                                    type: string
+                                    description: License number
+                                start_date:
+                                    type: string
+                                    description: Start date
+                                end_date:
+                                    type: string
+                                    description: End date
+                                payment_datetime:
+                                    type: string
+                                    description: Payment date
         """
         license = License.query.filter_by(number=lic_no).first()
         active_payment_record = license.get_active_cmte_fee_payment()
@@ -162,8 +164,10 @@ class CMTEFeePaymentResource(Resource):
     @jwt_required()
     def post(self, lic_no):
         """
-        This endpoint posts CMTE fee payment data.
+        Create a CMTE fee payment record for a license.
         ---
+        tags:
+            -   CMTE
         consumes:
             -   application/json
         parameters:
@@ -172,12 +176,12 @@ class CMTEFeePaymentResource(Resource):
                 type: string
                 required: true
                 description: License number
-            -   name: payment_datetime
-                in: body
-                type: string
+            -   in: body
                 required: true
                 schema:
-                    payment_datetime: string
+                    type: object
+                    required:
+                        - payment_datetime
                     properties:
                         payment_datetime:
                             type: string
@@ -185,22 +189,27 @@ class CMTEFeePaymentResource(Resource):
 
         responses:
             201:
-                description: Active CMTE fee payment of the individual
+                description: CMTE fee payment record created
                 schema:
-                    id: CMTEFeePaymentRecord
+                    type: object
                     properties:
-                        license_number:
-                            type: string
-                            description: license no.
-                        start_date:
-                            type: string
-                            description: Start date
-                        end_date:
-                            type: string
-                            description: End date
-                        payment_datetime:
-                            type: string
-                            description: Payment date
+                        data:
+                            type: object
+                            properties:
+                                license_number:
+                                    type: string
+                                    description: License number
+                                start_date:
+                                    type: string
+                                    description: Start date
+                                end_date:
+                                    type: string
+                                    description: End date
+                                payment_datetime:
+                                    type: string
+                                    description: Payment date
+            400:
+                description: Payment datetime is missing, license was not found, or the payment record already exists
         """
         payment_datetime = request.json.get('payment_datetime')
         print(payment_datetime)
@@ -231,16 +240,42 @@ class CMTEScore(Resource):
     @jwt_required()
     def get(self, lic_id):
         """
-        This endpoint returns CMTE scores.
+        Return CMTE scores for a license.
         ---
+        tags:
+            -   CMTE
         parameters:
-            -   lic_id: license ID
+            -   name: lic_id
                 in: path
                 type: string
                 required: true
+                description: License number
+            -   name: type
+                in: query
+                type: string
+                required: false
+                enum:
+                    - valid
+                    - total
+                default: valid
+                description: Score type to return
         responses:
             200:
                 description: Sum of the CMTE scores of the individual
+                schema:
+                    type: object
+                    properties:
+                        data:
+                            type: object
+                            properties:
+                                scores:
+                                    type: number
+                                type:
+                                    type: string
+                                active_cmte_payment_record:
+                                    type: object
+                                datetime:
+                                    type: string
         """
         license = License.query.filter_by(number=lic_id).first()
         total_score = license.total_cmte_scores
@@ -283,26 +318,32 @@ class MemberPIDPhoneNumber(Resource):
     @jwt_required()
     def get(self, pid, phone=None):
         """
-        This end point returns a member his/her information with a matching personal identification number.
+        Return member information filtered by personal ID and optionally by phone number.
         ---
+        tags:
+            -   Member
         parameters:
-            -   pid: Personal Identification Number
+            -   name: pid
                 in: path
                 type: string
                 required: true
-            -   phone: Phone Number
+                description: Personal Identification Number
+            -   name: phone
                 in: path
                 type: string
                 required: false
+                description: Phone number
         responses:
             200:
                 description: Member information
                 schema:
-                    id: MemberPhone
+                    type: object
                     properties:
-                        member:
+                        data:
                             type: object
                             properties:
+                                id:
+                                    type: integer
                                 pid:
                                     type: string
                                     description: หมายเลขบัตรประจำตัวประชาชน
@@ -318,6 +359,10 @@ class MemberPIDPhoneNumber(Resource):
                                 status:
                                     type: string
                                     description: สถานะสมาชิก
+            400:
+                description: Member status is not valid
+            404:
+                description: Member not found
         """
 
         if phone is not None:
@@ -345,49 +390,60 @@ class MemberPID(Resource):
     @jwt_required()
     def get(self, pid):
         """
-        This end point returns a member and a license information with a matching personal identification number.
+        Return member and license information for a personal identification number.
         ---
+        tags:
+            -   Member
         parameters:
-            -   pid: Personal Identification Number
+            -   name: pid
                 in: path
                 type: string
                 required: true
+                description: Personal Identification Number
         responses:
             200:
                 description: License information
                 schema:
-                    id: MemberLicense
+                    type: object
                     properties:
-                        license:
+                        data:
                             type: object
                             properties:
-                                number:
-                                    type: string
-                                    description: หมายเลขใบอนุญาต (ท.น.)
-                                lic_b_date:
-                                    type: string
-                                    description: วันออกใบอนุญาต
-                                lic_exp_date:
-                                    type: string
-                                    description: วันหมดอายุใบอนุญาต
-                                lic_status_name:
-                                    type: string
-                                    description: สถานะใบอนุญาต
-                        member:
-                            type: object
-                            properties:
-                                th_title:
-                                    type: string
-                                    description: คำนำหน้า
-                                th_firstname:
-                                    type: string
-                                    description: ชื่อภาษาไทย
-                                th_lastname:
-                                    type: string
-                                    description: นามสกุลภาษาไทย
-                                status:
-                                    type: string
-                                    description: สถานะใบอนุญาต
+                                license:
+                                    type: object
+                                    properties:
+                                        number:
+                                            type: string
+                                            description: หมายเลขใบอนุญาต (ท.น.)
+                                        lic_b_date:
+                                            type: string
+                                            description: วันออกใบอนุญาต
+                                        lic_exp_date:
+                                            type: string
+                                            description: วันหมดอายุใบอนุญาต
+                                        lic_status_name:
+                                            type: string
+                                            description: สถานะใบอนุญาต
+                                member:
+                                    type: object
+                                    properties:
+                                        th_title:
+                                            type: string
+                                            description: คำนำหน้า
+                                        th_firstname:
+                                            type: string
+                                            description: ชื่อภาษาไทย
+                                        th_lastname:
+                                            type: string
+                                            description: นามสกุลภาษาไทย
+                                        telephone:
+                                            type: string
+                                            description: หมายเลขโทรศัพท์
+                                        status:
+                                            type: string
+                                            description: สถานะสมาชิก
+            404:
+                description: Member not found
         """
         member = Member.query.filter_by(pid=pid).first()
         if member:
@@ -426,61 +482,67 @@ class MemberLicense(Resource):
     @jwt_required()
     def get(self, license_number):
         """
-        This end point returns a member and a license information with a matching license number.
+        Return member, license, and CMTE information for a license number.
         ---
+        tags:
+            -   Member
         parameters:
-            -   pin: License number
+            -   name: license_number
                 in: path
                 type: string
                 required: true
+                description: License number
         responses:
             200:
                 description: License information
                 schema:
-                    id: MemberLicense
+                    type: object
                     properties:
-                        license:
+                        data:
                             type: object
                             properties:
-                                number:
-                                    type: string
-                                    description: หมายเลขใบอนุญาต (ท.น.)
-                                lic_b_date:
-                                    type: string
-                                    description: วันออกใบอนุญาต
-                                lic_exp_date:
-                                    type: string
-                                    description: วันหมดอายุใบอนุญาต
-                                lic_status_name:
-                                    type: string
-                                    description: สถานะใบอนุญาต
-                        member:
-                            type: object
-                            properties:
-                                th_title:
-                                    type: string
-                                    description: คำนำหน้า
-                                th_firstname:
-                                    type: string
-                                    description: ชื่อภาษาไทย
-                                th_lastname:
-                                    type: string
-                                    description: นามสกุลภาษาไทย
-                        cmte_score:
-                            type: object
-                            properties:
-                                valid:
-                                    type: number
-                                    description: คะแนนสำหรับต่ออายุใบอนุญาตในรอบปัจจุบัน
-                                active_cmte_payment:
+                                license:
                                     type: object
                                     properties:
-                                        end_date:
+                                        number:
                                             type: string
-                                            description: วันที่หมดอายุ mock up
-                                        start_date:
+                                            description: หมายเลขใบอนุญาต (ท.น.)
+                                        lic_b_date:
                                             type: string
-                                            description: วันที่เริ่มต้น mock up
+                                            description: วันออกใบอนุญาต
+                                        lic_exp_date:
+                                            type: string
+                                            description: วันหมดอายุใบอนุญาต
+                                        lic_status_name:
+                                            type: string
+                                            description: สถานะใบอนุญาต
+                                member:
+                                    type: object
+                                    properties:
+                                        th_title:
+                                            type: string
+                                            description: คำนำหน้า
+                                        th_firstname:
+                                            type: string
+                                            description: ชื่อภาษาไทย
+                                        th_lastname:
+                                            type: string
+                                            description: นามสกุลภาษาไทย
+                                cmte:
+                                    type: object
+                                    properties:
+                                        valid_score:
+                                            type: number
+                                            description: คะแนนสำหรับต่ออายุใบอนุญาตในรอบปัจจุบัน
+                                        active_cmte_payment:
+                                            type: object
+                                            properties:
+                                                end_date:
+                                                    type: string
+                                                start_date:
+                                                    type: string
+            404:
+                description: License or member not found
         """
         license = License.query.filter_by(number=license_number).first()
         member = Member.query.get(license.member_id)
@@ -508,14 +570,251 @@ class MemberLicense(Resource):
         return jsonify(data=None), 404
 
 
+class MemberAddressResource(Resource):
+    ADDRESS_TYPE_MAP = {
+        'mailing': 1,
+        'work': 2,
+        'home': 3,
+    }
+    ADDRESS_TYPE_LABELS = {
+        1: 'mailing',
+        2: 'work',
+        3: 'home',
+    }
+    ADDRESS_FIELD_ALIASES = {
+        'street_number': ('street_number', 'add1'),
+        'alley': ('alley', 'soi'),
+        'street': ('street', 'road'),
+        'village': ('village', 'moo'),
+        'district': ('district', 'DISTRICT_NAME'),
+        'city': ('city', 'AMPHUR_NAME'),
+        'province': ('province', 'PROVINCE_NAME'),
+        'zipcode': ('zipcode',),
+    }
+
+    @classmethod
+    def _parse_address_type(cls, raw_value):
+        if raw_value is None:
+            return None
+        if isinstance(raw_value, int):
+            return raw_value if raw_value in cls.ADDRESS_TYPE_LABELS else None
+        return cls.ADDRESS_TYPE_MAP.get(str(raw_value).strip().lower())
+
+    @classmethod
+    def _serialize_address(cls, address):
+        return {
+            'id': address.id,
+            'address_type': cls.ADDRESS_TYPE_LABELS.get(address.address_type, address.address_type),
+            'street_number': address.street_number,
+            'alley': address.alley,
+            'street': address.street,
+            'village': address.village,
+            'district': address.district,
+            'city': address.city,
+            'province': address.province,
+            'zipcode': str(address.zipcode) if address.zipcode is not None else None,
+            'updated_at': address.updated_at.isoformat() if address.updated_at else None,
+        }
+
+    @jwt_required()
+    def put(self, pin):
+        """
+        Create or update a member mailing, work, or home address.
+        ---
+        tags:
+            -   Member
+        summary: Update member address information
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        parameters:
+            -   name: pin
+                in: path
+                type: string
+                required: true
+                description: Personal Identification Number
+            -   in: body
+                required: true
+                schema:
+                    type: object
+                    required:
+                        - address_type
+                    properties:
+                        address_type:
+                            type: string
+                            description: Address type to create or update
+                            enum: [mailing, work, home]
+                        address:
+                            type: object
+                            description: Address fields. The endpoint also accepts these fields at the top level.
+                            properties:
+                                street_number:
+                                    type: string
+                                    description: House number or primary street line
+                                alley:
+                                    type: string
+                                    description: Alley or soi
+                                street:
+                                    type: string
+                                    description: Street or road name
+                                village:
+                                    type: string
+                                    description: Village or moo
+                                district:
+                                    type: string
+                                    description: District / subdistrict
+                                city:
+                                    type: string
+                                    description: City / amphur
+                                province:
+                                    type: string
+                                    description: Province
+                                zipcode:
+                                    type: string
+                                    description: Postal code
+                examples:
+                    application/json:
+                        address_type: work
+                        address:
+                            street_number: 12/34
+                            alley: Sukhumvit 10
+                            street: Sukhumvit
+                            village: Village 5
+                            district: Khlong Toei
+                            city: Bangkok
+                            province: Bangkok
+                            zipcode: "10110"
+        responses:
+            200:
+                description: Address updated successfully
+                schema:
+                    type: object
+                    properties:
+                        data:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                address_type:
+                                    type: string
+                                    enum: [mailing, work, home]
+                                street_number:
+                                    type: string
+                                alley:
+                                    type: string
+                                street:
+                                    type: string
+                                village:
+                                    type: string
+                                district:
+                                    type: string
+                                city:
+                                    type: string
+                                province:
+                                    type: string
+                                zipcode:
+                                    type: string
+                                updated_at:
+                                    type: string
+                                    description: ISO 8601 timestamp
+            201:
+                description: Address created successfully
+                schema:
+                    type: object
+                    properties:
+                        data:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                address_type:
+                                    type: string
+                                    enum: [mailing, work, home]
+                                street_number:
+                                    type: string
+                                alley:
+                                    type: string
+                                street:
+                                    type: string
+                                village:
+                                    type: string
+                                district:
+                                    type: string
+                                city:
+                                    type: string
+                                province:
+                                    type: string
+                                zipcode:
+                                    type: string
+                                updated_at:
+                                    type: string
+                                    description: ISO 8601 timestamp
+            400:
+                description: Invalid request payload
+            404:
+                description: Member not found
+        """
+        member = Member.query.filter_by(pid=pin).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        payload = request.get_json(silent=True) or {}
+        if not payload:
+            return {'message': 'JSON body required.'}, HTTPStatus.BAD_REQUEST
+
+        address_payload = payload.get('address') if isinstance(payload.get('address'), dict) else payload
+        address_type = self._parse_address_type(payload.get('address_type') or address_payload.get('address_type'))
+        if address_type is None:
+            return {'message': 'address_type must be one of "mailing", "work", or "home".'}, HTTPStatus.BAD_REQUEST
+
+        address = MemberAddress.query.filter_by(member=member, address_type=address_type).first()
+        created = address is None
+        if created:
+            address = MemberAddress(member=member, address_type=address_type)
+            db.session.add(address)
+
+        updated_fields = 0
+        for field_name, aliases in self.ADDRESS_FIELD_ALIASES.items():
+            for alias in aliases:
+                if alias not in address_payload:
+                    continue
+
+                value = address_payload.get(alias)
+                if field_name == 'zipcode':
+                    if value in (None, ''):
+                        normalized_value = None
+                    else:
+                        try:
+                            normalized_value = int(str(value).strip())
+                        except (TypeError, ValueError):
+                            return {'message': 'zipcode must be numeric.'}, HTTPStatus.BAD_REQUEST
+                else:
+                    normalized_value = value.strip() if isinstance(value, str) else value
+                    if normalized_value == '':
+                        normalized_value = None
+
+                setattr(address, field_name, normalized_value)
+                updated_fields += 1
+                break
+
+        if updated_fields == 0:
+            return {'message': 'No address fields provided.'}, HTTPStatus.BAD_REQUEST
+
+            db.session.commit()
+            status = HTTPStatus.CREATED if created else HTTPStatus.OK
+        return {'data': self._serialize_address(address)}, status
+
+
 class MemberInfo(Resource):
-    # TODO: Add an endpoint for updating an address
     # TODO: Add an endpoint for adding new member
     @jwt_required()
     def get(self, pin):
         """
         This end point returns personal information of a member with matching PIN.
         ---
+        tags:
+            -   Member
         parameters:
             -   pin: Personal Identification Number
                 in: path

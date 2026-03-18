@@ -62,6 +62,7 @@ api = Api(api_bp, decorators=[csrf.exempt])
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
+    app.config['TESTING'] = os.environ.get('TESTING') == '1'
     app.config['MAIL_SERVER'] = 'smtp.gmail.com'
     app.config['MAIL_PORT'] = 587
     app.config['MAIL_USE_TLS'] = True
@@ -106,6 +107,7 @@ def create_app():
 
     from app.api.views import (Login,
                                CMTEScore,
+                               MemberAddressResource,
                                MemberInfo,
                                MemberPID,
                                MemberPIDPhoneNumber,
@@ -120,6 +122,7 @@ def create_app():
     api.add_resource(MemberPID, '/members/pids/<string:pid>')
     api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
+    api.add_resource(MemberAddressResource, '/members/<string:pin>/addresses')
     api.add_resource(RefreshToken, '/auth/refresh')
     api.add_resource(CMTEFeePaymentResource, '/members/<string:lic_no>/cmte-fee-payment-record')
     api.add_resource(MemberPIDPhoneNumber, '/members/<string:pid>/check-info', '/members/<string:pid>/phone/<string:phone>/info')

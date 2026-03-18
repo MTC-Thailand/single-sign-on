@@ -177,6 +177,7 @@ body {
     border: 1px solid var(--theme-border);
     border-radius: 22px;
     box-shadow: 0 14px 30px rgba(34, 79, 148, 0.08);
+    flex-wrap: wrap;
     overflow: visible;
     padding: 0 0.45rem;
     position: relative;
@@ -318,6 +319,27 @@ body {
     background: var(--theme-primary-soft);
 }
 
+.app-navbar-banner {
+    align-items: center;
+    background: linear-gradient(135deg, #fff5d6, #ffe9bf);
+    border-bottom: 1px solid rgba(198, 58, 52, 0.14);
+    border-radius: 22px 22px 14px 14px;
+    color: #7a4b00;
+    display: flex;
+    flex: 0 0 100%;
+    font-size: 0.9rem;
+    font-weight: 700;
+    gap: 0.6rem;
+    margin: 0 -0.45rem 0.2rem;
+    padding: 0.8rem 1.2rem 0.75rem;
+    width: calc(100% + 0.9rem);
+}
+
+.app-navbar-banner .icon {
+    color: var(--theme-accent);
+    flex: 0 0 auto;
+}
+
 .table {
     background: transparent;
 }
@@ -413,6 +435,14 @@ a:hover {
     .app-navbar .container {
         border-radius: 18px;
         padding: 0 0.25rem;
+    }
+
+    .app-navbar-banner {
+        border-radius: 18px 18px 12px 12px;
+        font-size: 0.84rem;
+        margin: 0 -0.25rem 0.2rem;
+        padding: 0.75rem 0.85rem 0.7rem;
+        width: calc(100% + 0.5rem);
     }
 
     .app-navbar .navbar-menu {
