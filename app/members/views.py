@@ -503,6 +503,13 @@ def index():
     return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores, image_base64=image_base64)
 
 
+@member.route('/members/licenses')
+@login_required
+def license_history():
+    licenses = License.query.filter_by(member_id=current_user.id).order_by(License.end_date.desc()).all()
+    return render_template('members/license_history.html', licenses=licenses)
+
+
 @member.route('/alerts')
 @login_required
 def alerts():

@@ -82,12 +82,19 @@
 
                     <table class="table is-fullwidth member-table">
                         <tr>
-                            <td><strong>วันเริ่มใบอนุญาต</strong></td>
-                            <td>{{ current_user.license.start_date|localdate }} ({{ current_user.license.start_date|humanizedate }})</td>
+                            <td><strong>วันเกิด</strong></td>
+                            <td>{{ current_user.dob|localdate or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>อายุ</strong></td>
+                            <td>{% if current_user.age is not none %}{{ current_user.age }} ปี{% else %}-{% endif %}</td>
                         </tr>
                         <tr>
                             <td><strong>ใบอนุญาตหมดอายุ</strong></td>
-                            <td>{{ current_user.license.end_date|localdate }} ({{ current_user.license.end_date|humanizedate }})</td>
+                            <td>
+                                {{ current_user.license.end_date|localdate }} ({{ current_user.license.end_date|humanizedate }})
+                                <a href="{{ url_for('member.license_history') }}" class="button is-small is-light ml-2">ดูประวัติ</a>
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>สถานะใบอนุญาต</strong></td>

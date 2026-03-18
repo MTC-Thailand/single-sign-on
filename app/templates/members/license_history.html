@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}License History{% endblock %}
+
+{% block content %}
+{% include "members/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="level mb-5">
+            <div class="level-left">
+                <div>
+                    <h1 class="title is-size-4 mb-2">ประวัติใบอนุญาต</h1>
+                    <p class="subtitle is-size-6 mb-0">รายการใบอนุญาตทั้งหมด เรียงตามวันหมดอายุจากใหม่ไปเก่า</p>
+                </div>
+            </div>
+            <div class="level-right">
+                <a href="{{ url_for('member.index') }}" class="button is-light">
+                    <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                    <span>กลับหน้าหลัก</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="box">
+            <table class="table is-fullwidth is-striped">
+                <thead>
+                    <tr>
+                        <th>หมายเลขใบอนุญาต</th>
+                        <th>วันเริ่ม</th>
+                        <th>วันหมดอายุ</th>
+                        <th>สถานะใบอนุญาต</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for license in licenses %}
+                    <tr>
+                        <td>{{ license.number }}</td>
+                        <td>{{ license.start_date|localdate }}</td>
+                        <td>{{ license.end_date|localdate }}</td>
+                        <td>{{ license.status or 'ปกติ' }}{% if license.is_expired %} (หมดอายุ){% endif %}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="has-text-centered has-text-grey">ไม่พบข้อมูลใบอนุญาต</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}
