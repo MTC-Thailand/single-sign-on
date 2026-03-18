@@ -1,45 +1,331 @@
 {% extends "base.html" %}
 
+{% block title %}Admin Console{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .admin-dashboard-section {
+        padding-top: 0.75rem;
+    }
+
+    .admin-dashboard-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .admin-dashboard-hero-copy,
+    .admin-dashboard-search-card,
+    .admin-dashboard-actions {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 24px;
+        box-shadow: 0 18px 40px rgba(34, 79, 148, 0.08);
+    }
+
+    .admin-dashboard-hero-copy {
+        background:
+            radial-gradient(circle at top left, rgba(196, 58, 52, 0.14), transparent 32%),
+            linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(243, 247, 255, 0.94));
+        padding: 1.35rem 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .admin-dashboard-hero-copy::after {
+        content: "";
+        position: absolute;
+        inset: auto -5rem -5rem auto;
+        width: 13rem;
+        height: 13rem;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(34, 79, 148, 0.14), rgba(34, 79, 148, 0));
+    }
+
+    .admin-dashboard-kicker,
+    .admin-section-kicker {
+        display: inline-block;
+        margin-bottom: 0.5rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--theme-primary);
+    }
+
+    .admin-dashboard-lead,
+    .admin-section-copy {
+        color: var(--theme-muted);
+        line-height: 1.7;
+    }
+
+    .admin-dashboard-hero-copy .title {
+        margin-bottom: 0.6rem;
+        letter-spacing: -0.02em;
+    }
+
+    .admin-dashboard-hero-copy .admin-dashboard-lead {
+        max-width: 52rem;
+    }
+
+    .admin-dashboard-highlight {
+        margin-top: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0.95rem;
+        border-radius: 16px;
+        background: rgba(24, 49, 79, 0.05);
+        color: var(--theme-text);
+        font-weight: 600;
+    }
+
+    .admin-dashboard-search-card,
+    .admin-dashboard-actions {
+        padding: 1.5rem;
+    }
+
+    .admin-dashboard-search-card {
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.94));
+    }
+
+    .admin-section-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .admin-search-tag {
+        border-radius: 999px;
+        background: var(--theme-primary-soft);
+        color: var(--theme-primary);
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        font-weight: 700;
+    }
+
+    .admin-search-input {
+        min-height: 3.75rem;
+        padding-left: 3rem;
+        border-width: 1px;
+        font-size: 1rem;
+        background: rgba(255, 255, 255, 0.98);
+    }
+
+    .admin-search-results {
+        min-height: 4rem;
+        margin-top: 1rem;
+    }
+
+    .admin-action-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .admin-action-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: start;
+        padding: 1.2rem 1.25rem;
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.92));
+        color: var(--theme-text);
+        text-decoration: none;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .admin-action-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(34, 79, 148, 0.28);
+        box-shadow: 0 18px 34px rgba(34, 79, 148, 0.10);
+        color: var(--theme-text);
+    }
+
+    .admin-action-card:hover .admin-action-arrow {
+        transform: translateX(2px);
+        color: var(--theme-primary);
+    }
+
+    .admin-action-card.is-primary {
+        background: linear-gradient(135deg, rgba(232, 240, 255, 0.92), rgba(255, 255, 255, 0.98));
+    }
+
+    .admin-action-card.is-accent {
+        background: linear-gradient(135deg, rgba(255, 241, 239, 0.95), rgba(255, 255, 255, 0.98));
+    }
+
+    .admin-action-card.is-muted {
+        background: linear-gradient(180deg, rgba(250, 251, 252, 0.98), rgba(243, 246, 249, 0.95));
+    }
+
+    .admin-action-icon {
+        width: 3rem;
+        height: 3rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        background: rgba(34, 79, 148, 0.08);
+        color: var(--theme-primary);
+        font-size: 1.1rem;
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+    }
+
+    .admin-action-copy h3 {
+        margin: 0 0 0.3rem;
+        color: var(--theme-text);
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .admin-action-copy p {
+        margin: 0;
+        color: var(--theme-muted);
+        line-height: 1.6;
+        font-size: 0.92rem;
+    }
+
+    .admin-action-arrow {
+        color: var(--theme-muted);
+        transition: transform 0.18s ease, color 0.18s ease;
+        padding-top: 0.2rem;
+    }
+
+    .admin-action-card.is-muted .tag {
+        border-radius: 999px;
+        font-weight: 700;
+    }
+
+    @media screen and (max-width: 1023px) {
+        .admin-action-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+        .admin-dashboard-hero-copy,
+        .admin-dashboard-search-card,
+        .admin-dashboard-actions {
+            padding: 1.15rem;
+        }
+
+        .admin-section-heading {
+            flex-direction: column;
+        }
+
+        .admin-dashboard-highlight {
+            width: 100%;
+        }
+
+        .admin-action-card {
+            grid-template-columns: 1fr;
+            text-align: left;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include "admin_nav.html" %}
-<section class="section">
+<section class="section admin-dashboard-section">
     <div class="container">
         {% include "messages.html" %}
-        <div class="columns">
-            <div class="column is-one-third">
-                <h1>Menu</h1>
-                <ul>
-                    <li>
-                        <a href="{{url_for('webadmin.upload_new')}}">Upload New Members</a>
-                    </li>
-                    <li>
-                        <a href="{{url_for('webadmin.upload_renew')}}">Upload Renew Members</a>
-                    </li>
-                    <li>
-                        <a href="{{url_for('webadmin.upload_phone_numbers')}}">Update Member Phone Numbers</a>
-                    </li>
-                    <li>
-                        <a href="">ตรวจสอบคะแนน CMTE</a>
-                    </li>
-                    <li>
-                        <a href="{{url_for('webadmin.view_member_password')}}">ดูรหัสผ่านเข้าระบบของสมาชิก</a>
-                    </li>
-                </ul>
-            </div>
-            <div class="column">
-                <h1 class="title is-size-5">ค้นหาสมาชิก</h1>
+
+        <div class="admin-dashboard-shell">
+            <section class="admin-dashboard-hero-copy">
+                <span class="admin-dashboard-kicker">Web Administration</span>
+                <h1 class="title is-4">ศูนย์จัดการข้อมูลสมาชิก</h1>
+                <p class="admin-dashboard-lead">
+                    จัดการงานอัปโหลด ค้นหาสมาชิก และเข้าถึงเครื่องมือดูแลระบบจากหน้าเดียวในรูปแบบที่อ่านง่ายขึ้น
+                </p>
+                <div class="admin-dashboard-highlight">
+                    <span class="icon"><i class="fa-solid fa-shield-halved"></i></span>
+                    <span>รวมเครื่องมือหลักสำหรับงานดูแลสมาชิกไว้ในจุดเดียว</span>
+                </div>
+            </section>
+
+            <section class="admin-dashboard-search-card">
+                <div class="admin-section-heading">
+                    <div>
+                        <p class="admin-section-kicker">Member Search</p>
+                        <h2 class="title is-5">ค้นหาสมาชิก</h2>
+                    </div>
+                    <span class="tag admin-search-tag">Live Search</span>
+                </div>
+                <p class="admin-section-copy">
+                    ค้นหาด้วยชื่อ เลขท.น. หรือหมายเลขโทรศัพท์ ระบบจะค้นหาให้อัตโนมัติขณะพิมพ์
+                </p>
                 <div class="field">
-                    <div class="control is-large" id="queryInput">
-                        <input id="query" type="text" name="query" class="input is-large is-rounded" placeholder="ค้นหาด้วยชื่อ เลขท.น.หรือเบอร์โทรศัพท์"
+                    <div class="control is-large has-icons-left" id="queryInput">
+                        <input id="query" type="text" name="query" class="input is-large admin-search-input"
+                               placeholder="ค้นหาด้วยชื่อ เลขท.น.หรือเบอร์โทรศัพท์"
                                hx-indicator="#queryInput"
                                hx-target="#searchResult"
                                hx-swap="innerHTML"
                                hx-get="{{url_for('webadmin.search_member')}}"
                                hx-trigger="keyup changed delay:1000ms">
+                        <span class="icon is-left">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
                     </div>
                 </div>
-                <div id="searchResult"></div>
-            </div>
+                <div id="searchResult" class="admin-search-results"></div>
+            </section>
+
+            <section class="admin-dashboard-actions">
+                <div class="admin-section-heading">
+                    <div>
+                        <p class="admin-section-kicker">Quick Actions</p>
+                        <h2 class="title is-5">เมนูหลัก</h2>
+                    </div>
+                </div>
+
+                <div class="admin-action-grid">
+                    <a href="{{url_for('webadmin.upload_new')}}" class="admin-action-card is-primary">
+                        <span class="admin-action-icon"><i class="fa-solid fa-user-plus"></i></span>
+                        <div class="admin-action-copy">
+                            <h3>Upload New Members</h3>
+                            <p>นำเข้าข้อมูลสมาชิกใหม่ พร้อมสร้างใบอนุญาตเริ่มต้นจากไฟล์อัปโหลด</p>
+                        </div>
+                        <span class="admin-action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="{{url_for('webadmin.upload_renew')}}" class="admin-action-card is-accent">
+                        <span class="admin-action-icon"><i class="fa-solid fa-rotate"></i></span>
+                        <div class="admin-action-copy">
+                            <h3>Upload Renew Members</h3>
+                            <p>อัปโหลดรายการต่ออายุ โดยใช้กลไกเดียวกับการต่ออายุจากหน้าข้อมูลสมาชิก</p>
+                        </div>
+                        <span class="admin-action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="{{url_for('webadmin.upload_phone_numbers')}}" class="admin-action-card">
+                        <span class="admin-action-icon"><i class="fa-solid fa-phone"></i></span>
+                        <div class="admin-action-copy">
+                            <h3>Update Member Phone Numbers</h3>
+                            <p>ปรับปรุงหมายเลขโทรศัพท์สมาชิกแบบเป็นชุดจากไฟล์อัปโหลด</p>
+                        </div>
+                        <span class="admin-action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="{{url_for('webadmin.view_member_password')}}" class="admin-action-card">
+                        <span class="admin-action-icon"><i class="fa-solid fa-key"></i></span>
+                        <div class="admin-action-copy">
+                            <h3>ดูรหัสผ่านเข้าระบบของสมาชิก</h3>
+                            <p>ใช้สำหรับช่วยตรวจสอบบัญชีและสนับสนุนการเข้าสู่ระบบของสมาชิก</p>
+                        </div>
+                        <span class="admin-action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                </div>
+            </section>
         </div>
     </div>
 </section>
