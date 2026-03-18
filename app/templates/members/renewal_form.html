@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "members/nav.html" %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column is-half is-offset-one-quarter">
+                <h1 class="title has-text-centered">แก้ไขข้อมูลการต่ออายุใบอนุญาต</h1>
+                <form method="post">
+                    {{ form.hidden_tag() }}
+                    <div class="field">
+                        <label class="label">หมายเลขใบอนุญาต</label>
+                        <div class="control">
+                            <input class="input" value="{{ renewal.license_number }}" readonly>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{ form.issue_date.label }}</label>
+                        <div class="control">
+                            {{ form.issue_date(class="input") }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{ form.start_date.label }}</label>
+                        <div class="control">
+                            {{ form.start_date(class="input") }}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">{{ form.end_date.label }}</label>
+                        <div class="control">
+                            {{ form.end_date(class="input") }}
+                        </div>
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <a href="{{ url_for('member.renewal_history') }}" class="button is-light">ยกเลิก</a>
+                        </div>
+                        <div class="control">
+                            <button class="button is-success" type="submit">
+                                <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                                <span>บันทึก</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

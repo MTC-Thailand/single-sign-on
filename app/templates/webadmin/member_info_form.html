@@ -323,6 +323,20 @@
                         <small>เลขใบอนุญาต</small>
                         <span>{{ member.license.number if member.license else '-' }}</span>
                     </div>
+                    <div class="buttons mt-4">
+                        <a hx-get="{{url_for('webadmin.edit_license', member_id=member.id, license_action='renew')}}"
+                           hx-target="#license-form"
+                           hx-swap="innerHTML"
+                           class="button is-link">
+                            <span class="icon"><i class="fa-solid fa-rotate"></i></span>
+                            <span>ต่ออายุใบอนุญาต</span>
+                        </a>
+                        <a href="{{ url_for('webadmin.renewal_history', member_id=member.id) }}"
+                           class="button is-info">
+                            <span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                            <span>ดูประวัติการต่ออายุ</span>
+                        </a>
+                    </div>
                 </div>
             </aside>
 
@@ -481,13 +495,6 @@
                         {% else %}
                         <div class="admin-member-license-empty">
                             <p>ใบอนุญาตหมดอายุหรือไม่มีใบอนุญาต</p>
-                            <div class="buttons mt-4">
-                                <a hx-get="{{url_for('webadmin.edit_license', member_id=member.id, license_action='renew')}}"
-                                   hx-target="#license-form"
-                                   hx-swap="innerHTML"
-                                   class="button is-link is-light">ต่ออายุใบอนุญาต</a>
-                            </div>
-                            <div id="license-form"></div>
                         </div>
                         {% endif %}
                     </div>
@@ -526,6 +533,7 @@
                 </form>
             </div>
         </div>
+        <div id="license-form"></div>
    </div>
 </section>
 {% endblock %}

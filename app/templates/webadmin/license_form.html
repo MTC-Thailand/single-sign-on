@@ -2,7 +2,7 @@
     <div class="modal-background"></div>
     <div class="modal-card">
         <header class="modal-card-head">
-            <p class="modal-card-title">Edit License</p>
+            <p class="modal-card-title">{% if license_action == 'renew' %}Renew License{% else %}Edit License{% endif %}</p>
             <button type="button" id="cancelButton" class="delete" aria-label="close"></button>
         </header>
         <form hx-post="{{ url_for('webadmin.edit_license', member_id=member_id, license_action=license_action) }}"
@@ -33,7 +33,7 @@
                 <div class="field">
                     <label class="label">{{form.end_date.label}}</label>
                     <div class="control">
-                        {{form.end_date(class="input", type="text")}}
+                        {{form.end_date(class="input", type="text", readonly=True)}}
                     </div>
                 </div>
                 <div class="field">
@@ -64,6 +64,23 @@
         htmx.removeClass(htmx.find('#license-form-modal'), 'is-active')
     })
     $(document).ready(function () {
+        const startDateInput = $("input[name='start_date']")
+        const endDateInput = $("input[name='end_date']")
+
+        function syncRenewEndDate() {
+            {% if license_action == 'renew' %}
+            const startValue = startDateInput.val()
+            if (!startValue) {
+                return
+            }
+            const startMoment = moment(startValue, 'DD/MM/YYYY', true)
+            if (!startMoment.isValid()) {
+                return
+            }
+            endDateInput.val(startMoment.clone().add(5, 'years').subtract(1, 'day').format('DD/MM/YYYY'))
+            {% endif %}
+        }
+
         $("input[name='issue_date']").daterangepicker({
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',
@@ -94,6 +111,10 @@
             format: 'DD/MM/YYYY'
         }
     })
+        startDateInput.on('apply.daterangepicker', function (ev, picker) {
+            startDateInput.val(picker.startDate.format('DD/MM/YYYY'))
+            syncRenewEndDate()
+        })
         $("input[name='end_date']").daterangepicker({
             buttonClasses: 'button is-small',
             applyButtonClasses: 'is-link',
@@ -109,5 +130,6 @@
             format: 'DD/MM/YYYY'
         }
     })
+        syncRenewEndDate()
     })
 </script>

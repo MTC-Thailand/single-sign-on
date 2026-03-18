@@ -41,6 +41,22 @@ class Member(db.Model, UserMixin):
         return None
 
     @property
+    def license(self):
+        if not self._license:
+            return None
+        if self._license.is_expired:
+            renewed = next((r for r in self._license.renews if r.is_valid), None)
+            if renewed:
+                self._license.start_date = renewed.start_date
+                self._license.end_date = renewed.end_date
+                self._license.issue_date = renewed.issue_date
+                self._license.status = 'ปกติ'
+                db.session.add(self._license)
+                db.session.commit()
+        return self._license
+
+
+    @property
     def th_fullname(self):
         return f'{self.th_firstname} {self.th_lastname}'
 
@@ -51,6 +67,13 @@ class Member(db.Model, UserMixin):
     @property
     def unique_id(self):
         return f'mtc-member-{self.id}'
+
+    @property
+    def age(self):
+        if not self.dob:
+            return None
+        today = date.today()
+        return today.year - self.dob.year - ((today.month, today.day) < (self.dob.month, self.dob.day))
 
     def get_address(self, address_type):
         return next((addr for addr in self.addresses if addr.address_type == address_type), None)
@@ -80,14 +103,11 @@ class License(db.Model):
     today = date.today().strftime('%Y-%m-%d')
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     number = db.Column(db.String(), unique=True, nullable=False, info={'label': 'หมายเลข'})
-    issue_date = db.Column(db.Date(), nullable=False, info={'label': 'วันอนุมัติใบอนุญาต'})
+    issue_date = db.Column(db.Date(), nullable=False, info={'label': 'วันอนุมัติใบอนุญาต_'})
     start_date = db.Column(db.Date(), nullable=False, info={'label': 'วันเริ่ม'})
     end_date = db.Column(db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
     member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
-    member = db.relationship(Member,
-                             backref=db.backref('license',
-                                                uselist=False,
-                                                order_by='License.end_date.desc()'))
+    member = db.relationship(Member, backref=db.backref('_license', uselist=False))
     status = db.Column(db.String(), info={'label': 'สถานะ',
                                           'choices': [(c,c) for c in ('ปกติ', 'พักใช้', 'เพิกถอน', 'สิ้นสุด')]})
 
@@ -129,6 +149,21 @@ class License(db.Model):
     @property
     def is_expired(self):
         return self.end_date < date.today()
+
+
+class LicenseRenewal(db.Model):
+    __tablename__ = 'license_renewals'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    license_number = db.Column(db.ForeignKey('licenses.number'), nullable=False)
+    license = db.relationship(License, backref=db.backref('renews',
+                                                          order_by='LicenseRenewal.start_date.desc()'))
+    issue_date = db.Column(db.Date(), nullable=False, info={'label': 'วันอนุมัติใบอนุญาต'})
+    start_date = db.Column(db.Date(), nullable=False, info={'label': 'วันเริ่ม'})
+    end_date = db.Column(db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
+
+    @property
+    def is_valid(self):
+        return self.end_date >= date.today() and self.end_date > self.license.end_date
 
 
 class MemberAddress(db.Model):

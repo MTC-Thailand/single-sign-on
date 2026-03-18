@@ -93,7 +93,9 @@
                             <td><strong>ใบอนุญาตหมดอายุ</strong></td>
                             <td>
                                 {{ current_user.license.end_date|localdate }} ({{ current_user.license.end_date|humanizedate }})
-                                <a href="{{ url_for('member.license_history') }}" class="button is-small is-light ml-2">ดูประวัติ</a>
+                                {% if current_user.license.renews %}
+                                <a href="{{ url_for('member.license_history') }}" class="button is-small is-light ml-2">ดูประวัติการต่ออายุ</a>
+                                {% endif %}
                             </td>
                         </tr>
                         <tr>

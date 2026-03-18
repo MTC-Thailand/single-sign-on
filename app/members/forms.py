@@ -67,3 +67,9 @@ class MemberInfoForm(ModelForm):
         only = ['tel', 'email']
     addresses = FieldList(FormField(MemberAddressForm, default=MemberAddress),
                           min_entries=3, max_entries=3)
+
+
+class LicenseRenewalForm(ModelForm):
+    class Meta:
+        model = LicenseRenewal
+        only = ['issue_date', 'start_date', 'end_date']

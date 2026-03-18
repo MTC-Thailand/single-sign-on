@@ -15,7 +15,7 @@ from pprint import pprint
 import requests
 import pandas as pd
 
-from flask import render_template, make_response, jsonify, current_app, flash, request, redirect, url_for, session
+from flask import render_template, make_response, jsonify, current_app, flash, request, redirect, url_for, session, abort
 from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
 from sqlalchemy import create_engine, or_, func, and_
@@ -24,7 +24,7 @@ from sqlalchemy_continuum.plugins import activity
 from app.cmte.views import bangkok
 from app.members import member_blueprint as member
 from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm, \
-    MemberInfoForm
+    MemberInfoForm, LicenseRenewalForm
 
 from app.members.models import *
 from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm, \
@@ -506,8 +506,43 @@ def index():
 @member.route('/members/licenses')
 @login_required
 def license_history():
-    licenses = License.query.filter_by(member_id=current_user.id).order_by(License.end_date.desc()).all()
-    return render_template('members/license_history.html', licenses=licenses)
+    renewal = current_user.license.renews[0] if current_user.license.renews else None
+    return render_template('members/license_history.html', renewal=renewal)
+
+
+@member.route('/members/licenses/renewals')
+@login_required
+def renewal_history():
+    renewals = current_user.license.renews
+    return render_template('members/renewal_history.html', renewals=renewals)
+
+
+@member.route('/members/licenses/renewals/<int:renewal_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_renewal(renewal_id):
+    renewal = LicenseRenewal.query.get(renewal_id)
+    if not renewal or renewal.license.member_id != current_user.id:
+        abort(404)
+    form = LicenseRenewalForm(obj=renewal)
+    if form.validate_on_submit():
+        form.populate_obj(renewal)
+        db.session.add(renewal)
+        db.session.commit()
+        flash('บันทึกข้อมูลการต่ออายุเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('member.renewal_history'))
+    return render_template('members/renewal_form.html', form=form, renewal=renewal)
+
+
+@member.route('/members/licenses/renewals/<int:renewal_id>/delete', methods=['POST'])
+@login_required
+def delete_renewal(renewal_id):
+    renewal = LicenseRenewal.query.get(renewal_id)
+    if not renewal or renewal.license.member_id != current_user.id:
+        abort(404)
+    db.session.delete(renewal)
+    db.session.commit()
+    flash('ลบข้อมูลการต่ออายุเรียบร้อยแล้ว', 'success')
+    return redirect(url_for('member.renewal_history'))
 
 
 @member.route('/alerts')

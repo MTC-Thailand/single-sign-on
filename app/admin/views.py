@@ -2,7 +2,8 @@ from datetime import datetime
 
 import arrow
 import pandas as pd
-from flask import render_template, request, url_for, make_response, flash, redirect
+from dateutil.relativedelta import relativedelta
+from flask import render_template, request, url_for, make_response, flash, redirect, abort
 from flask_login import login_required
 from sqlalchemy import or_
 
@@ -10,8 +11,8 @@ from app import db, admin_permission
 from app.admin import webadmin
 from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
-from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm
-from app.members.models import License, Member, MemberAddress
+from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm, LicenseRenewalForm
+from app.members.models import License, LicenseRenewal, Member, MemberAddress
 
 
 def _parse_excel_date(value):
@@ -271,13 +272,36 @@ def edit_member_info(member_id):
 def edit_license(member_id, license_action):
     member = Member.query.get(member_id)
     if license_action == 'renew':
-        license = License.query.filter_by(member_id=member.id) \
+        latest_license = License.query.filter_by(member_id=member.id) \
             .order_by(License.end_date.desc()).first()
+        license = License(member_id=member.id)
+        if latest_license:
+            license.number = latest_license.number
+            license.status = latest_license.status
         form = LicenseAdminForm(obj=license)
         if request.method == 'POST':
             if form.validate_on_submit():
-                form.populate_obj(license)
-                db.session.add(license)
+                start_date = form.start_date.data
+                issue_date = form.issue_date.data
+                end_date = start_date + relativedelta(years=5, days=-1) if start_date else None
+
+                if latest_license and start_date and start_date < latest_license.end_date:
+                    renewal = LicenseRenewal.query.filter_by(license=latest_license).first()
+                    if not renewal:
+                        renewal = LicenseRenewal(license=latest_license)
+                    renewal.issue_date = issue_date
+                    renewal.start_date = start_date
+                    renewal.end_date = end_date
+                    db.session.add(renewal)
+                else:
+                    if not latest_license:
+                        latest_license = License(member_id=member.id, number=form.number.data)
+                    latest_license.number = form.number.data
+                    latest_license.issue_date = issue_date
+                    latest_license.start_date = start_date
+                    latest_license.end_date = end_date
+                    latest_license.status = 'ปกติ'
+                    db.session.add(latest_license)
                 db.session.commit()
                 flash('ต่ออายุใบอนุญาตแล้ว', 'success')
                 resp = make_response()
@@ -289,6 +313,47 @@ def edit_license(member_id, license_action):
                            license_action=license_action,
                            member_id=member_id,
                            form=form)
+
+
+@webadmin.route('/members/<int:member_id>/renewals', methods=['GET'])
+@login_required
+@admin_permission.require(http_exception=403)
+def renewal_history(member_id):
+    member = Member.query.get(member_id)
+    renewals = member.license.renews if member and member.license else []
+    return render_template('webadmin/renewal_history.html', member=member, renewals=renewals)
+
+
+@webadmin.route('/members/<int:member_id>/renewals/<int:renewal_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def edit_renewal(member_id, renewal_id):
+    member = Member.query.get(member_id)
+    renewal = LicenseRenewal.query.get(renewal_id)
+    if not member or not renewal or renewal.license.member_id != member.id:
+        abort(404)
+    form = LicenseRenewalForm(obj=renewal)
+    if form.validate_on_submit():
+        form.populate_obj(renewal)
+        db.session.add(renewal)
+        db.session.commit()
+        flash('บันทึกข้อมูลการต่ออายุเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('webadmin.renewal_history', member_id=member.id))
+    return render_template('webadmin/renewal_form.html', form=form, renewal=renewal, member=member)
+
+
+@webadmin.route('/members/<int:member_id>/renewals/<int:renewal_id>/delete', methods=['POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def delete_renewal(member_id, renewal_id):
+    member = Member.query.get(member_id)
+    renewal = LicenseRenewal.query.get(renewal_id)
+    if not member or not renewal or renewal.license.member_id != member.id:
+        abort(404)
+    db.session.delete(renewal)
+    db.session.commit()
+    flash('ลบข้อมูลการต่ออายุเรียบร้อยแล้ว', 'success')
+    return redirect(url_for('webadmin.renewal_history', member_id=member.id))
 
 
 @webadmin.route('/members/password-view', methods=['GET', 'POST'])

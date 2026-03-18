@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        {% include "messages.html" %}
+        <div class="level mb-5">
+            <div class="level-left">
+                <div>
+                    <h1 class="title is-size-4 mb-2">ประวัติการต่ออายุใบอนุญาต</h1>
+                    <p class="subtitle is-size-6 mb-0">{{ member.th_fullname }}{% if member.license %} • {{ member.license.number }}{% endif %}</p>
+                </div>
+            </div>
+            <div class="level-right">
+                <a href="{{ url_for('webadmin.edit_member_info', member_id=member.id) }}" class="button is-link">
+                    <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                    <span>กลับหน้าข้อมูลสมาชิก</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="box">
+            <table class="table is-fullwidth is-striped">
+                <thead>
+                    <tr>
+                        <th>หมายเลขใบอนุญาต</th>
+                        <th>วันอนุมัติ</th>
+                        <th>วันเริ่ม</th>
+                        <th>วันหมดอายุ</th>
+                        <th>สถานะ</th>
+                        <th class="has-text-right">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for renewal in renewals %}
+                    <tr>
+                        <td>{{ renewal.license_number }}</td>
+                        <td>{{ renewal.issue_date|localdate }}</td>
+                        <td>{{ renewal.start_date|localdate }}</td>
+                        <td>{{ renewal.end_date|localdate }}</td>
+                        <td>{% if renewal.is_valid %}มีผลใช้งาน{% else %}หมดอายุแล้ว{% endif %}</td>
+                        <td class="has-text-right">
+                            <a href="{{ url_for('webadmin.edit_renewal', member_id=member.id, renewal_id=renewal.id) }}"
+                               class="button is-warning">
+                                <span class="icon"><i class="fa-solid fa-pen"></i></span>
+                                <span>แก้ไข</span>
+                            </a>
+                            <form method="post"
+                                  action="{{ url_for('webadmin.delete_renewal', member_id=member.id, renewal_id=renewal.id) }}"
+                                  style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="button is-danger"
+                                        type="submit"
+                                        onclick="return confirm('ยืนยันการลบข้อมูลการต่ออายุนี้หรือไม่');">
+                                    <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                    <span>ลบ</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="has-text-centered has-text-grey">ไม่พบข้อมูลการต่ออายุใบอนุญาต</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}
