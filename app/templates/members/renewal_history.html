@@ -40,7 +40,7 @@
                         <td>{{ renewal.issue_date|localdate }}</td>
                         <td>{{ renewal.start_date|localdate }}</td>
                         <td>{{ renewal.end_date|localdate }}</td>
-                        <td>{% if renewal.is_valid %}มีผลใช้งาน{% else %}หมดอายุแล้ว{% endif %}</td>
+                        <td>{{ renewal.status_label }}</td>
                         <td class="has-text-right">
                             <a href="{{ url_for('member.edit_renewal', renewal_id=renewal.id) }}" class="button is-small is-light">
                                 แก้ไข

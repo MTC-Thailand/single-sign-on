@@ -45,7 +45,7 @@ def _apply_license_renewal(member_id, license_number, issue_date, start_date, st
         .order_by(License.end_date.desc()).first()
     end_date = start_date + relativedelta(years=5, days=-1) if start_date else None
 
-    if latest_license and start_date and start_date < latest_license.end_date:
+    if latest_license and start_date:
         renewal = LicenseRenewal.query.filter_by(
             license=latest_license,
             start_date=start_date,
@@ -56,6 +56,17 @@ def _apply_license_renewal(member_id, license_number, issue_date, start_date, st
         renewal.start_date = start_date
         renewal.end_date = end_date
         db.session.add(renewal)
+
+        # Only promote the base license row when the new renewal starts
+        # after the currently stored license period ends. Overlapping
+        # renewals should remain historical records only.
+        if latest_license.end_date and start_date > latest_license.end_date:
+            latest_license.number = license_number
+            latest_license.issue_date = issue_date
+            latest_license.start_date = start_date
+            latest_license.end_date = end_date
+            latest_license.status = status
+            db.session.add(latest_license)
         return latest_license
 
     if not latest_license:

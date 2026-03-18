@@ -39,7 +39,7 @@
                         <td>{{ renewal.issue_date|localdate }}</td>
                         <td>{{ renewal.start_date|localdate }}</td>
                         <td>{{ renewal.end_date|localdate }}</td>
-                        <td>{% if renewal.is_valid %}มีผลใช้งาน{% else %}หมดอายุแล้ว{% endif %}</td>
+                        <td>{{ renewal.status_label }}</td>
                     </tr>
                     {% else %}
                     <tr>

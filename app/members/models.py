@@ -162,8 +162,27 @@ class LicenseRenewal(db.Model):
     end_date = db.Column(db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
 
     @property
+    def is_current(self):
+        return self.license is not None and (
+            self.start_date == self.license.start_date and
+            self.end_date == self.license.end_date and
+            self.issue_date == self.license.issue_date
+        )
+
+    @property
     def is_valid(self):
-        return self.end_date >= date.today() and self.end_date > self.license.end_date
+        return self.start_date <= date.today() <= self.end_date and (
+            self.is_current or self.end_date > self.license.end_date
+        )
+
+    @property
+    def status_label(self):
+        today = date.today()
+        if today < self.start_date:
+            return 'รอมีผล'
+        if self.is_valid:
+            return 'มีผลใช้งาน'
+        return 'หมดอายุแล้ว'
 
 
 class MemberAddress(db.Model):
