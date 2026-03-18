@@ -40,6 +40,35 @@ def _get_row_value(row, column_name, default=None):
     return value
 
 
+def _apply_license_renewal(member_id, license_number, issue_date, start_date, status='ปกติ'):
+    latest_license = License.query.filter_by(member_id=member_id) \
+        .order_by(License.end_date.desc()).first()
+    end_date = start_date + relativedelta(years=5, days=-1) if start_date else None
+
+    if latest_license and start_date and start_date < latest_license.end_date:
+        renewal = LicenseRenewal.query.filter_by(
+            license=latest_license,
+            start_date=start_date,
+        ).first()
+        if not renewal:
+            renewal = LicenseRenewal(license=latest_license)
+        renewal.issue_date = issue_date
+        renewal.start_date = start_date
+        renewal.end_date = end_date
+        db.session.add(renewal)
+        return latest_license
+
+    if not latest_license:
+        latest_license = License(member_id=member_id, number=license_number)
+    latest_license.number = license_number
+    latest_license.issue_date = issue_date
+    latest_license.start_date = start_date
+    latest_license.end_date = end_date
+    latest_license.status = status
+    db.session.add(latest_license)
+    return latest_license
+
+
 @webadmin.route('/')
 @login_required
 def index():
@@ -54,11 +83,15 @@ def upload_renew():
         df = pd.read_excel(f, engine='openpyxl')
         for idx, row in df.iterrows():
             license = License.query.filter_by(number=str(int(row['license_no']))).first()
-            if license and not pd.isnull(row['renew_end_date']) and not pd.isnull(row['renew_start_date']):
-                license.start_date = row['renew_start_date']
-                license.end_date = row['renew_end_date']
-                license.issue_date = row['start_date']
-                db.session.add(license)
+            renew_start_date = _parse_excel_date(_get_row_value(row, 'renew_start_date'))
+            issue_date = _parse_excel_date(_get_row_value(row, 'start_date'))
+            if license and renew_start_date and issue_date:
+                _apply_license_renewal(
+                    member_id=license.member_id,
+                    license_number=license.number,
+                    issue_date=issue_date,
+                    start_date=renew_start_date,
+                )
                 if row['type'] == 'renew_name':
                     member = license.member
                     member.th_firstname = row['firstname']
@@ -281,27 +314,13 @@ def edit_license(member_id, license_action):
         form = LicenseAdminForm(obj=license)
         if request.method == 'POST':
             if form.validate_on_submit():
-                start_date = form.start_date.data
-                issue_date = form.issue_date.data
-                end_date = start_date + relativedelta(years=5, days=-1) if start_date else None
-
-                if latest_license and start_date and start_date < latest_license.end_date:
-                    renewal = LicenseRenewal.query.filter_by(license=latest_license).first()
-                    if not renewal:
-                        renewal = LicenseRenewal(license=latest_license)
-                    renewal.issue_date = issue_date
-                    renewal.start_date = start_date
-                    renewal.end_date = end_date
-                    db.session.add(renewal)
-                else:
-                    if not latest_license:
-                        latest_license = License(member_id=member.id, number=form.number.data)
-                    latest_license.number = form.number.data
-                    latest_license.issue_date = issue_date
-                    latest_license.start_date = start_date
-                    latest_license.end_date = end_date
-                    latest_license.status = 'ปกติ'
-                    db.session.add(latest_license)
+                _apply_license_renewal(
+                    member_id=member.id,
+                    license_number=form.number.data,
+                    issue_date=form.issue_date.data,
+                    start_date=form.start_date.data,
+                    status='ปกติ',
+                )
                 db.session.commit()
                 flash('ต่ออายุใบอนุญาตแล้ว', 'success')
                 resp = make_response()
