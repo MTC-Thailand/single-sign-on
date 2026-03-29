@@ -1,44 +1,422 @@
 {% extends "base.html" %}
 
+{% block title %}ค้นหาผู้ประกอบวิชาชีพเทคนิคการแพทย์{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --search-ink: #16324f;
+    --search-ink-soft: #4c6278;
+    --search-accent: #0f766e;
+    --search-accent-soft: #dff4ef;
+    --search-surface: #ffffff;
+    --search-surface-alt: #f4f8fb;
+    --search-line: rgba(22, 50, 79, 0.12);
+    --search-shadow: 0 24px 60px rgba(20, 45, 74, 0.14);
+  }
+
+  .member-search-page {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 32%),
+      radial-gradient(circle at top right, rgba(22, 50, 79, 0.10), transparent 28%),
+      linear-gradient(180deg, #f8fbfd 0%, #eef4f8 100%);
+    font-family: "Noto Sans Thai", sans-serif;
+  }
+
+  .member-search-wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+  }
+
+  .member-search-header {
+    margin-bottom: 1.75rem;
+    padding: 1.5rem 1.75rem;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(22, 50, 79, 0.08);
+    box-shadow: 0 18px 40px rgba(20, 45, 74, 0.08);
+    backdrop-filter: blur(10px);
+  }
+
+  .member-search-brand {
+    display: flex;
+    align-items: center;
+    gap: 1.15rem;
+    width: 100%;
+  }
+
+  .member-search-mark {
+    width: 132px;
+    height: 132px;
+    border-radius: 34px;
+    background: linear-gradient(180deg, #ffffff 0%, #f2f7fa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(22, 50, 79, 0.10);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    flex-shrink: 0;
+  }
+
+  .member-search-mark img {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+  }
+
+  .member-search-overline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.08);
+    border: 1px solid rgba(15, 118, 110, 0.14);
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    color: var(--search-accent);
+  }
+
+  .member-search-title {
+    font-family: "IBM Plex Serif", serif;
+    font-size: clamp(1.9rem, 3vw, 2.7rem);
+    line-height: 1.15;
+    margin: 0.9rem 0 0.5rem;
+    color: var(--search-ink);
+  }
+
+  .member-search-subtitle {
+    max-width: 42rem;
+    color: var(--search-ink-soft);
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .member-search-card {
+    background: var(--search-surface);
+    border: 1px solid var(--search-line);
+    border-radius: 28px;
+    box-shadow: var(--search-shadow);
+    padding: 1.75rem;
+  }
+
+  .member-search-card-head {
+    margin-bottom: 1.25rem;
+  }
+
+  .member-search-card-kicker {
+    color: var(--search-accent);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+
+  .member-search-card-title {
+    font-family: "IBM Plex Serif", serif;
+    color: var(--search-ink);
+    font-size: clamp(1.4rem, 2vw, 1.9rem);
+    line-height: 1.2;
+    margin: 0.45rem 0 0.4rem;
+  }
+
+  .member-search-card-text {
+    color: var(--search-ink-soft);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .member-search-input-wrap {
+    position: relative;
+    margin-top: 1.25rem;
+  }
+
+  .member-search-input {
+    width: 100%;
+    min-height: 4rem;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 50, 79, 0.12);
+    background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    padding: 1rem 1.35rem 1rem 3.5rem;
+    font-size: 1.05rem;
+    color: var(--search-ink);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .member-search-input:focus {
+    outline: none;
+    border-color: rgba(15, 118, 110, 0.5);
+    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.10);
+  }
+
+  .member-search-icon {
+    position: absolute;
+    inset: 0 auto 0 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    color: var(--search-accent);
+    font-size: 1rem;
+    pointer-events: none;
+  }
+
+  .member-search-hint {
+    margin-top: 0.8rem;
+    color: var(--search-ink-soft);
+    font-size: 0.93rem;
+    line-height: 1.6;
+  }
+
+  .member-search-result {
+    margin-top: 1.25rem;
+    min-height: 4rem;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+    border: 1px solid var(--search-line);
+    padding: 1rem;
+  }
+
+  .member-search-result:empty::before {
+    content: "พิมพ์ชื่อ นามสกุล หรือหมายเลขใบอนุญาตเพื่อเริ่มค้นหา";
+    color: var(--search-ink-soft);
+    display: block;
+    text-align: center;
+    padding: 1rem 0.5rem;
+  }
+
+  .member-search-note {
+    margin-top: 1rem;
+    color: var(--search-ink-soft);
+    font-size: 0.93rem;
+    line-height: 1.7;
+    text-align: center;
+  }
+
+  .member-search-result .table {
+    background: transparent;
+  }
+
+  .member-search-result .table thead th {
+    border: 0;
+    color: var(--search-ink-soft);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    padding: 0.75rem 0.9rem 0.9rem;
+  }
+
+  .member-search-result .table tbody td {
+    border: 0;
+    border-top: 1px solid rgba(22, 50, 79, 0.08);
+    padding: 1rem 0.9rem;
+    vertical-align: middle;
+    color: var(--search-ink);
+  }
+
+  .member-search-results-table {
+    overflow-x: auto;
+  }
+
+  .member-search-person-name {
+    font-weight: 700;
+    color: var(--search-ink);
+    line-height: 1.5;
+  }
+
+  .member-search-person-meta {
+    margin-top: 0.2rem;
+    color: var(--search-ink-soft);
+    font-size: 0.88rem;
+  }
+
+  .member-search-license {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.25rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.08);
+    color: var(--search-accent);
+    font-weight: 700;
+  }
+
+  .member-search-action {
+    background: linear-gradient(135deg, #174d78, #0f766e);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    min-width: 6rem;
+  }
+
+  .member-search-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    min-height: 11rem;
+    text-align: center;
+    color: var(--search-ink-soft);
+    padding: 1rem;
+  }
+
+  .member-search-empty h3 {
+    margin: 0;
+    font-family: "IBM Plex Serif", serif;
+    color: var(--search-ink);
+    font-size: 1.35rem;
+  }
+
+  .member-search-empty p {
+    margin: 0;
+    max-width: 24rem;
+    line-height: 1.7;
+  }
+
+  @media screen and (max-width: 640px) {
+    .member-search-page {
+      padding-inline: 0.25rem;
+    }
+
+    .member-search-header,
+    .member-search-card {
+      padding: 1.25rem;
+    }
+
+    .member-search-brand {
+      align-items: flex-start;
+    }
+
+    .member-search-mark {
+      width: 104px;
+      height: 104px;
+      border-radius: 28px;
+    }
+
+    .member-search-mark img {
+      width: 68px;
+      height: 68px;
+    }
+
+    .member-search-input {
+      min-height: 3.6rem;
+      padding-left: 3.2rem;
+      font-size: 1rem;
+    }
+
+    .member-search-result .table thead {
+      display: none;
+    }
+
+    .member-search-result .table,
+    .member-search-result .table tbody,
+    .member-search-result .table tr,
+    .member-search-result .table td {
+      display: block;
+      width: 100%;
+    }
+
+    .member-search-result .table tr {
+      padding: 0.25rem 0;
+    }
+
+    .member-search-result .table tbody td {
+      padding: 0.45rem 0;
+      border-top: 0;
+    }
+
+    .member-search-result .table tbody td:last-child {
+      padding-top: 0.85rem;
+    }
+
+    .member-search-action {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="section">
-    <div class="container">
-        <div class="columns">
-            <div class="column">
-                <div class="block has-text-centered">
-                    <figure class="image is-128x128 is-inline-block">
-                        <img src="{{url_for('static', filename='logo.png')}}" width="100">
-                    </figure>
+<section class="section member-search-page">
+    <div class="container member-search-wrap">
+        <section class="member-search-header">
+            <div class="member-search-brand">
+                <div class="member-search-mark">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="MTC logo">
                 </div>
-            </div>
-        </div>
-        <br>
-        <div class="columns">
-            <div class="column">
-                <h1 class="title has-text-centered">ตรวจสอบใบอนุญาตประกอบวิชาชีพเทคนิคการแพทย์</h1>
-            </div>
-        </div>
-        <div class="columns">
-            <div class="column">
-                <div class="field">
-                    <div class="control is-large" id="queryInput">
-                        <input id="query" type="text" name="query" class="input is-large is-rounded" placeholder="ค้นหาด้วยชื่อหรือเลขท.น."
-                               hx-indicator="#queryInput"
-                               hx-target="#searchResult"
-                               hx-swap="innerHTML"
-                               hx-get="{{url_for('member.search_member_api')}}"
-                               hx-trigger="keyup changed delay:1000ms">
+                <div>
+                    <div class="member-search-overline">
+                        <span class="icon is-small"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <span>Medical Technology Council Public Registry</span>
                     </div>
+                    <h1 class="member-search-title">ค้นหาผู้ประกอบวิชาชีพเทคนิคการแพทย์</h1>
+                    <p class="member-search-subtitle">
+                        ระบบตรวจสอบข้อมูลการขึ้นทะเบียนและใบอนุญาตประกอบวิชาชีพเทคนิคการแพทย์สำหรับการใช้งานสาธารณะ
+                    </p>
                 </div>
-                <div id="searchResult"></div>
             </div>
-        </div>
+        </section>
+
+        <section class="member-search-card">
+            <div class="member-search-card-head">
+                <div class="member-search-card-kicker">Search</div>
+                <h2 class="member-search-card-title">ค้นหาด้วยชื่อ - นามสกุล หรือหมายเลขใบอนุญาต</h2>
+                <p class="member-search-card-text">
+                    แสดงผลข้อมูลผู้ประกอบวิชาชีพจากฐานข้อมูลปัจจุบันของสภาเทคนิคการแพทย์
+                </p>
+            </div>
+
+            <div class="member-search-input-wrap" id="queryInput">
+                <span class="member-search-icon">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input id="query"
+                       type="text"
+                       name="query"
+                       class="member-search-input"
+                       placeholder="ระบุชื่อ นามสกุล หรือหมายเลขใบอนุญาต"
+                       hx-indicator="#queryInput"
+                       hx-target="#searchResult"
+                       hx-swap="innerHTML"
+                       hx-get="{{ url_for('member.search_member_api') }}"
+                       hx-trigger="keyup changed delay:1000ms">
+            </div>
+
+            <p class="member-search-hint">
+                ตัวอย่าง: ชื่อจริงและนามสกุล หรือเลขที่ใบอนุญาตประกอบวิชาชีพ
+            </p>
+
+            <div id="searchResult" class="member-search-result"></div>
+
+            <p class="member-search-note">
+                หากพบข้อผิดพลาดหรือสงสัยในข้อมูลสมาชิก กรุณาติดต่อเจ้าหน้าที่เพื่อดำเนินการตรวจสอบเพิ่มเติม
+                โทร 02-0266491 ต่อ 107
+            </p>
+        </section>
     </div>
-    <br>
-    <footer>
-        <div class="content has-text-centered">
-            หากพบข้อผิดพลาดหรือสงสัยในข้อมูลสมาชิกกรุณาติดต่อกับเจ้าหน้าที่เพื่อตรวจสอบยืนยัน โทร 02-0266491 ต่อ 107
-        </div>
-    </footer>
 </section>
+{% endblock %}
+
+{% block footer %}
+<div class="section member-search-page" style="padding-top: 0;">
+    <div class="container member-search-wrap">
+        {% if config['DEBUG'] %}
+        <article class="message is-warning">
+            <div class="message-header">
+                DEBUG MODE
+            </div>
+            <div class="message-body">
+                <strong>Template file:</strong> {{ self._TemplateReference__context.name }}
+            </div>
+        </article>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

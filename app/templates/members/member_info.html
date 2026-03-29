@@ -1,69 +1,575 @@
 {% extends "base.html" %}
 
+{% block title %}ข้อมูลผู้ประกอบวิชาชีพเทคนิคการแพทย์{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --member-ink: #16324f;
+    --member-ink-soft: #4c6278;
+    --member-accent: #0f766e;
+    --member-accent-soft: #dff4ef;
+    --member-surface: #ffffff;
+    --member-surface-alt: #f4f8fb;
+    --member-line: rgba(22, 50, 79, 0.12);
+    --member-shadow: 0 24px 60px rgba(20, 45, 74, 0.14);
+  }
+
+  .member-public-page {
+    background:
+      radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 32%),
+      radial-gradient(circle at top right, rgba(22, 50, 79, 0.10), transparent 28%),
+      linear-gradient(180deg, #f8fbfd 0%, #eef4f8 100%);
+    min-height: 100vh;
+    font-family: "Noto Sans Thai", sans-serif;
+  }
+
+  .member-public-wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .member-header {
+    display: block;
+    margin-bottom: 1.75rem;
+    padding: 1.5rem 1.75rem;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(22, 50, 79, 0.08);
+    box-shadow: 0 18px 40px rgba(20, 45, 74, 0.08);
+    backdrop-filter: blur(10px);
+  }
+
+  .member-brand {
+    display: flex;
+    align-items: center;
+    gap: 1.15rem;
+    width: 100%;
+  }
+
+  .member-brand-mark {
+    width: 132px;
+    height: 132px;
+    border-radius: 34px;
+    background: linear-gradient(180deg, #ffffff 0%, #f2f7fa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(22, 50, 79, 0.10);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .member-brand-mark img {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+  }
+
+  .member-brand-overline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.08);
+    border: 1px solid rgba(15, 118, 110, 0.14);
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    color: var(--member-accent);
+  }
+
+  .member-hero-title {
+    font-family: "IBM Plex Serif", serif;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    line-height: 1.15;
+    margin: 0.9rem 0 0.5rem;
+    color: var(--member-ink);
+  }
+
+  .member-hero-subtitle {
+    max-width: 48rem;
+    color: var(--member-ink-soft);
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 0;
+  }
+
+  .member-grid {
+    margin-top: 1.75rem;
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .member-panel {
+    background: var(--member-surface);
+    border: 1px solid var(--member-line);
+    border-radius: 28px;
+    box-shadow: var(--member-shadow);
+  }
+
+  .member-profile-panel {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .member-portrait-shell {
+    position: relative;
+    padding: 1rem;
+    border-radius: 26px;
+    background: linear-gradient(180deg, #f7fbfd 0%, #eef4f8 100%);
+    border: 1px solid rgba(22, 50, 79, 0.08);
+  }
+
+  .member-portrait {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 22px;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(22, 50, 79, 0.08), rgba(15, 118, 110, 0.08)),
+      #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--member-ink-soft);
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .member-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 18px;
+  }
+
+  .member-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at top, rgba(15, 118, 110, 0.14), transparent 45%),
+      linear-gradient(180deg, #f7fbfd 0%, #edf4f8 100%);
+    color: var(--member-ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.85rem;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .member-placeholder-icon {
+    width: 5.25rem;
+    height: 5.25rem;
+    border-radius: 999px;
+    background: rgba(22, 50, 79, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--member-accent);
+  }
+
+  .member-placeholder-title {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .member-placeholder-text {
+    max-width: 16rem;
+    color: var(--member-ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  .member-verify {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.1rem;
+    border-radius: 20px;
+    background: var(--member-accent-soft);
+    color: #114a44;
+  }
+
+  .member-verify-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.14);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .member-verify strong {
+    display: block;
+    color: #0f5c55;
+    margin-bottom: 0.15rem;
+  }
+
+  .member-verify p {
+    margin: 0;
+    font-size: 0.94rem;
+    line-height: 1.65;
+  }
+
+  .member-info-panel {
+    padding: 1.75rem;
+  }
+
+  .member-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .member-section-kicker {
+    color: var(--member-accent);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+
+  .member-section-title {
+    font-family: "IBM Plex Serif", serif;
+    color: var(--member-ink);
+    font-size: clamp(1.5rem, 2vw, 2.1rem);
+    line-height: 1.2;
+    margin: 0.35rem 0 0.5rem;
+  }
+
+  .member-section-text {
+    margin: 0;
+    color: var(--member-ink-soft);
+    line-height: 1.7;
+    max-width: 42rem;
+  }
+
+  .member-status-box {
+    min-width: 200px;
+    padding: 1rem 1.1rem;
+    border-radius: 20px;
+    background: var(--member-surface-alt);
+    border: 1px solid var(--member-line);
+  }
+
+  .member-status-box .label {
+    color: var(--member-ink-soft);
+    font-size: 0.82rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .member-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .member-detail-card {
+    border-radius: 22px;
+    border: 1px solid var(--member-line);
+    background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+    padding: 1.15rem 1.2rem;
+  }
+
+  .member-detail-card.is-wide {
+    grid-column: 1 / -1;
+  }
+
+  .member-detail-label {
+    display: block;
+    color: var(--member-ink-soft);
+    font-size: 0.82rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .member-detail-value {
+    color: var(--member-ink);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .member-detail-subtext {
+    margin-top: 0.4rem;
+    color: var(--member-ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .member-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+  }
+
+  .member-actions .button {
+    height: auto;
+    min-height: 3.25rem;
+    padding: 0.95rem 1.3rem;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .member-actions .button.is-primary {
+    background: linear-gradient(135deg, #174d78, #0f766e);
+    border: none;
+    color: #fff;
+  }
+
+  .member-actions .button.is-light {
+    background: #fff;
+    border: 1px solid var(--member-line);
+    color: var(--member-ink);
+  }
+
+  .member-footnote {
+    margin-top: 1rem;
+    color: var(--member-ink-soft);
+    font-size: 0.93rem;
+    line-height: 1.7;
+  }
+
+  @media screen and (max-width: 900px) {
+    .member-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .member-details {
+      grid-template-columns: 1fr;
+    }
+
+    .member-section-head {
+      flex-direction: column;
+    }
+
+    .member-status-box {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  @media screen and (max-width: 640px) {
+    .member-public-page {
+      padding-inline: 0.25rem;
+    }
+
+    .member-hero,
+    .member-info-panel,
+    .member-profile-panel {
+      padding: 1.25rem;
+    }
+
+    .member-brand {
+      align-items: flex-start;
+    }
+
+    .member-brand-mark {
+      width: 104px;
+      height: 104px;
+      border-radius: 28px;
+    }
+
+    .member-brand-mark img {
+      width: 68px;
+      height: 68px;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="section">
-  <div class="container">
-    <div class="block has-text-centered">
-      <figure class="image is-64x64 is-inline-block">
-        <img src="{{url_for('static', filename='logo.png')}}">
-      </figure>
-    </div>
-    <h1 class="title is-size-4 has-text-centered">ระบบแสดงข้อมูลผู้ประกอบวิชาชีพเทคนิคการแพทย์</h1>
-    <h1 class="subtitle is-size-5 has-text-centered">สำนักงานเลขาธิการ สภาเทคนิคการแพทย์</h1>
-    <div class="columns">
-      <figure class="image is-128x128" id="profile-image">
-          <span>กำลังโหลดรูปภาพ..</span>
-      </figure>
-      <div class="column">
-        <table class="table">
-            <colgroup>
-                <col style="width: 20%;">
-                <col style="width: auto;">
-            </colgroup>
-          <tr>
-            <td><strong>ชื่อ</strong></td>
-            <td>{{member.th_fullname}}</td>
-          </tr>
-          <tr>
-            <td><strong>หมายเลขใบอนุญาต</strong></td>
-            <td>{{member.license.number}}</td>
-          </tr>
-          <tr>
-            <td><strong>วันที่ใบอนุญาต</strong></td>
-            <td>{{member.license.dates}}</td>
-          </tr>
-          <tr>
-            <td><strong>สถานะใบอนุญาต</strong></td>
-            <td>{{lic_status|safe}}</td>
-          </tr>
-        </table>
+<section class="section member-public-page">
+  <div class="container member-public-wrap">
+    <section class="member-header">
+      <div class="member-brand">
+        <div class="member-brand-mark">
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="MTC logo">
+        </div>
+        <div>
+          <div class="member-brand-overline">
+            <span class="icon is-small"><i class="fa-solid fa-shield-halved"></i></span>
+            <span>Medical Technology Council Public Registry</span>
+          </div>
+          <h1 class="member-hero-title">ข้อมูลผู้ประกอบวิชาชีพเทคนิคการแพทย์</h1>
+          <p class="member-hero-subtitle">
+            สำนักงานเลขาธิการสภาเทคนิคการแพทย์
+            แสดงข้อมูลการขึ้นทะเบียนและสถานะใบอนุญาตสำหรับการตรวจสอบต่อสาธารณะ
+          </p>
+        </div>
       </div>
-    </div>
-    <div class="columns">
-      <div class="column has-text-centered">
-        <a href="{{url_for('member.search_member')}}" class="button is-rounded is-link">
+    </section>
+
+    <div class="member-grid">
+      <aside class="member-panel member-profile-panel">
+        <div class="member-portrait-shell">
+          <figure class="member-portrait" id="profile-image">
+            <div>
+              <span class="icon is-large mb-3"><i class="fa-regular fa-image fa-xl"></i></span>
+              <p>กำลังโหลดรูปภาพผู้ประกอบวิชาชีพ</p>
+            </div>
+          </figure>
+        </div>
+
+        <div class="member-verify">
+          <span class="member-verify-icon">
+            <i class="fa-solid fa-badge-check"></i>
+          </span>
+          <div>
+            <strong>ข้อมูลจากระบบตรวจสอบสาธารณะ</strong>
+            <p>ใช้สำหรับยืนยันข้อมูลเบื้องต้นของผู้ประกอบวิชาชีพเทคนิคการแพทย์จากฐานข้อมูลปัจจุบันของสภาเทคนิคการแพทย์</p>
+          </div>
+        </div>
+      </aside>
+
+      <section class="member-panel member-info-panel">
+        <div class="member-section-head">
+          <div>
+            <div class="member-section-kicker">Professional Credential</div>
+            <h2 class="member-section-title">รายละเอียดการขึ้นทะเบียนและใบอนุญาต</h2>
+            <p class="member-section-text">
+              ข้อมูลด้านล่างแสดงชื่อผู้ประกอบวิชาชีพ หมายเลขใบอนุญาต ช่วงเวลาที่ใบอนุญาตมีผล และสถานะล่าสุดของใบอนุญาต
+            </p>
+          </div>
+          <div class="member-status-box">
+            <div class="label">สถานะใบอนุญาต</div>
+            <div>{{ lic_status|safe }}</div>
+          </div>
+        </div>
+
+        <div class="member-details">
+          <article class="member-detail-card">
+            <span class="member-detail-label">ชื่อ - นามสกุล</span>
+            <div class="member-detail-value">{{ member.th_fullname }}</div>
+          </article>
+
+          <article class="member-detail-card">
+            <span class="member-detail-label">หมายเลขใบอนุญาตประกอบวิชาชีพ</span>
+            <div class="member-detail-value">{{ member.license.number }}</div>
+          </article>
+
+          <article class="member-detail-card is-wide">
+            <span class="member-detail-label">ระยะเวลาที่ใบอนุญาตมีผล</span>
+            <div class="member-detail-value">{{ member.license.dates }}</div>
+            <div class="member-detail-subtext">
+              โปรดตรวจสอบสถานะใบอนุญาตควบคู่กับช่วงวันที่ใบอนุญาตเพื่อยืนยันความถูกต้องล่าสุด
+            </div>
+          </article>
+
+          <article class="member-detail-card">
+            <span class="member-detail-label">สถานะในระบบ</span>
+            <div class="member-detail-value">{{ member.license.status or 'ปกติ' }}</div>
+          </article>
+
+          <article class="member-detail-card">
+            <span class="member-detail-label">แหล่งข้อมูล</span>
+            <div class="member-detail-value">สำนักงานเลขาธิการสภาเทคนิคการแพทย์</div>
+          </article>
+        </div>
+
+        <div class="member-actions">
+          <a href="{{ url_for('member.search_member') }}" class="button is-primary">
             <span class="icon">
-                <i class="fa-solid fa-magnifying-glass"></i>
+              <i class="fa-solid fa-magnifying-glass"></i>
             </span>
-            <span>
-                ค้นหาผู้ประกอบวิชาชีพ
+            <span>ค้นหาผู้ประกอบวิชาชีพเพิ่มเติม</span>
+          </a>
+          <a href="{{ url_for('member.search_member') }}" class="button is-light">
+            <span class="icon">
+              <i class="fa-solid fa-arrow-left"></i>
             </span>
-        </a>
-      </div>
+            <span>กลับไปหน้าค้นหา</span>
+          </a>
+        </div>
+
+        <p class="member-footnote">
+          หากพบข้อผิดพลาดหรือมีข้อสงสัยเกี่ยวกับข้อมูลการขึ้นทะเบียน กรุณาติดต่อสำนักงานเลขาธิการสภาเทคนิคการแพทย์
+          เพื่อดำเนินการตรวจสอบเพิ่มเติม
+        </p>
+      </section>
     </div>
   </div>
 </section>
 {% endblock %}
+
+{% block footer %}
+<div class="section member-public-page" style="padding-top: 0;">
+  <div class="container member-public-wrap">
+    {% if config['DEBUG'] %}
+    <article class="message is-warning">
+      <div class="message-header">
+        DEBUG MODE
+      </div>
+      <div class="message-body">
+        <strong>Template file:</strong> {{ self._TemplateReference__context.name }}
+      </div>
+    </article>
+    {% endif %}
+  </div>
+ </div>
+{% endblock %}
+
 {% block scripts %}
 {{ super() }}
     <script>
+    function renderProfilePlaceholder() {
+        return `
+          <div class="member-placeholder">
+            <span class="member-placeholder-icon">
+              <i class="fa-regular fa-user fa-2x"></i>
+            </span>
+            <div class="member-placeholder-title">{{ member.th_fullname|e }}</div>
+            <div class="member-placeholder-text">ไม่พบรูปภาพในระบบฐานข้อมูล</div>
+          </div>
+        `;
+    }
+
+    function ensureProfileFallback() {
+        const profile = document.querySelector('#profile-image');
+        if (!profile) {
+            return;
+        }
+
+        const img = profile.querySelector('img');
+        if (!img) {
+            profile.innerHTML = renderProfilePlaceholder();
+            return;
+        }
+
+        img.addEventListener('error', () => {
+            profile.innerHTML = renderProfilePlaceholder();
+        }, { once: true });
+    }
+
     $(document).ready(()=>{
         htmx.ajax('GET', {{ url_for('member.get_member_profile_image', member_id=member.id)|tojson|safe }},
             {
                 target: "#profile-image",
                 swap: "innerHTML",
             })
+        ensureProfileFallback()
+    })
+
+    document.body.addEventListener('htmx:afterSwap', (event) => {
+        if (event.target && event.target.id === 'profile-image') {
+            ensureProfileFallback()
+        }
     })
     </script>
 {% endblock %}

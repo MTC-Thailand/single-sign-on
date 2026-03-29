@@ -9,8 +9,6 @@ import os
 import uuid
 
 import boto3
-from dateutil.relativedelta import relativedelta
-from pprint import pprint
 
 import requests
 import pandas as pd
@@ -18,12 +16,12 @@ import pandas as pd
 from flask import render_template, make_response, jsonify, current_app, flash, request, redirect, url_for, session, abort
 from flask_login import login_required, login_user, current_user, logout_user
 from flask_principal import identity_changed, Identity, AnonymousIdentity
-from sqlalchemy import create_engine, or_, func, and_
+from sqlalchemy import or_, func, and_
 from sqlalchemy_continuum.plugins import activity
 
 from app.cmte.views import bangkok
 from app.members import member_blueprint as member
-from app.members.forms import MemberSearchForm, AnonymousMemberSearchForm, MemberLoginForm, MemberLoginOldForm, \
+from app.members.forms import MemberLoginForm, MemberLoginOldForm, \
     MemberInfoForm, LicenseRenewalForm
 
 from app.members.models import *
@@ -31,7 +29,6 @@ from app.cmte.forms import IndividualScoreForm, MemberCMTEFeePaymentForm, \
     CMTEEventParticipationRecordAdditionalRequestForm, IndividualScoreGroupForm
 from app.cmte.models import CMTEEventType, CMTEEventParticipationRecord, CMTEEventDoc, CMTEFeePaymentRecord, CMTEEvent, \
     CMTEEventActivity, CMTEParticipationRecordRequest, CMTEEventGroupParticipationRecord
-from app import admin_permission
 
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -39,96 +36,6 @@ from urllib3.util import Retry
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
 IMG_BASE_URL = 'https://mtc.thaijobjob.com'
-MYSQL_HOST = os.environ.get('MYSQL_HOST')
-MYSQL_USER = os.environ.get('MYSQL_USER')
-MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
-MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
-
-template = '''
-<div class="box">
-<span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
-<span class="label">Name</span> <span>{} {}</span><br>
-<span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
-<span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
-<span class="help">{}</span>
-</div>
-'''
-
-template_cmte_admin = '''
-<div class="box">
-<span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
-<span class="label">Name</span> <span>{} {}</span><br>
-<span class="label">Tel.</span> <span>{}</span><br>
-<span class="label">Email</span> <span>{}</span><br>
-<span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
-<span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
-<span class="help has-text-{}">{} {}</span><br>
-<span class="label">Valid CMTE <span class="title is-size-5 has-text-info">{} คะแนน</span>
-</div>
-'''
-
-template_cmte = '''
-<div class="box">
-<span class="label">ชื่อ นามสกุล</span> <span>{} {}</span><br>
-<span class="label">Name</span> <span>{} {}</span><br>
-<span class="label">หมายเลขใบอนุญาต</span> <span>{}</span><br>
-<span class="label">วันหมดอายุ</span> <span class="title is-size-4 {}">{}</span><br>
-<span class="help has-text-{}">{} {}</span><br>
-<span class="label">Valid CMTE <span class="title is-size-5 has-text-info">{} คะแนน</span>
-</div>
-'''
-
-
-def load_from_mtc(firstname=None, lastname=None, license_id=None):
-    engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
-    engine.connect()
-    if firstname and lastname:
-        query = f'''
-        SELECT member.mem_id, member.fname AS firstnameTH, member.lname AS lastnameTH, member.e_fname AS firstnameEN, member.e_lname AS lastnameEN, member.mobilesms AS mobilesms, member.email_member AS email 
-        FROM member WHERE member.fname='{firstname}' AND member.lname='{lastname}';
-        '''
-        data = pd.read_sql_query(query, con=engine)
-        if data.empty:
-            return None
-        data = data.squeeze().to_dict()
-
-        query = f'''
-        SELECT lic_mem.lic_id AS license_no, lic_mem.lic_exp_date AS end_date,lic_mem.lic_b_date,
-        lic_status.lic_status_name AS status_license FROM lic_mem
-        INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
-        WHERE lic_mem.mem_id={data['mem_id']}
-        '''
-        lic_data = pd.read_sql_query(query, con=engine)
-        lic_data = lic_data.squeeze().to_dict()
-        data.update(lic_data)
-    elif license_id:
-        query = f'''
-        SELECT lic_mem.mem_id, lic_mem.lic_id AS license_no, lic_mem.lic_exp_date AS end_date,lic_mem.lic_b_date,
-        lic_status.lic_status_name AS status_license FROM lic_mem
-        INNER JOIN lic_status ON lic_mem.lic_status_id=lic_status.lic_status_id
-        WHERE lic_mem.lic_id={license_id}
-        '''
-        lic_data = pd.read_sql_query(query, con=engine)
-        data = lic_data.squeeze().to_dict()
-
-        query = f'''
-        SELECT member.mem_id, member.fname AS firstnameTH, member.lname AS lastnameTH, member.e_fname AS firstnameEN, member.e_lname AS lastnameEN, member.mobilesms AS mobilesms, member.email_member AS email 
-        FROM member WHERE member.mem_id={data['mem_id']};
-        '''
-        mem_data = pd.read_sql_query(query, con=engine)
-        mem_data = mem_data.squeeze().to_dict()
-        data.update(mem_data)
-
-    return [data]
-
-
-def check_license_status(delta, status):
-    if status == 'ปกติ' and delta.days >= 0:
-        return 'ปกติ'
-    elif status == 'ปกติ' and delta.days < 0:
-        return 'หมดอายุ'
-    else:
-        return status
 
 
 @member.route('/search/test/<license_id>')
@@ -145,199 +52,9 @@ def search_test(license_id):
         return jsonify(data_)
 
 
-@member.route('/admin')
-@login_required
-def admin_index():
-    print(admin_permission.can())
-    return render_template('members/admin/index.html')
-
-
-@member.route('/admin/members', methods=['GET', 'POST'])
-@login_required
-def view_members():
-    form = MemberSearchForm()
-    if form.validate_on_submit():
-        data_ = load_from_mtc(license_id=form.license_id.data)
-        message = ''
-        engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
-        engine.connect()
-        for rec in data_:
-            exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
-            delta = exp_date - arrow.now()
-            license_status = check_license_status(delta, rec.get('status_license'))
-            if form.license_renewal_date.data:
-                renewal_date = form.license_renewal_date.data + relativedelta(years=-543)
-                expire_date = renewal_date + relativedelta(years=5)
-                query = f'''
-                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
-                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
-                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-                    WHERE lic_id={form.license_id.data}
-                    AND cpd_work.w_bdate BETWEEN '{renewal_date}' AND '{expire_date}'
-                    AND cpd_work.w_appr_date IS NOT NULL
-                    ORDER BY cpd_work.w_bdate DESC
-                    '''
-            else:
-                query = f'''
-                    SELECT cpd_work.w_title, cpd_work.w_bdate, cpd_work.w_edate, cpd_work.cpd_score FROM cpd_work
-                    INNER JOIN member ON member.mem_id=cpd_work.mem_id
-                    INNER JOIN lic_mem ON lic_mem.mem_id=member.mem_id
-                    WHERE lic_id={form.license_id.data}
-                    AND cpd_work.w_bdate BETWEEN lic_mem.lic_b_date AND lic_mem.lic_exp_date
-                    AND cpd_work.w_appr_date IS NOT NULL
-                    ORDER BY cpd_work.w_bdate DESC
-                    '''
-            valid_score_df = pd.read_sql_query(query, con=engine)
-            message += template_cmte_admin.format(rec.get('firstnameTH'),
-                                                  rec.get('lastnameTH'),
-                                                  rec.get('firstnameEN'),
-                                                  rec.get('lastnameEN'),
-                                                  rec.get('mobilesms'),
-                                                  rec.get('email'),
-                                                  int(rec.get('license_no')),
-                                                  'has-text-success' if delta.days > 0 else 'has-text-danger',
-                                                  exp_date.format('DD MMMM YYYY', locale='th'),
-                                                  'success' if license_status == 'ปกติ' else 'danger',
-                                                  exp_date.humanize(granularity=['year', 'day'], locale='th'),
-                                                  license_status,
-                                                  valid_score_df.cpd_score.sum(),
-                                                  )
-            message += valid_score_df.to_html(classes='table is-fullwidth is-striped')
-        resp = make_response(message)
-        return resp
-    else:
-        print(form.errors)
-    return render_template('members/admin/members.html', form=form)
-
-
-@member.route('/search', methods=['GET', 'POST'])
+@member.route('/search')
 def search_member():
-    form = MemberSearchForm()
-    if form.validate_on_submit():
-        message = ''
-        form.firstname.data = form.firstname.data.strip()
-        form.lastname.data = form.lastname.data.strip()
-        form.license_id.data = form.license_id.data.strip()
-        if form.firstname.data and form.lastname.data:
-            try:
-                response = requests.get(f'{BASE_URL}/GetdataBylicenseAndfirstnamelastname',
-                                        params={'search': f'{form.firstname.data} {form.lastname.data}'},
-                                        headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)}, stream=True,
-                                        timeout=99)
-            except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
-                resp = make_response(str(e))
-            else:
-                try:
-                    data_ = response.json().get('results', [])
-                except requests.exceptions.JSONDecodeError as e:
-                    data_ = load_from_mtc(form.firstname.data, form.lastname.data)
-                    for rec in data_:
-                        exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
-                        delta = exp_date - arrow.now()
-                        license_status = check_license_status(delta, rec.get('status_license'))
-                        message += template.format(rec.get('firstnameTH'),
-                                                   rec.get('lastnameTH'),
-                                                   rec.get('firstnameEN'),
-                                                   rec.get('lastnameEN'),
-                                                   int(rec.get('license_no')),
-                                                   'has-text-success' if delta.days > 0 else 'has-text-danger',
-                                                   exp_date.format('DD MMMM YYYY', locale='th'),
-                                                   exp_date.humanize(granularity=['year', 'day'], locale='th'),
-                                                   'is-success' if license_status == 'ปกติ' else 'is-danger',
-                                                   license_status,
-                                                   )
-
-                    resp = make_response(message)
-                else:
-                    if not data_:
-                        data_ = load_from_mtc(form.firstname.data, form.lastname.data)
-                        if data_ is None:
-                            message = '<h1 class="title has-text-danger">ไม่พบข้อมูลในระบบ</h1>'
-                            resp = make_response(message)
-                            resp.headers['HX-Trigger-After-Swap'] = json.dumps({"stopLoading": "#submit-btn"})
-                            return resp
-                    for rec in data_:
-                        exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
-                        delta = exp_date - arrow.now()
-                        license_status = check_license_status(delta, rec.get('status_license'))
-                        message += template.format(rec.get('firstnameTH'),
-                                                   rec.get('lastnameTH'),
-                                                   rec.get('firstnameEN'),
-                                                   rec.get('lastnameEN'),
-                                                   int(rec.get('license_no')),
-                                                   'has-text-success' if delta.days >= 0 else 'has-text-danger',
-                                                   exp_date.format('DD MMMM YYYY', locale='th'),
-                                                   exp_date.humanize(granularity=['year', 'day'], locale='th'),
-                                                   'is-success' if license_status == 'ปกติ' else 'is-danger',
-                                                   license_status,
-                                                   )
-
-                    resp = make_response(message)
-        elif form.license_id.data:
-            try:
-                response = requests.get(f'{BASE_URL}/GetdataBylicenseAndfirstnamelastname',
-                                        params={'search': f'{form.license_id.data}'},
-                                        headers={'Authorization': 'Bearer {}'.format(INET_API_TOKEN)},
-                                        stream=True, timeout=99,
-                                        )
-            except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
-                resp = make_response(str(e))
-            else:
-                try:
-                    data_ = response.json().get('results', [])
-                except requests.exceptions.JSONDecodeError as e:
-                    print(f'***************{form.license_id.data}*************')
-                    pprint(response.text)
-                    # pprint(e)
-                    data_ = load_from_mtc(license_id=form.license_id.data)
-                    for rec in data_:
-                        exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'), locale='th')
-                        delta = exp_date - arrow.now()
-                        license_status = check_license_status(delta, rec.get('status_license'))
-                        message += template.format(rec.get('firstnameTH'),
-                                                   rec.get('lastnameTH'),
-                                                   rec.get('firstnameEN'),
-                                                   rec.get('lastnameEN'),
-                                                   int(rec.get('license_no')),
-                                                   'has-text-success' if delta.days > 0 else 'has-text-danger',
-                                                   exp_date.format('DD MMMM YYYY', locale='th'),
-                                                   exp_date.humanize(granularity=['year', 'day'], locale='th'),
-                                                   'is-success' if license_status == 'ปกติ' else 'is-danger',
-                                                   license_status,
-                                                   )
-                    resp = make_response(message)
-                else:
-                    if not data_:
-                        data_ = load_from_mtc(license_id=form.license_id.data)
-                    for rec in data_:
-                        exp_date = arrow.get(rec.get('end_date', 'YYYY-MM-DD'))
-                        delta = exp_date - arrow.now()
-                        pprint(response.json().get('results'))
-                        # print(exp_date, delta.days)
-                        license_status = check_license_status(delta, rec.get('status_license'))
-                        message += template.format(
-                            # rec.get('profile'),
-                            rec.get('firstnameTH'),
-                            rec.get('lastnameTH'),
-                            rec.get('firstnameEN'),
-                            rec.get('lastnameEN'),
-                            int(rec.get('license_no')),
-                            'has-text-success' if delta.days > 0 else 'has-text-danger',
-                            exp_date.format('DD MMMM YYYY', locale='th'),
-                            exp_date.humanize(granularity=['year', 'day'], locale='th'),
-                            'is-success' if license_status == 'ปกติ' else 'is-danger',
-                            license_status,
-                        )
-
-                    resp = make_response(message)
-        else:
-            resp = make_response('Error, no input found.')
-
-        resp.headers['HX-Trigger-After-Swap'] = json.dumps({"stopLoading": "#submit-btn"})
-
-        return resp
-
-    return render_template('members/search_form.html', form=form)
+    return render_template('members/search_form.html')
 
 
 @member.route('/info/<int:member_id>')
@@ -1085,11 +802,6 @@ def search_member_api():
     query = request.args.get('query')
     query = query.strip()
     if query:
-        template = '''<table class="table is-fullwidth is-striped">'''
-        template += '''
-        <thead><th>ชื่อ</th><th>หมายเลขใบอนุญาตฯ</th><th>วันขึ้นทะเบียน - หมดอายุ</th><th>สถานะใบอนุญาต</th></thead>
-        <tbody>
-        '''
         licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
         if not licenses:
             try:
@@ -1104,6 +816,26 @@ def search_member_api():
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
                                               Member.th_lastname.like(f'%{query}%')))
             licenses = [(member.license, member) for member in members]
+        licenses = sorted(
+            licenses,
+            key=lambda item: (
+                0 if item[0] and item[0].number and item[0].number.isdigit() else 1,
+                int(item[0].number) if item[0] and item[0].number and item[0].number.isdigit() else (
+                    item[0].number if item[0] and item[0].number else ''
+                ),
+            )
+        )
+        if not licenses:
+            return make_response(
+                '<div class="member-search-empty">'
+                '<span class="icon is-large"><i class="fa-regular fa-folder-open fa-xl"></i></span>'
+                '<h3>ไม่พบข้อมูลที่ตรงกับคำค้นหา</h3>'
+                '<p>กรุณาตรวจสอบชื่อ นามสกุล หรือหมายเลขใบอนุญาต แล้วลองค้นหาอีกครั้ง</p>'
+                '</div>'
+            )
+        template = '<div class="member-search-results-table"><table class="table is-fullwidth"><thead><tr>'
+        template += '<th>ชื่อผู้ประกอบวิชาชีพ</th><th>หมายเลขใบอนุญาตฯ</th><th>วันขึ้นทะเบียน - หมดอายุ</th><th>สถานะใบอนุญาต</th><th></th>'
+        template += '</tr></thead><tbody>'
         for lic, member in licenses:
             status_tag = '<span class="tag {}">{}</span>'
             if lic.is_expired:
@@ -1116,13 +848,31 @@ def search_member_api():
             else:
                 lic_status = status_tag.format('is-success', 'ปกติ')
             if lic:
-                template += (f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td>'
-                             f'<td><a class="button is-link is-small is-rounded" href={url_for("member.view_member_info", member_id=member.id)}>ดูข้อมูล</td></tr>')
+                template += (
+                    f'<tr>'
+                    f'<td><div class="member-search-person">'
+                    f'<div class="member-search-person-name">{member.th_fullname}</div>'
+                    f'</div></td>'
+                    f'<td><span class="member-search-license">{lic.number}</span></td>'
+                    f'<td>{lic.dates}</td>'
+                    f'<td>{lic_status}</td>'
+                    f'<td class="has-text-right"><a class="button is-small is-rounded member-search-action" href="{url_for("member.view_member_info", member_id=member.id)}">ดูข้อมูล</a></td>'
+                    f'</tr>'
+                )
             else:
                 lic = License.query.filter_by(member_id=member.id).first()
-                template += (f'<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td></tr>'
-                            f'<td><a class="button is-link is-small is-rounded" href={url_for("member.view_member_info", member_id=member.id)}>ดูข้อมูล</td></tr>')
-        template += '</tbody></table>'
+                template += (
+                    f'<tr>'
+                    f'<td><div class="member-search-person">'
+                    f'<div class="member-search-person-name">{member.th_fullname}</div>'
+                    f'</div></td>'
+                    f'<td><span class="member-search-license">{lic.number}</span></td>'
+                    f'<td>{lic.dates}</td>'
+                    f'<td>{lic_status}</td>'
+                    f'<td class="has-text-right"><a class="button is-small is-rounded member-search-action" href="{url_for("member.view_member_info", member_id=member.id)}">ดูข้อมูล</a></td>'
+                    f'</tr>'
+                )
+        template += '</tbody></table></div>'
         return make_response(template)
     return 'กรุณาระบุชื่อ นามสกุลหรือหมายเลขใบอนุญาตประกอบวิชาชีพ'
 

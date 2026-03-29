@@ -1090,10 +1090,11 @@ def admin_edit_fee_payment_record(record_id=None):
                 license = License.query.filter_by(number=form.license_number.data).one()
                 if license:
                     if license.get_active_cmte_fee_payment():
-                        flash('Fee payment has been recorded and active.', 'warning')
-                        return redirect(url_for('member.admin_index'))
+                        flash('มีรายการชำระเงินค่าธรรมเนียมอยู่แล้ว', 'warning')
+                        next = request.args.get('next')
+                        return redirect(next or url_for('cmte.admin_edit_fee_payment_record'))
                     else:
-                        flash('Fee payment record update failed. No license number found.', 'danger')
+                        flash('ไม่พบข้อมูลใบอนุญาต', 'danger')
                 record = CMTEFeePaymentRecord()
                 record.start_date = license.start_date
                 record.end_date = license.end_date
@@ -1102,12 +1103,12 @@ def admin_edit_fee_payment_record(record_id=None):
             form.populate_obj(record)
             db.session.add(record)
             db.session.commit()
-            flash('Fee payment record has been created/approved.', 'success')
+            flash('บันทึกรายการชำระค่าธรรมเนียมเรียบร้อยแล้ว', 'success')
             next = request.args.get('next')
             return redirect(next or url_for('cmte.admin_edit_fee_payment_record'))
         else:
             print('form is not valid')
-            flash('Error updating fee payment record form.', 'danger')
+            flash('พบข้อผิดพลาดจากข้อมูลในแบบฟอร์มกรุณาตรวจสอบ', 'danger')
     return render_template('cmte/admin/fee_payment_form.html',
                            form=form,
                            record=record,
