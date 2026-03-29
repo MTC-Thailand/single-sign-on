@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import arrow
 import pandas as pd
@@ -18,10 +18,26 @@ from app.members.models import License, LicenseRenewal, Member, MemberAddress
 def _parse_excel_date(value):
     if pd.isna(value):
         return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
     if isinstance(value, pd.Timestamp):
         return value.date()
     if isinstance(value, datetime):
         return value.date()
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return None
+        for fmt in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f'):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+    if isinstance(value, (int, float)):
+        try:
+            return pd.to_datetime(value, unit='D', origin='1899-12-30').date()
+        except (ValueError, TypeError, OverflowError):
+            pass
     if hasattr(value, 'year') and hasattr(value, 'month') and hasattr(value, 'day'):
         return value
 
@@ -32,12 +48,28 @@ def _parse_excel_date(value):
 
 
 def _get_row_value(row, column_name, default=None):
-    if column_name not in row.index:
-        return default
-    value = row[column_name]
+    if column_name in row.index:
+        value = row[column_name]
+    else:
+        normalized_name = str(column_name).strip().lower()
+        matched_column = next(
+            (name for name in row.index if str(name).strip().lower() == normalized_name),
+            None,
+        )
+        if matched_column is None:
+            return default
+        value = row[matched_column]
     if pd.isna(value):
         return default
     return value
+
+
+def _get_first_row_value(row, *column_names, default=None):
+    for column_name in column_names:
+        value = _get_row_value(row, column_name, default=None)
+        if value is not None:
+            return value
+    return default
 
 
 def _apply_license_renewal(member_id, license_number, issue_date, start_date, status='ปกติ'):
@@ -120,9 +152,12 @@ def upload_new():
         f = request.files['file']
         df = pd.read_excel(f, engine='openpyxl', dtype={'telephone_number': str})
         for idx, row in df.iterrows():
-            dob = _parse_excel_date(_get_row_value(row, 'dob', _get_row_value(row, 'birthday')))
+            dob = _parse_excel_date(_get_first_row_value(row, 'dob', 'birthday', 'date_of_birth', 'birth_date'))
             has_traditional_fee = _get_row_value(row, 'form_tradition') == 1
             payment_date = _get_row_value(row, 'payment_date')
+            license_start_date = _parse_excel_date(_get_row_value(row, 'license_begin_date'))
+            license_end_date = _parse_excel_date(_get_row_value(row, 'license_exp_date'))
+            license_issue_date = _parse_excel_date(_get_row_value(row, 'approve_date'))
             member = Member.query.filter_by(pid=str(int(row['idcardnumber']))).first()
             if not member:
                 member = Member(pid=str(row['idcardnumber']),
@@ -139,15 +174,15 @@ def upload_new():
                 db.session.add(member)
                 license = License.query.filter_by(number=str(int(row['license_no']))).first()
                 if not license:
-                    license = License(start_date=row['license_begin_date'],
-                                      end_date=row['license_exp_date'],
-                                      issue_date=row['approve_date'],
+                    license = License(start_date=license_start_date,
+                                      end_date=license_end_date,
+                                      issue_date=license_issue_date,
                                       number=str(row['license_no']),
                                       member=member)
                 else:
-                    license.start_date = row['license_begin_date']
-                    license.end_date = row['license_exp_date']
-                    license.issue_date = row['approve_date']
+                    license.start_date = license_start_date
+                    license.end_date = license_end_date
+                    license.issue_date = license_issue_date
                 db.session.add(license)
             else:
                 member_updates = {
@@ -167,6 +202,12 @@ def upload_new():
                 if dob is not None:
                     member.dob = dob
                 db.session.add(member)
+                license = License.query.filter_by(number=str(int(row['license_no']))).first()
+                if license:
+                    license.start_date = license_start_date
+                    license.end_date = license_end_date
+                    license.issue_date = license_issue_date
+                    db.session.add(license)
             # The source spreadsheet uses form_tradition as a fee-paid flag for the traditional fee flow.
             if has_traditional_fee and payment_date is not None:
                 cmte_payment_record = member.license.cmte_fee_payment_records.filter_by(
