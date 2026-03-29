@@ -1,8 +1,6 @@
+import os
 import datetime
 import arrow
-import os
-
-import pandas as pd
 from http import HTTPStatus
 
 import requests
@@ -12,17 +10,11 @@ from flask_jwt_extended import (create_access_token,
                                 get_jwt_identity,
                                 create_refresh_token)
 from flask_restful import Resource
-from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash
 
 from app import db
 from app.members.models import Member, License, MemberAddress
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
-
-MYSQL_HOST = os.environ.get('MYSQL_HOST')
-MYSQL_USER = os.environ.get('MYSQL_USER')
-MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
-MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE')
 
 
 class Login(Resource):
@@ -807,6 +799,23 @@ class MemberAddressResource(Resource):
 
 
 class MemberInfo(Resource):
+    @staticmethod
+    def _serialize_legacy_address(address):
+        if not address:
+            return {}
+        return {
+            'add_id': address.address_type,
+            'add1': address.street_number or '',
+            'moo': address.village or '',
+            'soi': address.alley or '',
+            'road': address.street or '',
+            'zipcode': str(address.zipcode) if address.zipcode is not None else '',
+            'PROVINCE_NAME': address.province or '',
+            'AMPHUR_NAME': address.city or '',
+            'DISTRICT_NAME': address.district or '',
+            'updt': address.updated_at.isoformat() if address.updated_at else None,
+        }
+
     # TODO: Add an endpoint for adding new member
     @jwt_required()
     def get(self, pin):
@@ -968,80 +977,47 @@ class MemberInfo(Resource):
         if not member:
             return {'message': 'Member not found.'}, 404
 
-        engine = create_engine(f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DATABASE}')
-        engine.connect()
-        query = f'''
-        SELECT member.mem_id_txt,member.mem_id,member.title_id,member.fname,member.lname,member.e_title,member.e_fname,member.e_lname,
-        member.address_id_doc,member.birthday,member.position,member.office_name,member.department_w,member.mobilesms,member.email_member,
-        member.mem_status_id,member.emp_function_id,member.emp_owner_id,member.emp_contract_id
-        FROM member WHERE member.persion_id='{pin}';
-        '''
-        try:
-            data = pd.read_sql_query(query, con=engine)
-        except:
-            data = {}
-        else:
-            data = data.squeeze().to_dict()
+        license = member.license
+        current_addr = self._serialize_legacy_address(member.mailing_address)
+        work_addr = self._serialize_legacy_address(member.working_address)
+        home_addr = self._serialize_legacy_address(member.home_address)
+        data = {
+            'mem_id_txt': member.number,
+            'mem_id': member.old_mem_id or member.id,
+            'title_id': member.th_title,
+            'fname': member.th_firstname,
+            'lname': member.th_lastname,
+            'e_title': member.en_title,
+            'e_fname': member.en_firstname,
+            'e_lname': member.en_lastname,
+            'birthday': member.dob.isoformat() if member.dob else None,
+            'mobilesms': member.tel,
+            'email_member': member.email,
+            'mem_status': member.status,
+            'lic_b_date': license.start_date.isoformat() if license else None,
+            'lic_exp_date': license.end_date.isoformat() if license else None,
+            'lic_number': license.number if license else None,
+            'lic_status_name': license.status if license else None,
+            'document_addr': member.mailing_address.address_type if member.mailing_address else '',
+            'current_addr': current_addr,
+            'home_addr': home_addr,
+        }
+        data['office'] = {
+            'office_position': '',
+            'office_name': '',
+            'office_department': '',
+            'function': '',
+            'employer': '',
+            'contract': '',
+            'office_addr': work_addr,
+        }
 
-        data['mem_status'] = member.status if member else None
-
-        if data['emp_function_id']:
-            query = f"""
-            SELECT emp_function.function_name,emp_owner.emp_owner_name,emp_contract.contract_name
-            FROM emp_function
-            INNER JOIN emp_owner ON emp_owner.emp_owner_id={data['emp_owner_id']}
-            INNER JOIN emp_contract ON emp_contract.emp_contract_id={data['emp_contract_id']}
-            WHERE emp_function.emp_function_id={data['emp_function_id']}
-            """
-            emp_data = pd.read_sql_query(query, con=engine)
-            data.update(emp_data.squeeze().to_dict())
-
-        data['lic_b_date'] = member.license.start_date.isoformat()
-        data['lic_number'] = member.license.number
-        data['lic_exp_date'] = member.license.end_date.isoformat()
-        data['document_addr'] = data.pop('address_id_doc', None) or ''
-        data['birthday'] = member.dob.isoformat() if member.dob else None
-
-        work_office = {'office_position': data.pop('position', None) or '',
-                       'office_name': data.pop('office_name', None) or '',
-                       'office_department': data.pop('department_w', None) or '',
-                       'function': data.pop('function_name', None) or '',
-                       'employer': data.pop('emp_owner_name', None) or '',
-                       'contract': data.pop('contract_name', None) or ''}
-        mem_id = data.get('mem_id', None)
-        data['office'] = work_office
-
-        if mem_id:
-            query = f'''
-            SELECT add_id,add1,moo,soi,road,zipcode,province.PROVINCE_NAME,amphur.AMPHUR_NAME,district.DISTRICT_NAME,updt
-            FROM member_add
-            INNER JOIN province ON province.PROVINCE_ID=member_add.PROVINCE_ID
-            INNER JOIN amphur ON amphur.AMPHUR_ID=member_add.AMPHUR_ID
-            INNER JOIN district ON district.DISTRICT_ID=member_add.DISTRICT_ID
-            WHERE mem_id={mem_id}
-            '''
-
-            addr = pd.read_sql_query(query, con=engine)
-            for idx, row in addr.iterrows():
-                dict_ = row.to_dict()
-                dict_['updt'] = row['updt'].isoformat() if row['updt'] else None
-                if dict_['add_id'] == 2:
-                    work_office['office_addr'] = dict_
-                elif dict_['add_id'] == 1:
-                    data['current_addr'] = dict_
-                elif dict_['add_id'] == 3:
-                    data['home_addr'] = dict_
-        else:
-            data['current_addr'] = {}
-            data['home_addr'] = {}
-            data['office_addr'] = {}
-
-        cmte_fee_payment_record = member.license.get_active_cmte_fee_payment()
-        total_score = member.license.total_cmte_scores
-        valid_score = member.license.valid_cmte_scores
+        cmte_fee_payment_record = license.get_active_cmte_fee_payment() if license else None
+        total_score = license.total_cmte_scores if license else 0
+        valid_score = license.valid_cmte_scores if license else 0
         data['active_cmte_payment'] = cmte_fee_payment_record.to_dict() if cmte_fee_payment_record else {}
-        data['lic_b_date'] = member.license.start_date.strftime('%Y-%m-%d')
-        data['lic_exp_date'] = member.license.end_date.strftime('%Y-%m-%d')
+        data['lic_b_date'] = license.start_date.strftime('%Y-%m-%d') if license else None
+        data['lic_exp_date'] = license.end_date.strftime('%Y-%m-%d') if license else None
 
         data['cmte_score'] = {'total': float(total_score), 'valid': float(valid_score)}
         return {'data': data}
