@@ -56,9 +56,12 @@
                             <div hx-get="{{ url_for('member.get_member_profile_image', member_id=current_user.id) }}"
                                  hx-trigger="load"
                                  hx-swap="innerHTML">
-                                <figure class="image is-128x128">
-                                    <img class="is-rounded" src="{{ url_for('static', filename='doctor.png') }}">
-                                </figure>
+                                <div class="member-avatar-frame member-avatar-placeholder is-loading" aria-busy="true">
+                                    <span class="member-avatar-spinner" aria-hidden="true">
+                                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                    </span>
+                                    <span class="member-avatar-loading-copy">กำลังโหลดรูปโปรไฟล์</span>
+                                </div>
                             </div>
                         </div>
                         <div class="member-profile-copy">

@@ -89,9 +89,19 @@ def get_member_profile_image(member_id):
         else:
             image_base64 = None
     if image_base64:
-        template = f'<img src="data:image/jpeg;base64, {image_base64}">'
+        image_src = f'data:image/jpeg;base64, {image_base64}'
     else:
-        template= f'<img src="https://avatar.iran.liara.run/username?username={member.en_fullname}">'
+        image_src = f'https://avatar.iran.liara.run/username?username={member.en_fullname}'
+    template = (
+        '<div class="member-avatar-frame is-loading" data-avatar-frame>'
+        '  <span class="member-avatar-spinner" aria-hidden="true">'
+        '    <i class="fa-solid fa-circle-notch fa-spin"></i>'
+        '  </span>'
+        f'  <img class="is-rounded" src="{image_src}" alt="Member profile image" '
+        '     onload="this.closest(\'[data-avatar-frame]\').classList.remove(\'is-loading\')" '
+        '     onerror="this.closest(\'[data-avatar-frame]\').classList.remove(\'is-loading\')">'
+        '</div>'
+    )
     return template
 
 
