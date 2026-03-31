@@ -54,13 +54,13 @@
 
                     <div class="member-profile">
                         <div class="member-avatar">
-                            <figure class="image is-128x128">
-                                {% if not image_base64 %}
-                                <img class="is-rounded" src="{{ url_for('static', filename='doctor.png') }}">
-                                {% else %}
-                                <img class="is-rounded" src="data:image/jpeg;base64, {{ image_base64 }}">
-                                {% endif %}
-                            </figure>
+                            <div hx-get="{{ url_for('member.get_member_profile_image', member_id=current_user.id) }}"
+                                 hx-trigger="load"
+                                 hx-swap="innerHTML">
+                                <figure class="image is-128x128">
+                                    <img class="is-rounded" src="{{ url_for('static', filename='doctor.png') }}">
+                                </figure>
+                            </div>
                         </div>
                         <div class="member-profile-copy">
                             <h2 class="member-profile-name">{{ current_user.th_fullname }}</h2>

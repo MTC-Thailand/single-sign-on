@@ -79,8 +79,9 @@ def get_member_profile_image(member_id):
     member = Member.query.get(member_id)
     try:
         img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
-                                    params={'license_no': member.license.number})
-    except:
+                                    params={'license_no': member.license.number},
+                                    timeout=(2, 5))
+    except requests.RequestException:
         image_base64 = None
     else:
         if img_response.status_code == 200:
@@ -202,22 +203,7 @@ def logout():
 @member.route('/')
 @login_required
 def index():
-    license = current_user.license
-    try:
-        img_response = requests.get(f'{IMG_BASE_URL}/api/external/getImageUserCouncil',
-                                    params={'license_no': current_user.license.number})
-    except:
-        image_base64 = None
-    else:
-        if img_response.status_code == 200:
-            image_base64 = base64.b64encode(img_response.content).decode('utf-8')
-        else:
-            image_base64 = None
-    valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score)) \
-        .filter(
-        CMTEEventParticipationRecord.license == license,
-        CMTEEventParticipationRecord.score_valid_until == current_user.license.end_date).scalar()
-    return render_template('members/index.html', valid_cmte_scores=valid_cmte_scores, image_base64=image_base64)
+    return render_template('members/index.html')
 
 
 @member.route('/members/licenses')
