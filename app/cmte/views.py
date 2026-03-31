@@ -345,7 +345,39 @@ def add_participants(event_id):
     if form.validate_on_submit():
         score_file = form.upload_file.data
         if score_file:
-            df = pd.read_excel(score_file, sheet_name='Sheet1')
+            try:
+                workbook = pd.ExcelFile(score_file)
+            except Exception:
+                flash('ไม่สามารถเปิดไฟล์ Excel ได้', 'danger')
+                if source == 'admin':
+                    return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
+                return redirect(url_for('cmte.preview_event', event_id=event_id))
+
+            if 'Sheet1' in workbook.sheet_names:
+                sheet_name = 'Sheet1'
+            elif len(workbook.sheet_names) == 1:
+                sheet_name = workbook.sheet_names[0]
+            else:
+                flash(
+                    'ไม่พบชีต Sheet1 และไฟล์มีหลายชีต กรุณาระบุชื่อชีตให้ถูกต้องหรือเหลือเพียงชีตเดียว',
+                    'danger'
+                )
+                if source == 'admin':
+                    return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
+                return redirect(url_for('cmte.preview_event', event_id=event_id))
+
+            df = workbook.parse(sheet_name=sheet_name)
+            required_columns = {'name', 'license_number', 'score'}
+            missing_columns = required_columns.difference(df.columns)
+            if missing_columns:
+                flash(
+                    'ไฟล์ Excel ไม่มีคอลัมน์ที่จำเป็น: {}'.format(', '.join(sorted(missing_columns))),
+                    'danger'
+                )
+                if source == 'admin':
+                    return redirect(url_for('cmte.admin_preview_event', event_id=event_id))
+                return redirect(url_for('cmte.preview_event', event_id=event_id))
+
             for idx, row in df.iterrows():
                 if not pd.isna(row['license_number']):
                     license_number = str(int(row['license_number']))
@@ -2687,7 +2719,7 @@ def admin_confirm_payment(event_id):
     '''
     resp = make_response(template)
     resp.headers['HX-Refresh'] = 'true'
-    return template
+    return resp
 
 
 @cmte.route('/admin/events/management', methods=['GET', 'POST', 'DELETE'])
