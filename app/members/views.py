@@ -97,7 +97,7 @@ def get_member_profile_image(member_id):
         '  <span class="member-avatar-spinner" aria-hidden="true">'
         '    <i class="fa-solid fa-circle-notch fa-spin"></i>'
         '  </span>'
-        f'  <img class="is-rounded" src="{image_src}" alt="Member profile image" '
+        f'  <img src="{image_src}" alt="Member profile image" '
         '     onload="this.closest(\'[data-avatar-frame]\').classList.remove(\'is-loading\')" '
         '     onerror="this.closest(\'[data-avatar-frame]\').classList.remove(\'is-loading\')">'
         '</div>'
