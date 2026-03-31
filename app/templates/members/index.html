@@ -13,7 +13,6 @@
     <div class="member-shell">
         {% include "messages.html" %}
 
-        {% set fee_payment = current_user.license.get_active_cmte_fee_payment() %}
         <div class="member-hero">
             <div class="member-hero-content">
                 <p class="member-kicker">Member Center</p>
@@ -38,7 +37,7 @@
                     </div>
                     <div class="member-stat">
                         <span class="member-stat-label">หน่วยคะแนน CMTE</span>
-                        <span class="member-stat-value">{{ current_user.license.valid_cmte_scores }}</span>
+                        <span class="member-stat-value">{{ valid_cmte_scores }}</span>
                     </div>
                 </div>
             </div>
@@ -109,8 +108,8 @@
                             <td>
                                 <a href="{{ url_for('member.summarize_cmte_scores') }}">
                                     <div class="member-score-box">
-                                        <p class="member-score-value {% if current_user.license.valid_cmte_scores >= 50 %}has-text-success{% endif %}">
-                                            {{ current_user.license.valid_cmte_scores }}
+                                        <p class="member-score-value {% if valid_cmte_scores >= 50 %}has-text-success{% endif %}">
+                                            {{ valid_cmte_scores }}
                                         </p>
                                         <p class="member-score-caption mb-0">กดเพื่อดูสรุปหน่วยคะแนนทั้งหมด</p>
                                     </div>

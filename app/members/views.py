@@ -203,7 +203,16 @@ def logout():
 @member.route('/')
 @login_required
 def index():
-    return render_template('members/index.html')
+    license = current_user.license
+    valid_cmte_scores = db.session.query(func.sum(CMTEEventParticipationRecord.score)) \
+        .filter(
+        CMTEEventParticipationRecord.license == license,
+        CMTEEventParticipationRecord.score_valid_until == license.end_date,
+        CMTEEventParticipationRecord.approved_date != None).scalar() or 0
+    fee_payment = license.get_active_cmte_fee_payment()
+    return render_template('members/index.html',
+                           valid_cmte_scores=valid_cmte_scores,
+                           fee_payment=fee_payment)
 
 
 @member.route('/members/licenses')
