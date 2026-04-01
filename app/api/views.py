@@ -799,6 +799,28 @@ class MemberAddressResource(Resource):
 
 
 class MemberInfo(Resource):
+    PROFILE_FIELD_MAP = {
+        'prefix': 'th_title',
+        'prefixEN': 'en_title',
+        'firstnameTH': 'th_firstname',
+        'lastnameTH': 'th_lastname',
+        'firstnameEN': 'en_firstname',
+        'lastnameEN': 'en_lastname',
+        'gender': 'gender',
+        'idcardnumber': 'pid',
+        'passsport_id': 'passport_id',
+        'birthday': 'dob',
+        'nationality': 'nationality',
+        'telephone_number': 'tel',
+        'email': 'email',
+    }
+    UNSUPPORTED_PROFILE_FIELDS = {
+        'midnameTH',
+        'midnameEN',
+        'ethnicity',
+        'religion',
+    }
+
     @staticmethod
     def _serialize_legacy_address(address):
         if not address:
@@ -1021,6 +1043,113 @@ class MemberInfo(Resource):
 
         data['cmte_score'] = {'total': float(total_score), 'valid': float(valid_score)}
         return {'data': data}
+
+    @jwt_required()
+    def put(self, pin):
+        """
+        Update personal information of a member with matching PIN.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        parameters:
+            -   pin: Personal Identification Number
+                in: path
+                type: string
+                required: true
+            -   in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        profile:
+                            type: object
+        responses:
+            200:
+                description: Member information updated successfully.
+            400:
+                description: Invalid request body or field format.
+            404:
+                description: Member not found.
+            409:
+                description: Requested PID is already used by another member.
+        """
+        if not request.is_json:
+            return {'message': 'JSON body required.'}, HTTPStatus.BAD_REQUEST
+
+        payload = request.get_json(silent=True) or {}
+        profile = payload.get('profile')
+        if not isinstance(profile, dict):
+            return {'message': 'profile object required.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=pin).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        updated_fields = []
+        ignored_fields = []
+
+        for incoming_field, model_field in self.PROFILE_FIELD_MAP.items():
+            if incoming_field not in profile:
+                continue
+
+            value = profile.get(incoming_field)
+            if isinstance(value, str):
+                value = value.strip()
+                if value == '':
+                    value = None
+
+            if incoming_field == 'birthday':
+                if value is None:
+                    setattr(member, model_field, None)
+                    updated_fields.append(model_field)
+                    continue
+                try:
+                    value = datetime.datetime.strptime(value, '%Y-%m-%d').date()
+                except (TypeError, ValueError):
+                    return {'message': 'birthday must be in YYYY-MM-DD format.'}, HTTPStatus.BAD_REQUEST
+
+            if incoming_field == 'idcardnumber':
+                if not value:
+                    return {'message': 'idcardnumber is required.'}, HTTPStatus.BAD_REQUEST
+                existing_member = Member.query.filter_by(pid=value).first()
+                if existing_member and existing_member.id != member.id:
+                    return {'message': 'idcardnumber is already used by another member.'}, HTTPStatus.CONFLICT
+
+            setattr(member, model_field, value)
+            updated_fields.append(model_field)
+
+        for field_name in self.UNSUPPORTED_PROFILE_FIELDS:
+            if field_name in profile:
+                ignored_fields.append(field_name)
+
+        if not updated_fields and not ignored_fields:
+            return {'message': 'No supported profile fields provided.'}, HTTPStatus.BAD_REQUEST
+
+        db.session.add(member)
+        db.session.commit()
+
+        return {
+            'message': 'Member information updated successfully.',
+            'data': {
+                'pid': member.pid,
+                'th_title': member.th_title,
+                'th_firstname': member.th_firstname,
+                'th_lastname': member.th_lastname,
+                'en_title': member.en_title,
+                'en_firstname': member.en_firstname,
+                'en_lastname': member.en_lastname,
+                'gender': member.gender,
+                'passport_id': member.passport_id,
+                'dob': member.dob.isoformat() if member.dob else None,
+                'nationality': member.nationality,
+                'tel': member.tel,
+                'email': member.email,
+            },
+            'updated_fields': updated_fields,
+            'ignored_fields': ignored_fields,
+        }, HTTPStatus.OK
 
 
 class CMTEEventResource(Resource):
