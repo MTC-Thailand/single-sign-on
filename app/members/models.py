@@ -192,6 +192,7 @@ class MemberAddress(db.Model):
     __tablename__ = 'member_addresses'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     street_number = db.Column(db.String(), info={'label': 'บ้านเลขที่'})
+    building = db.Column(db.String(), info={'label': 'อาคาร'})
     alley = db.Column(db.String(), info={'label': 'ซอย'})
     street = db.Column(db.String(), info={'label': 'ถนน'})
     village = db.Column(db.String(), info={'label': 'หมู่'})
@@ -208,4 +209,4 @@ class MemberAddress(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     def __str__(self):
-        return f'{self.street_number} ม.{self.village or " -"} ซอย{self.alley or " -"} ถนน{self.street or " -"} ตำบล{self.district or " -"} อำเภอ{self.city or " -"} จังหวัด{self.province or " -"} รหัสไปรษณีย์{self.zipcode or " -"}'
+        return f'{self.building or " -"} {self.street_number} ม.{self.village or " -"} ซอย{self.alley or " -"} ถนน{self.street or " -"} ตำบล{self.district or " -"} อำเภอ{self.city or " -"} จังหวัด{self.province or " -"} รหัสไปรษณีย์{self.zipcode or " -"}'

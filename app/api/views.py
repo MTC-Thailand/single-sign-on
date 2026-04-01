@@ -575,6 +575,7 @@ class MemberAddressResource(Resource):
     }
     ADDRESS_FIELD_ALIASES = {
         'street_number': ('street_number', 'add1'),
+        'building': ('building',),
         'alley': ('alley', 'soi'),
         'street': ('street', 'road'),
         'village': ('village', 'moo'),
@@ -582,6 +583,30 @@ class MemberAddressResource(Resource):
         'city': ('city', 'AMPHUR_NAME'),
         'province': ('province', 'PROVINCE_NAME'),
         'zipcode': ('zipcode',),
+    }
+    BULK_ADDRESS_TYPE_MAP = {
+        'now': 1,
+        'contact': 2,
+        'regis': 3,
+        'send_document': 1,
+    }
+    BULK_ADDRESS_FIELD_MAP = {
+        'street_number': 'no',
+        'building': 'building',
+        'village': 'moo',
+        'street': 'road',
+        'alley': 'soi',
+        'province': 'province',
+        'city': 'amphures',
+        'district': 'tambons',
+        'zipcode': 'zipcode',
+    }
+    BULK_IGNORED_FIELDS = {
+        'idcardnumber',
+        'address_id',
+        'member_id',
+        'check_address_now',
+        'send_documents_address',
     }
 
     @classmethod
@@ -598,6 +623,7 @@ class MemberAddressResource(Resource):
             'id': address.id,
             'address_type': cls.ADDRESS_TYPE_LABELS.get(address.address_type, address.address_type),
             'street_number': address.street_number,
+            'building': address.building,
             'alley': address.alley,
             'street': address.street,
             'village': address.village,
@@ -607,6 +633,90 @@ class MemberAddressResource(Resource):
             'zipcode': str(address.zipcode) if address.zipcode is not None else None,
             'updated_at': address.updated_at.isoformat() if address.updated_at else None,
         }
+
+    @staticmethod
+    def _normalize_address_value(field_name, value):
+        if field_name == 'zipcode':
+            if value in (None, ''):
+                return None
+            try:
+                return int(str(value).strip())
+            except (TypeError, ValueError):
+                raise ValueError('zipcode must be numeric.')
+
+        normalized_value = value.strip() if isinstance(value, str) else value
+        if normalized_value == '':
+            return None
+        return normalized_value
+
+    @classmethod
+    def _update_address_from_payload(cls, address, payload):
+        updated_fields = 0
+        for field_name, aliases in cls.ADDRESS_FIELD_ALIASES.items():
+            for alias in aliases:
+                if alias not in payload:
+                    continue
+
+                normalized_value = cls._normalize_address_value(field_name, payload.get(alias))
+                setattr(address, field_name, normalized_value)
+                updated_fields += 1
+                break
+        return updated_fields
+
+    @classmethod
+    def _upsert_member_address(cls, member, address_type, payload):
+        address = MemberAddress.query.filter_by(member=member, address_type=address_type).first()
+        created = address is None
+        if created:
+            address = MemberAddress(member=member, address_type=address_type)
+            db.session.add(address)
+
+        updated_fields = cls._update_address_from_payload(address, payload)
+        return address, created, updated_fields
+
+    @classmethod
+    def _extract_bulk_address_payloads(cls, payload):
+        address_entries = payload.get('address')
+        if not isinstance(address_entries, list) or not address_entries:
+            return None, {'message': 'address must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        address_data = address_entries[0]
+        if not isinstance(address_data, dict):
+            return None, {'message': 'address items must be objects.'}, HTTPStatus.BAD_REQUEST
+
+        bulk_payloads = {}
+        ignored_fields = []
+
+        for raw_field, value in address_data.items():
+            matched = False
+            for suffix, address_type in cls.BULK_ADDRESS_TYPE_MAP.items():
+                suffix_token = f'_{suffix}'
+                if not raw_field.endswith(suffix_token):
+                    continue
+
+                base_name = raw_field[:-len(suffix_token)]
+                target_field = cls.BULK_ADDRESS_FIELD_MAP.get(base_name)
+                if target_field is None:
+                    ignored_fields.append(raw_field)
+                    matched = True
+                    break
+
+                bulk_payloads.setdefault(address_type, {})[target_field] = value
+                matched = True
+                break
+
+            if matched:
+                continue
+
+            if raw_field in cls.BULK_IGNORED_FIELDS:
+                ignored_fields.append(raw_field)
+            else:
+                ignored_fields.append(raw_field)
+
+        return {
+            'bulk_payloads': bulk_payloads,
+            'ignored_fields': sorted(set(ignored_fields)),
+        }, None, None
 
     @jwt_required()
     def put(self, pin):
@@ -755,46 +865,53 @@ class MemberAddressResource(Resource):
         if not payload:
             return {'message': 'JSON body required.'}, HTTPStatus.BAD_REQUEST
 
+        if isinstance(payload.get('address'), list):
+            parsed_payload, error_body, error_status = self._extract_bulk_address_payloads(payload)
+            if error_body:
+                return error_body, error_status
+
+            bulk_payloads = parsed_payload['bulk_payloads']
+            ignored_fields = parsed_payload['ignored_fields']
+            if not bulk_payloads:
+                return {'message': 'No supported address fields provided.'}, HTTPStatus.BAD_REQUEST
+
+            results = []
+            created_any = False
+            try:
+                for address_type, address_payload in bulk_payloads.items():
+                    address, created, updated_fields = self._upsert_member_address(member, address_type, address_payload)
+                    if updated_fields == 0:
+                        continue
+                    results.append(self._serialize_address(address))
+                    created_any = created_any or created
+            except ValueError as exc:
+                return {'message': str(exc)}, HTTPStatus.BAD_REQUEST
+
+            if not results:
+                return {'message': 'No supported address fields provided.'}, HTTPStatus.BAD_REQUEST
+
+            db.session.commit()
+            status = HTTPStatus.CREATED if created_any else HTTPStatus.OK
+            return {
+                'data': results,
+                'ignored_fields': ignored_fields,
+            }, status
+
         address_payload = payload.get('address') if isinstance(payload.get('address'), dict) else payload
         address_type = self._parse_address_type(payload.get('address_type') or address_payload.get('address_type'))
         if address_type is None:
             return {'message': 'address_type must be one of "mailing", "work", or "home".'}, HTTPStatus.BAD_REQUEST
 
-        address = MemberAddress.query.filter_by(member=member, address_type=address_type).first()
-        created = address is None
-        if created:
-            address = MemberAddress(member=member, address_type=address_type)
-            db.session.add(address)
-
-        updated_fields = 0
-        for field_name, aliases in self.ADDRESS_FIELD_ALIASES.items():
-            for alias in aliases:
-                if alias not in address_payload:
-                    continue
-
-                value = address_payload.get(alias)
-                if field_name == 'zipcode':
-                    if value in (None, ''):
-                        normalized_value = None
-                    else:
-                        try:
-                            normalized_value = int(str(value).strip())
-                        except (TypeError, ValueError):
-                            return {'message': 'zipcode must be numeric.'}, HTTPStatus.BAD_REQUEST
-                else:
-                    normalized_value = value.strip() if isinstance(value, str) else value
-                    if normalized_value == '':
-                        normalized_value = None
-
-                setattr(address, field_name, normalized_value)
-                updated_fields += 1
-                break
+        try:
+            address, created, updated_fields = self._upsert_member_address(member, address_type, address_payload)
+        except ValueError as exc:
+            return {'message': str(exc)}, HTTPStatus.BAD_REQUEST
 
         if updated_fields == 0:
             return {'message': 'No address fields provided.'}, HTTPStatus.BAD_REQUEST
 
-            db.session.commit()
-            status = HTTPStatus.CREATED if created else HTTPStatus.OK
+        db.session.commit()
+        status = HTTPStatus.CREATED if created else HTTPStatus.OK
         return {'data': self._serialize_address(address)}, status
 
 
