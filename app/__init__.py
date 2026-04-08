@@ -109,6 +109,8 @@ def create_app():
                                CMTEScore,
                                MemberAddressResource,
                                MemberInfo,
+                               MemberLicenseRegistrationResource,
+                               MemberRegistrationResource,
                                MemberPID,
                                MemberPIDPhoneNumber,
                                MemberLicense,
@@ -121,6 +123,8 @@ def create_app():
     api.add_resource(CMTEScore, '/members/<string:lic_id>/cmte/scores')
     api.add_resource(MemberPID, '/members/pids/<string:pid>')
     api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')
+    api.add_resource(MemberLicenseRegistrationResource, '/members/licenses/registration')
+    api.add_resource(MemberRegistrationResource, '/members/registration')
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
     api.add_resource(MemberAddressResource, '/members/<string:pin>/addresses')
     api.add_resource(RefreshToken, '/auth/refresh')

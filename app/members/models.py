@@ -2,6 +2,7 @@ from datetime import date
 
 from flask_login import UserMixin
 from sqlalchemy import func
+from sqlalchemy.engine import default
 
 from app import db
 
@@ -27,7 +28,7 @@ class Member(db.Model, UserMixin):
     tel = db.Column(db.String(), info={'label': 'โทรศัพท์'})
     username = db.Column(db.String())
     password = db.Column(db.String())
-    status = db.Column(db.String(), info={'label': 'สถานะ',
+    status = db.Column(db.String(), default='ปกติ', info={'label': 'สถานะ',
                                           'choices': [(c, c) for c in ('ปกติ', 'ลาออก', 'พ้นสมาชิกภาพ', 'ตาย')]})
     end_date = db.Column(db.Date(), info={'label': 'วันสิ้นอายุสมาชิกภาพ'})
     begin_date = db.Column(db.Date(), info={'label': 'วันเริ่มต้นสมาชิกภาพ'})

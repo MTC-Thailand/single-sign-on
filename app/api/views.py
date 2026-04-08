@@ -2,6 +2,7 @@ import os
 import datetime
 import arrow
 from http import HTTPStatus
+from dateutil.relativedelta import relativedelta
 
 import requests
 from flask import jsonify, request
@@ -13,7 +14,7 @@ from flask_restful import Resource
 from werkzeug.security import check_password_hash
 
 from app import db
-from app.members.models import Member, License, MemberAddress
+from app.members.models import Member, License, MemberAddress, LicenseRenewal
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
 
 
@@ -560,6 +561,326 @@ class MemberLicense(Resource):
             }
             return jsonify(data=data)
         return jsonify(data=None), 404
+
+
+class MemberLicenseRegistrationResource(Resource):
+    REQUIRED_FIELDS = ('member_id_txt', 'member_idpeople', 'member_license', 'groupdate')
+    IGNORED_FIELDS = {
+        'member_name',
+        'member_midname',
+        'member_surname',
+        'group_id',
+        'prefix',
+    }
+
+    @staticmethod
+    def _normalize_value(value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @staticmethod
+    def _parse_group_date(raw_value):
+        try:
+            return datetime.datetime.strptime(raw_value, '%Y-%m-%d %H:%M:%S').date()
+        except (TypeError, ValueError):
+            raise ValueError('groupdate must be in YYYY-MM-DD HH:MM:SS format.')
+
+    @staticmethod
+    def _apply_license_registration(member_id, license_number, group_date, status='ปกติ'):
+        latest_license = License.query.filter_by(member_id=member_id) \
+            .order_by(License.end_date.desc()).first()
+        end_date = group_date + relativedelta(years=5, days=-1) if group_date else None
+
+        if latest_license and group_date:
+            renewal = LicenseRenewal.query.filter_by(
+                license=latest_license,
+                start_date=group_date,
+            ).first()
+            if not renewal:
+                renewal = LicenseRenewal(license=latest_license)
+            renewal.issue_date = group_date
+            renewal.start_date = group_date
+            renewal.end_date = end_date
+            db.session.add(renewal)
+
+            if latest_license.end_date and group_date > latest_license.end_date:
+                latest_license.number = license_number
+                latest_license.issue_date = group_date
+                latest_license.start_date = group_date
+                latest_license.end_date = end_date
+                latest_license.status = status
+                db.session.add(latest_license)
+            return latest_license
+
+        if not latest_license:
+            latest_license = License(member_id=member_id, number=license_number)
+
+        latest_license.number = license_number
+        latest_license.issue_date = group_date
+        latest_license.start_date = group_date
+        latest_license.end_date = end_date
+        latest_license.status = status
+        db.session.add(latest_license)
+        return latest_license
+
+    @staticmethod
+    def _serialize_license(license):
+        return {
+            'id': license.id,
+            'number': license.number,
+            'member_id': license.member_id,
+            'issue_date': license.issue_date.isoformat() if license.issue_date else None,
+            'start_date': license.start_date.isoformat() if license.start_date else None,
+            'end_date': license.end_date.isoformat() if license.end_date else None,
+            'status': license.status,
+        }
+
+    @jwt_required()
+    def post(self):
+        """
+        Bulk create or update member licenses from a registration payload.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Licenses processed successfully
+            400:
+                description: Invalid request payload
+        """
+        payload = request.get_json(silent=True) or {}
+        users = payload.get('user')
+        if not isinstance(users, list) or not users:
+            return {'message': 'user must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        processed_licenses = []
+        skipped_licenses = []
+
+        for index, user in enumerate(users):
+            if not isinstance(user, dict):
+                return {'message': f'user[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            normalized_user = {
+                field_name: self._normalize_value(user.get(field_name))
+                for field_name in ('member_id_txt', 'member_idpeople', 'member_license', 'groupdate', 'status')
+            }
+
+            missing_fields = [
+                field_name for field_name in self.REQUIRED_FIELDS
+                if normalized_user.get(field_name) is None
+            ]
+            if missing_fields:
+                return {
+                    'message': f'user[{index}] is missing required fields: {", ".join(missing_fields)}.'
+                }, HTTPStatus.BAD_REQUEST
+
+            incoming_status = (normalized_user.get('status') or '').lower()
+            if incoming_status and incoming_status != 'approve':
+                skipped_licenses.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'member_license': normalized_user['member_license'],
+                    'reason': 'status is not approve.',
+                })
+                continue
+
+            try:
+                group_date = self._parse_group_date(normalized_user['groupdate'])
+            except ValueError as exc:
+                return {'message': f'user[{index}] {exc}'}, HTTPStatus.BAD_REQUEST
+
+            member = Member.query.filter_by(pid=normalized_user['member_idpeople']).first()
+            if member is None:
+                member = Member.query.filter_by(number=normalized_user['member_id_txt']).first()
+
+            if member is None:
+                skipped_licenses.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'member_license': normalized_user['member_license'],
+                    'reason': 'member not found.',
+                })
+                continue
+
+            license = self._apply_license_registration(
+                member_id=member.id,
+                license_number=normalized_user['member_license'],
+                group_date=group_date,
+                status='ปกติ',
+            )
+            processed_licenses.append({
+                'index': index,
+                'member': {
+                    'id': member.id,
+                    'number': member.number,
+                    'pid': member.pid,
+                },
+                'license': self._serialize_license(license),
+                'ignored_fields': sorted(field for field in user.keys() if field in self.IGNORED_FIELDS),
+            })
+
+        if not processed_licenses and skipped_licenses:
+            return {
+                'message': 'No licenses were processed.',
+                'processed_count': 0,
+                'skipped_count': len(skipped_licenses),
+                'skipped': skipped_licenses,
+            }, HTTPStatus.OK
+
+        db.session.commit()
+
+        return {
+            'message': 'Member license registration processed.',
+            'processed_count': len(processed_licenses),
+            'skipped_count': len(skipped_licenses),
+            'data': processed_licenses,
+            'skipped': skipped_licenses,
+        }, HTTPStatus.OK
+
+
+class MemberRegistrationResource(Resource):
+    BEGIN_DATE_REQUIRED_FIELDS = ('member_id_txt', 'member_idpeople', 'groupdate')
+    BEGIN_DATE_IGNORED_FIELDS = {
+        'prefix',
+        'member_name',
+        'member_midname',
+        'member_surname',
+        'group_id',
+    }
+
+    @classmethod
+    def _normalize_value(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @classmethod
+    def _serialize_member(cls, member):
+        return {
+            'id': member.id,
+            'number': member.number,
+            'pid': member.pid,
+            'th_title': member.th_title,
+            'th_firstname': member.th_firstname,
+            'th_lastname': member.th_lastname,
+            'status': member.status,
+            'begin_date': member.begin_date.isoformat() if member.begin_date else None,
+        }
+
+    @staticmethod
+    def _parse_begin_date(raw_value):
+        try:
+            return datetime.datetime.strptime(raw_value, '%Y-%m-%d %H:%M:%S').date()
+        except (TypeError, ValueError):
+            raise ValueError('groupdate must be in YYYY-MM-DD HH:MM:SS format.')
+
+    @jwt_required()
+    def put(self):
+        """
+        Bulk update member begin_date from a member payload.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Members updated successfully
+            400:
+                description: Invalid request payload
+        """
+        payload = request.get_json(silent=True) or {}
+        users = payload.get('user')
+        if not isinstance(users, list) or not users:
+            return {'message': 'user must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        updated_members = []
+        skipped_members = []
+
+        for index, user in enumerate(users):
+            if not isinstance(user, dict):
+                return {'message': f'user[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            normalized_user = {
+                field_name: self._normalize_value(user.get(field_name))
+                for field_name in ('member_id_txt', 'member_idpeople', 'groupdate', 'status')
+            }
+
+            missing_fields = [
+                field_name for field_name in self.BEGIN_DATE_REQUIRED_FIELDS
+                if normalized_user.get(field_name) is None
+            ]
+            if missing_fields:
+                return {
+                    'message': f'user[{index}] is missing required fields: {", ".join(missing_fields)}.'
+                }, HTTPStatus.BAD_REQUEST
+
+            incoming_status = (normalized_user.get('status') or '').lower()
+            if incoming_status and incoming_status != 'approve':
+                skipped_members.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'reason': 'status is not approve.',
+                })
+                continue
+
+            try:
+                begin_date = self._parse_begin_date(normalized_user['groupdate'])
+            except ValueError as exc:
+                return {'message': f'user[{index}] {exc}'}, HTTPStatus.BAD_REQUEST
+
+            member = Member.query.filter_by(pid=normalized_user['member_idpeople']).first()
+            if member is None:
+                member = Member.query.filter_by(number=normalized_user['member_id_txt']).first()
+
+            if member is None:
+                skipped_members.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'reason': 'member not found.',
+                })
+                continue
+
+            member.begin_date = begin_date
+            db.session.add(member)
+            updated_members.append({
+                'index': index,
+                'member': self._serialize_member(member),
+                'ignored_fields': sorted(field for field in user.keys() if field in self.BEGIN_DATE_IGNORED_FIELDS),
+            })
+
+        if not updated_members and skipped_members:
+            return {
+                'message': 'No members were updated.',
+                'updated_count': 0,
+                'skipped_count': len(skipped_members),
+                'skipped': skipped_members,
+            }, HTTPStatus.OK
+
+        db.session.commit()
+
+        return {
+            'message': 'Member begin_date update processed.',
+            'updated_count': len(updated_members),
+            'skipped_count': len(skipped_members),
+            'data': updated_members,
+            'skipped': skipped_members,
+        }, HTTPStatus.OK
 
 
 class MemberAddressResource(Resource):
