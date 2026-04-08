@@ -930,6 +930,15 @@ class MemberAddressResource(Resource):
         'send_documents_address',
     }
 
+    @staticmethod
+    def _resolve_member(pin, payload):
+        member_pin = pin
+        if member_pin is None and isinstance(payload, dict):
+            member_pin = payload.get('idcardnumber')
+        if member_pin is None:
+            return None
+        return Member.query.filter_by(pid=str(member_pin).strip()).first()
+
     @classmethod
     def _parse_address_type(cls, raw_value):
         if raw_value is None:
@@ -1040,7 +1049,7 @@ class MemberAddressResource(Resource):
         }, None, None
 
     @jwt_required()
-    def put(self, pin):
+    def put(self, pin=None):
         """
         Create or update a member mailing, work, or home address.
         ---
@@ -1178,13 +1187,13 @@ class MemberAddressResource(Resource):
             404:
                 description: Member not found
         """
-        member = Member.query.filter_by(pid=pin).first()
-        if not member:
-            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
-
         payload = request.get_json(silent=True) or {}
         if not payload:
             return {'message': 'JSON body required.'}, HTTPStatus.BAD_REQUEST
+
+        member = self._resolve_member(pin, payload)
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
 
         if isinstance(payload.get('address'), list):
             parsed_payload, error_body, error_status = self._extract_bulk_address_payloads(payload)
@@ -1196,6 +1205,32 @@ class MemberAddressResource(Resource):
             if not bulk_payloads:
                 return {'message': 'No supported address fields provided.'}, HTTPStatus.BAD_REQUEST
 
+            results = []
+            created_any = False
+            try:
+                for address_type, address_payload in bulk_payloads.items():
+                    address, created, updated_fields = self._upsert_member_address(member, address_type, address_payload)
+                    if updated_fields == 0:
+                        continue
+                    results.append(self._serialize_address(address))
+                    created_any = created_any or created
+            except ValueError as exc:
+                return {'message': str(exc)}, HTTPStatus.BAD_REQUEST
+
+            if not results:
+                return {'message': 'No supported address fields provided.'}, HTTPStatus.BAD_REQUEST
+
+            db.session.commit()
+            status = HTTPStatus.CREATED if created_any else HTTPStatus.OK
+            return {
+                'data': results,
+                'ignored_fields': ignored_fields,
+            }, status
+
+        flat_bulk_payload, _, _ = self._extract_bulk_address_payloads({'address': [payload]})
+        bulk_payloads = flat_bulk_payload['bulk_payloads']
+        ignored_fields = flat_bulk_payload['ignored_fields']
+        if bulk_payloads:
             results = []
             created_any = False
             try:
