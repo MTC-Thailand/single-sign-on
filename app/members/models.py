@@ -211,3 +211,15 @@ class MemberAddress(db.Model):
 
     def __str__(self):
         return f'{self.building or " -"} {self.street_number} ม.{self.village or " -"} ซอย{self.alley or " -"} ถนน{self.street or " -"} ตำบล{self.district or " -"} อำเภอ{self.city or " -"} จังหวัด{self.province or " -"} รหัสไปรษณีย์{self.zipcode or " -"}'
+
+
+class MemberEducationRecord(db.Model):
+    __tablename__ = 'member_education_records'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    education_id = db.Column(db.String(), unique=True, info={'label': 'External Education ID'})
+    degree_level = db.Column(db.String(), info={'label': 'ระดับการศึกษา'})
+    degree_name = db.Column(db.String(), info={'label': 'ชื่อปริญญา'})
+    institution = db.Column(db.String(), info={'label': 'สถาบันการศึกษา'})
+    graduate_year = db.Column(db.Integer(), info={'label': 'ปีที่จบ'})
+    member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
+    member = db.relationship(Member, backref=db.backref('education_records',))

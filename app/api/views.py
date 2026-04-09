@@ -14,7 +14,7 @@ from flask_restful import Resource
 from werkzeug.security import check_password_hash
 
 from app import db
-from app.members.models import Member, License, MemberAddress, LicenseRenewal
+from app.members.models import Member, License, MemberAddress, LicenseRenewal, MemberEducationRecord
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
 
 
@@ -1269,6 +1269,134 @@ class MemberAddressResource(Resource):
         db.session.commit()
         status = HTTPStatus.CREATED if created else HTTPStatus.OK
         return {'data': self._serialize_address(address)}, status
+
+
+class MemberEducationResource(Resource):
+    EDUCATION_FIELD_MAP = {
+        'educational_degree': 'degree_name',
+        'educational_name': 'institution',
+        'graduate_year': 'graduate_year',
+    }
+    IGNORED_FIELDS = {'member_id', 'id'}
+    DEFAULT_DEGREE_LEVEL = 'ปริญญาตรี'
+
+    @staticmethod
+    def _serialize_education(record):
+        return {
+            'id': record.id,
+            'education_id': record.education_id,
+            'member_id': record.member_id,
+            'degree_level': record.degree_level,
+            'degree_name': record.degree_name,
+            'institution': record.institution,
+            'graduate_year': record.graduate_year,
+        }
+
+    @staticmethod
+    def _normalize_value(value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @classmethod
+    def _normalize_graduate_year(cls, value):
+        value = cls._normalize_value(value)
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            raise ValueError('graduate_year must be numeric.')
+
+    @jwt_required()
+    def put(self):
+        """
+        Create or update member education records by idcardnumber.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Education records processed successfully
+            400:
+                description: Invalid request payload
+            404:
+                description: Member not found
+        """
+        payload = request.get_json(silent=True) or {}
+        idcardnumber = self._normalize_value(payload.get('idcardnumber'))
+        education_items = payload.get('education')
+
+        if idcardnumber is None:
+            return {'message': 'idcardnumber is required.'}, HTTPStatus.BAD_REQUEST
+        if not isinstance(education_items, list) or not education_items:
+            return {'message': 'education must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        processed_records = []
+
+        for index, item in enumerate(education_items):
+            if not isinstance(item, dict):
+                return {'message': f'education[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            education_id = self._normalize_value(item.get('education_id'))
+            if education_id is not None:
+                record = MemberEducationRecord.query.filter_by(education_id=education_id).first()
+                if record is not None and record.member_id != member.id:
+                    return {
+                        'message': f'education[{index}].education_id already belongs to another member.'
+                    }, HTTPStatus.BAD_REQUEST
+                if record is None:
+                    record = MemberEducationRecord(member=member, education_id=education_id)
+                    db.session.add(record)
+                    created = True
+                else:
+                    created = False
+            else:
+                record = MemberEducationRecord(member=member)
+                db.session.add(record)
+                created = True
+
+            degree_name = self._normalize_value(item.get('educational_degree'))
+            institution = self._normalize_value(item.get('educational_name'))
+            if degree_name is None or institution is None:
+                return {
+                    'message': f'education[{index}] requires educational_degree and educational_name.'
+                }, HTTPStatus.BAD_REQUEST
+
+            record.degree_level = self.DEFAULT_DEGREE_LEVEL
+            record.education_id = education_id
+            record.institution = institution
+            record.degree_name = degree_name
+            try:
+                record.graduate_year = self._normalize_graduate_year(item.get('graduate_year'))
+            except ValueError as exc:
+                return {'message': f'education[{index}] {exc}'}, HTTPStatus.BAD_REQUEST
+
+            db.session.add(record)
+            processed_records.append({
+                'index': index,
+                'created': created,
+                'education': self._serialize_education(record),
+                'ignored_fields': sorted(field for field in item.keys() if field in self.IGNORED_FIELDS),
+            })
+
+        db.session.commit()
+
+        return {
+            'message': 'Member education records processed.',
+            'processed_count': len(processed_records),
+            'data': processed_records,
+        }, HTTPStatus.OK
 
 
 class MemberInfo(Resource):

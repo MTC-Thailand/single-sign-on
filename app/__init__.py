@@ -108,6 +108,7 @@ def create_app():
     from app.api.views import (Login,
                                CMTEScore,
                                MemberAddressResource,
+                               MemberEducationResource,
                                MemberInfo,
                                MemberLicenseRegistrationResource,
                                MemberRegistrationResource,
@@ -125,6 +126,7 @@ def create_app():
     api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')
     api.add_resource(MemberLicenseRegistrationResource, '/members/licenses/registration')
     api.add_resource(MemberRegistrationResource, '/members/registration')
+    api.add_resource(MemberEducationResource, '/members/education')
     api.add_resource(MemberInfo, '/members/<string:pin>/info')
     api.add_resource(MemberAddressResource, '/members/<string:pin>/addresses')
     api.add_resource(RefreshToken, '/auth/refresh')
