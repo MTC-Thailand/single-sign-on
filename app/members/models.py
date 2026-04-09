@@ -223,3 +223,22 @@ class MemberEducationRecord(db.Model):
     graduate_year = db.Column(db.Integer(), info={'label': 'ปีที่จบ'})
     member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
     member = db.relationship(Member, backref=db.backref('education_records',))
+
+
+class MemberExpertise(db.Model):
+    __tablename__ = 'member_expertise'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    expertise = db.Column(db.String(), info={'label': 'ความเชี่ยวชาญ'})
+    member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
+    member = db.relationship(Member, backref=db.backref('expertise_records', cascade='all, delete-orphan'))
+
+
+class MemberCertificate(db.Model):
+    __tablename__ = 'member_certificates'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    certificate_name = db.Column(db.String(), info={'label': 'ชื่อประกาศนียบัตร'})
+    certificate_detail = db.Column(db.String(), info={'label': 'รายละเอียดประกาศนียบัตร'})
+    issued_date = db.Column(db.Date(), info={'label': 'วันที่ออก'})
+    mtc_issued_date = db.Column(db.Date(), info={'label': 'วันที่ออกโดยสภาเทคนิคการแพทย์'})
+    member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
+    member = db.relationship(Member, backref=db.backref('certificate_records', cascade='all, delete-orphan'))

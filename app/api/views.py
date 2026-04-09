@@ -14,7 +14,7 @@ from flask_restful import Resource
 from werkzeug.security import check_password_hash
 
 from app import db
-from app.members.models import Member, License, MemberAddress, LicenseRenewal, MemberEducationRecord
+from app.members.models import Member, License, MemberAddress, LicenseRenewal, MemberEducationRecord, MemberExpertise
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
 
 
@@ -1394,6 +1394,86 @@ class MemberEducationResource(Resource):
 
         return {
             'message': 'Member education records processed.',
+            'processed_count': len(processed_records),
+            'data': processed_records,
+        }, HTTPStatus.OK
+
+
+class MemberExpertiseResource(Resource):
+    IGNORED_FIELDS = {'member_id', 'type_expertise'}
+
+    @staticmethod
+    def _normalize_value(value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @staticmethod
+    def _serialize_expertise(record):
+        return {
+            'id': record.id,
+            'member_id': record.member_id,
+            'expertise': record.expertise,
+        }
+
+    @jwt_required()
+    def put(self):
+        """
+        Replace member expertise records by idcardnumber.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Expertise records processed successfully
+            400:
+                description: Invalid request payload
+            404:
+                description: Member not found
+        """
+        payload = request.get_json(silent=True) or {}
+        idcardnumber = self._normalize_value(payload.get('idcardnumber'))
+        expertise_items = payload.get('expertise')
+
+        if idcardnumber is None:
+            return {'message': 'idcardnumber is required.'}, HTTPStatus.BAD_REQUEST
+        if not isinstance(expertise_items, list):
+            return {'message': 'expertise must be a list.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        for record in member.expertise_records:
+            db.session.delete(record)
+
+        processed_records = []
+        for index, item in enumerate(expertise_items):
+            if not isinstance(item, dict):
+                return {'message': f'expertise[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            expertise_name = self._normalize_value(item.get('expertise_name'))
+            if expertise_name is None:
+                return {'message': f'expertise[{index}] requires expertise_name.'}, HTTPStatus.BAD_REQUEST
+
+            record = MemberExpertise(member=member, expertise=expertise_name)
+            db.session.add(record)
+            processed_records.append({
+                'index': index,
+                'expertise': self._serialize_expertise(record),
+                'ignored_fields': sorted(field for field in item.keys() if field in self.IGNORED_FIELDS),
+            })
+
+        db.session.commit()
+
+        return {
+            'message': 'Member expertise records processed.',
             'processed_count': len(processed_records),
             'data': processed_records,
         }, HTTPStatus.OK
