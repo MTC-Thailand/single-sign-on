@@ -238,6 +238,7 @@ class MemberCertificate(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     certificate_name = db.Column(db.String(), info={'label': 'ชื่อประกาศนียบัตร'})
     certificate_detail = db.Column(db.String(), info={'label': 'รายละเอียดประกาศนียบัตร'})
+    issuer = db.Column(db.String(), info={'label': 'หน่วยงานผู้ออก'})
     issued_date = db.Column(db.Date(), info={'label': 'วันที่ออก'})
     mtc_issued_date = db.Column(db.Date(), info={'label': 'วันที่ออกโดยสภาเทคนิคการแพทย์'})
     member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))

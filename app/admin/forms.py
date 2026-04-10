@@ -4,7 +4,7 @@ from wtforms_alchemy import model_form_factory, ModelFormField
 
 from app import db
 from app.members.forms import MemberAddressForm
-from app.members.models import Member, License, MemberAddress
+from app.members.models import Member, License, MemberAddress, MemberCertificate
 
 BaseModelForm = model_form_factory(FlaskForm)
 
@@ -20,6 +20,12 @@ class LicenseAdminForm(ModelForm):
         model = License
         date_format = '%d/%m/%Y'
         unique_validator = None
+
+
+class MemberCertificateAdminForm(ModelForm):
+    class Meta:
+        model = MemberCertificate
+        date_format = '%d/%m/%Y'
 
 
 class MemberInfoAdminForm(ModelForm):

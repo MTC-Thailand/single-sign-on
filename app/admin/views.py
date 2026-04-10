@@ -9,10 +9,10 @@ from sqlalchemy import or_
 
 from app import db, admin_permission
 from app.admin import webadmin
-from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm
+from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm, MemberCertificateAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
 from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm, LicenseRenewalForm
-from app.members.models import License, LicenseRenewal, Member, MemberAddress
+from app.members.models import License, LicenseRenewal, Member, MemberAddress, MemberCertificate
 
 
 def _parse_excel_date(value):
@@ -384,6 +384,74 @@ def edit_license(member_id, license_action):
                            license_action=license_action,
                            member_id=member_id,
                            form=form)
+
+
+@webadmin.route('/members/<int:member_id>/certificates/new', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def create_member_certificate(member_id):
+    member = Member.query.get(member_id)
+    if not member:
+        abort(404)
+
+    certificate = MemberCertificate(member=member)
+    form = MemberCertificateAdminForm(obj=certificate)
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(certificate)
+            certificate.member = member
+            db.session.add(certificate)
+            db.session.commit()
+            flash('เพิ่มประกาศนียบัตรเรียบร้อย', 'success')
+            resp = make_response()
+            resp.headers['HX-Refresh'] = 'true'
+            return resp
+        else:
+            print(form.errors)
+
+    return render_template(
+        'webadmin/certificate_form.html',
+        member=member,
+        member_id=member_id,
+        form=form,
+        form_action=url_for('webadmin.create_member_certificate', member_id=member_id),
+        modal_title='New Certificate',
+    )
+
+
+@webadmin.route('/members/<int:member_id>/certificates/<int:certificate_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def edit_member_certificate(member_id, certificate_id):
+    member = Member.query.get(member_id)
+    certificate = MemberCertificate.query.get(certificate_id)
+    if not member or not certificate or certificate.member_id != member.id:
+        abort(404)
+
+    form = MemberCertificateAdminForm(obj=certificate)
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(certificate)
+            certificate.member = member
+            db.session.add(certificate)
+            db.session.commit()
+            flash('แก้ไขประกาศนียบัตรเรียบร้อย', 'success')
+            resp = make_response()
+            resp.headers['HX-Refresh'] = 'true'
+            return resp
+        else:
+            print(form.errors)
+
+    return render_template(
+        'webadmin/certificate_form.html',
+        member=member,
+        member_id=member_id,
+        form=form,
+        form_action=url_for('webadmin.edit_member_certificate', member_id=member_id, certificate_id=certificate_id),
+        modal_title='Edit Certificate',
+    )
 
 
 @webadmin.route('/members/<int:member_id>/renewals', methods=['GET'])

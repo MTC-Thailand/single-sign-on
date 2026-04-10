@@ -140,6 +140,48 @@
                         </tr>
                     </table>
                 </div>
+
+                {% set mtc_certificates = current_user.certificate_records | selectattr('mtc_issued_date') | list %}
+                <div class="member-card">
+                    <p class="member-card-title">
+                        <span class="icon has-text-link"><i class="fa-solid fa-award"></i></span>
+                        <span>ประกาศนียบัตรจากสภาเทคนิคการแพทย์</span>
+                    </p>
+
+                    {% if mtc_certificates %}
+                    <div class="content">
+                        {% for certificate in mtc_certificates %}
+                        <div class="{% if not loop.first %}mt-4 pt-4{% endif %}" {% if not loop.first %}style="border-top: 1px solid rgba(22, 50, 79, 0.08);" {% endif %}>
+                            <p class="mb-1"><strong>{{ certificate.certificate_name or 'ไม่ระบุชื่อประกาศนียบัตร' }}</strong></p>
+                            <p class="has-text-grey mb-1">{{ certificate.certificate_detail or '-' }}</p>
+                            <p class="mb-1">หน่วยงานผู้ออก: {{ certificate.issuer or '-' }}</p>
+                            <p class="mb-0">วันที่ออกโดยสภาเทคนิคการแพทย์: {{ certificate.mtc_issued_date|localdate }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="has-text-grey">ยังไม่มีประกาศนียบัตรที่ออกโดยสภาเทคนิคการแพทย์</p>
+                    {% endif %}
+                </div>
+
+                <div class="member-card">
+                    <p class="member-card-title">
+                        <span class="icon has-text-link"><i class="fa-solid fa-brain"></i></span>
+                        <span>ความเชี่ยวชาญ</span>
+                    </p>
+
+                    {% if current_user.expertise_records %}
+                    <div class="content">
+                        <ul>
+                            {% for expertise in current_user.expertise_records %}
+                            <li>{{ expertise.expertise }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <p class="has-text-grey">ยังไม่มีข้อมูลความเชี่ยวชาญ</p>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="column is-12-tablet is-4-desktop">
