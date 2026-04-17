@@ -748,6 +748,15 @@ class MemberLicenseRegistrationResource(Resource):
 
 
 class MemberRegistrationResource(Resource):
+    USER_FIELD_MAP = {
+        'prefix': 'th_title',
+        'member_name': 'th_firstname',
+        'member_surname': 'th_lastname',
+        'member_id_txt': 'number',
+        'member_idpeople': 'pid',
+    }
+    REQUIRED_FIELDS = ('member_name', 'member_surname', 'member_id_txt', 'member_idpeople')
+    IGNORED_FIELDS = {'member_midname'}
     BEGIN_DATE_REQUIRED_FIELDS = ('member_id_txt', 'member_idpeople', 'groupdate')
     BEGIN_DATE_IGNORED_FIELDS = {
         'prefix',
@@ -784,6 +793,125 @@ class MemberRegistrationResource(Resource):
             return datetime.datetime.strptime(raw_value, '%Y-%m-%d %H:%M:%S').date()
         except (TypeError, ValueError):
             raise ValueError('groupdate must be in YYYY-MM-DD HH:MM:SS format.')
+
+    @jwt_required()
+    def post(self):
+        """
+        Bulk create members from a registration payload.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            201:
+                description: Members created successfully
+            400:
+                description: Invalid request payload
+        """
+        payload = request.get_json(silent=True) or {}
+        users = payload.get('user')
+        if not isinstance(users, list) or not users:
+            return {'message': 'user must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        existing_numbers = {
+            member.number: member
+            for member in Member.query.filter(Member.number.in_([
+                str(user.get('member_id_txt')).strip()
+                for user in users
+                if isinstance(user, dict) and user.get('member_id_txt') not in (None, '')
+            ])).all()
+        }
+        existing_pids = {
+            member.pid: member
+            for member in Member.query.filter(Member.pid.in_([
+                str(user.get('member_idpeople')).strip()
+                for user in users
+                if isinstance(user, dict) and user.get('member_idpeople') not in (None, '')
+            ])).all()
+        }
+
+        seen_numbers = set()
+        seen_pids = set()
+        created_members = []
+        skipped_members = []
+
+        for index, user in enumerate(users):
+            if not isinstance(user, dict):
+                return {'message': f'user[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            normalized_user = {
+                field_name: self._normalize_value(user.get(field_name))
+                for field_name in self.USER_FIELD_MAP
+            }
+
+            missing_fields = [
+                field_name for field_name in self.REQUIRED_FIELDS
+                if normalized_user.get(field_name) is None
+            ]
+            if missing_fields:
+                return {
+                    'message': f'user[{index}] is missing required fields: {", ".join(missing_fields)}.'
+                }, HTTPStatus.BAD_REQUEST
+
+            member_number = normalized_user['member_id_txt']
+            pid = normalized_user['member_idpeople']
+
+            duplicate_reason = None
+            if member_number in seen_numbers:
+                duplicate_reason = 'duplicate member_id_txt in request payload.'
+            elif pid in seen_pids:
+                duplicate_reason = 'duplicate member_idpeople in request payload.'
+            elif member_number in existing_numbers:
+                duplicate_reason = 'member_id_txt already exists.'
+            elif pid in existing_pids:
+                duplicate_reason = 'member_idpeople already exists.'
+
+            if duplicate_reason:
+                skipped_members.append({
+                    'index': index,
+                    'member_id_txt': member_number,
+                    'member_idpeople': pid,
+                    'reason': duplicate_reason,
+                })
+                continue
+
+            member = Member(
+                number=member_number,
+                pid=pid,
+                th_title=normalized_user.get('prefix'),
+                th_firstname=normalized_user['member_name'],
+                th_lastname=normalized_user['member_surname'],
+                status='ปกติ',
+            )
+            db.session.add(member)
+            created_members.append({
+                'index': index,
+                'member': self._serialize_member(member),
+                'ignored_fields': sorted(field for field in user.keys() if field in self.IGNORED_FIELDS),
+            })
+            seen_numbers.add(member_number)
+            seen_pids.add(pid)
+
+        if not created_members and skipped_members:
+            return {
+                'message': 'No members were created.',
+                'created_count': 0,
+                'skipped_count': len(skipped_members),
+                'skipped': skipped_members,
+            }, HTTPStatus.OK
+
+        db.session.commit()
+
+        return {
+            'message': 'Member registration processed.',
+            'created_count': len(created_members),
+            'skipped_count': len(skipped_members),
+            'data': created_members,
+            'skipped': skipped_members,
+        }, HTTPStatus.CREATED
 
     @jwt_required()
     def put(self):
@@ -1311,7 +1439,45 @@ class MemberEducationResource(Resource):
             raise ValueError('graduate_year must be numeric.')
 
     @jwt_required()
-    def put(self):
+    def get(self, pin=None):
+        """
+        Get member education records by pin.
+        ---
+        tags:
+            -   Member
+        produces:
+            -   application/json
+        parameters:
+            -   in: path
+                name: pin
+                type: string
+                required: true
+                description: Member national ID card number
+        responses:
+            200:
+                description: Education records returned successfully
+            400:
+                description: Missing idcardnumber
+            404:
+                description: Member not found
+        """
+        idcardnumber = self._normalize_value(pin or request.args.get('idcardnumber'))
+        if idcardnumber is None:
+            return {'message': 'pin is required.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        records = MemberEducationRecord.query.filter_by(member_id=member.id).order_by(MemberEducationRecord.id).all()
+        return {
+            'idcardnumber': member.pid,
+            'member_id': member.id,
+            'data': [self._serialize_education(record) for record in records],
+        }, HTTPStatus.OK
+
+    @jwt_required()
+    def put(self, pin=None):
         """
         Create or update member education records by idcardnumber.
         ---
@@ -1330,7 +1496,7 @@ class MemberEducationResource(Resource):
                 description: Member not found
         """
         payload = request.get_json(silent=True) or {}
-        idcardnumber = self._normalize_value(payload.get('idcardnumber'))
+        idcardnumber = self._normalize_value(pin or payload.get('idcardnumber'))
         education_items = payload.get('education')
 
         if idcardnumber is None:
@@ -1419,7 +1585,45 @@ class MemberExpertiseResource(Resource):
         }
 
     @jwt_required()
-    def put(self):
+    def get(self, pin=None):
+        """
+        Get member expertise records by pin.
+        ---
+        tags:
+            -   Member
+        produces:
+            -   application/json
+        parameters:
+            -   in: path
+                name: pin
+                type: string
+                required: true
+                description: Member national ID card number
+        responses:
+            200:
+                description: Expertise records returned successfully
+            400:
+                description: Missing idcardnumber
+            404:
+                description: Member not found
+        """
+        idcardnumber = self._normalize_value(pin or request.args.get('idcardnumber'))
+        if idcardnumber is None:
+            return {'message': 'pin is required.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        records = MemberExpertise.query.filter_by(member_id=member.id).order_by(MemberExpertise.id).all()
+        return {
+            'idcardnumber': member.pid,
+            'member_id': member.id,
+            'data': [self._serialize_expertise(record) for record in records],
+        }, HTTPStatus.OK
+
+    @jwt_required()
+    def put(self, pin=None):
         """
         Replace member expertise records by idcardnumber.
         ---
@@ -1438,7 +1642,7 @@ class MemberExpertiseResource(Resource):
                 description: Member not found
         """
         payload = request.get_json(silent=True) or {}
-        idcardnumber = self._normalize_value(payload.get('idcardnumber'))
+        idcardnumber = self._normalize_value(pin or payload.get('idcardnumber'))
         expertise_items = payload.get('expertise')
 
         if idcardnumber is None:
