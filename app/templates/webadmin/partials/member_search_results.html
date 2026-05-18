@@ -1,0 +1,25 @@
+<table class="table is-fullwidth is-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>License No.</th>
+      <th>License Date</th>
+      <th>License Status</th>
+      <th>Phone</th>
+      <th colspan="2">Valid CMTE</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.member.th_fullname }}</td>
+        <td>{{ row.license.number }}</td>
+        <td>{{ row.license.dates }}</td>
+        <td><span class="tag {{ row.status_class }}">{{ row.status_text }}</span></td>
+        <td>{{ row.license.member.tel }}</td>
+        <td><a href="{{ row.scores_url }}">{{ row.license.valid_cmte_scores }}</a></td>
+        <td><a href="{{ row.edit_url }}">แก้ไขข้อมูล</a></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
