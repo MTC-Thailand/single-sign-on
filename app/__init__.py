@@ -70,6 +70,7 @@ def create_app():
     app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = ('MTC Web Services', os.environ.get('MAIL_USERNAME'))
+    app.config['PUBLIC_BASE_URL'] = os.environ.get('PUBLIC_BASE_URL')
     database_url = os.environ.get('DATABASE_URL')
 
     if database_url.startswith('postgresql'):
