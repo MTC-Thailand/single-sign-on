@@ -216,6 +216,41 @@
         color: #12344d;
     }
 
+    .admin-member-record-stack {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .admin-member-record-card {
+        border: 1px solid rgba(18, 52, 77, 0.08);
+        border-radius: 18px;
+        padding: 1rem 1.1rem;
+        background: linear-gradient(180deg, rgba(244, 248, 251, 0.9), rgba(255, 255, 255, 0.98));
+    }
+
+    .admin-member-record-card h3 {
+        margin: 0 0 0.75rem;
+        font-size: 1rem;
+        color: #12344d;
+    }
+
+    .admin-member-record-grid {
+        display: grid;
+        gap: 0.85rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-member-record-item small {
+        display: block;
+        margin-bottom: 0.2rem;
+        color: #6d7a86;
+    }
+
+    .admin-member-record-item span {
+        color: #12344d;
+        word-break: break-word;
+    }
+
     .admin-member-actions {
         position: sticky;
         bottom: 1rem;
@@ -527,6 +562,80 @@
                         </div>
                     </div>
 
+                    <div class="admin-member-form-card">
+                        <div class="admin-member-card-header">
+                            <div>
+                                <h2>ประกาศนียบัตรสมาชิก</h2>
+                                <p>แสดงรายการประกาศนียบัตรและวันที่ออกที่บันทึกไว้ในระบบ</p>
+                            </div>
+                            <div class="is-flex is-align-items-center" style="gap: 0.75rem;">
+                                <span class="admin-member-badge">
+                                    <span class="icon is-small"><i class="fa-solid fa-award"></i></span>
+                                    <span>Certificates</span>
+                                </span>
+                                <button class="button is-light"
+                                        type="button"
+                                        hx-get="{{ url_for('webadmin.create_member_certificate', member_id=member.id) }}"
+                                        hx-target="#certificate-form"
+                                        hx-swap="innerHTML">
+                                    <span class="icon is-small"><i class="fa-solid fa-plus"></i></span>
+                                    <span>New Certificate</span>
+                                </button>
+                            </div>
+                        </div>
+                        {% if member.certificate_records %}
+                        <div class="admin-member-record-stack">
+                            {% for certificate in member.certificate_records %}
+                            <div class="admin-member-record-card">
+                                <div class="is-flex is-justify-content-space-between is-align-items-center" style="gap: 0.75rem; margin-bottom: 0.75rem;">
+                                    <h3 style="margin: 0;">{{ certificate.certificate_name or 'ไม่ระบุชื่อประกาศนียบัตร' }}</h3>
+                                    <button class="button is-small is-light"
+                                            type="button"
+                                            hx-get="{{ url_for('webadmin.edit_member_certificate', member_id=member.id, certificate_id=certificate.id) }}"
+                                            hx-target="#certificate-form"
+                                            hx-swap="innerHTML">
+                                        <span class="icon is-small"><i class="fa-solid fa-pen"></i></span>
+                                        <span>Edit</span>
+                                    </button>
+                                </div>
+                                <div class="admin-member-record-grid">
+                                    <div class="admin-member-record-item">
+                                        <small>รายละเอียด</small>
+                                        <span>{{ certificate.certificate_detail or '-' }}</span>
+                                    </div>
+                                    <div class="admin-member-record-item">
+                                        <small>หน่วยงานผู้ออก</small>
+                                        <span>{{ certificate.issuer or '-' }}</span>
+                                    </div>
+                                    <div class="admin-member-record-item">
+                                        <small>
+                                            {% if certificate.mtc_issued_date %}
+                                            วันที่ออกโดยสภาเทคนิคการแพทย์
+                                            {% else %}
+                                            วันที่ออก
+                                            {% endif %}
+                                        </small>
+                                        <span>
+                                            {% if certificate.mtc_issued_date %}
+                                            {{ certificate.mtc_issued_date|localdate }}
+                                            {% elif certificate.issued_date %}
+                                            {{ certificate.issued_date|localdate }}
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="admin-member-license-empty">
+                            <p>ยังไม่มีข้อมูลประกาศนียบัตรของสมาชิก</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
                     <div class="admin-member-actions">
                         <p>ตรวจสอบข้อมูลให้ครบก่อนบันทึก การเปลี่ยนแปลงจะมีผลทันที</p>
                         <div class="buttons">
@@ -538,6 +647,7 @@
             </div>
         </div>
         <div id="license-form"></div>
+        <div id="certificate-form"></div>
    </div>
 </section>
 {% endblock %}

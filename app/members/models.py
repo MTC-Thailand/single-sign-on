@@ -2,6 +2,7 @@ from datetime import date
 
 from flask_login import UserMixin
 from sqlalchemy import func
+from sqlalchemy.engine import default
 
 from app import db
 
@@ -20,11 +21,14 @@ class Member(db.Model, UserMixin):
     en_lastname = db.Column(db.String(), info={'label': 'Lastname'})
     dob = db.Column(db.Date(), info={'label': 'วันเกิด'})
     pid = db.Column(db.String(), nullable=False, info={'label': 'เลขบัตรประชาชน'})
+    gender = db.Column(db.String(), info={'label': 'เพศ', 'choices': [(c,c) for c in ('ชาย', 'หญิง')]})
+    passport_id = db.Column(db.String(), info={'label': 'Passport ID'})
+    nationality = db.Column(db.String(), info={'label': 'สัญชาติ'})
     email = db.Column(db.String(), info={'label': 'E-mail'})
     tel = db.Column(db.String(), info={'label': 'โทรศัพท์'})
     username = db.Column(db.String())
     password = db.Column(db.String())
-    status = db.Column(db.String(), info={'label': 'สถานะ',
+    status = db.Column(db.String(), default='ปกติ', info={'label': 'สถานะ',
                                           'choices': [(c, c) for c in ('ปกติ', 'ลาออก', 'พ้นสมาชิกภาพ', 'ตาย')]})
     end_date = db.Column(db.Date(), info={'label': 'วันสิ้นอายุสมาชิกภาพ'})
     begin_date = db.Column(db.Date(), info={'label': 'วันเริ่มต้นสมาชิกภาพ'})
@@ -190,6 +194,7 @@ class MemberAddress(db.Model):
     __tablename__ = 'member_addresses'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     street_number = db.Column(db.String(), info={'label': 'บ้านเลขที่'})
+    building = db.Column(db.String(), info={'label': 'อาคาร'})
     alley = db.Column(db.String(), info={'label': 'ซอย'})
     street = db.Column(db.String(), info={'label': 'ถนน'})
     village = db.Column(db.String(), info={'label': 'หมู่'})
@@ -206,4 +211,36 @@ class MemberAddress(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     def __str__(self):
-        return f'{self.street_number} ม.{self.village or " -"} ซอย{self.alley or " -"} ถนน{self.street or " -"} ตำบล{self.district or " -"} อำเภอ{self.city or " -"} จังหวัด{self.province or " -"} รหัสไปรษณีย์{self.zipcode or " -"}'
+        return f'{self.building or " -"} {self.street_number} ม.{self.village or " -"} ซอย{self.alley or " -"} ถนน{self.street or " -"} ตำบล{self.district or " -"} อำเภอ{self.city or " -"} จังหวัด{self.province or " -"} รหัสไปรษณีย์{self.zipcode or " -"}'
+
+
+class MemberEducationRecord(db.Model):
+    __tablename__ = 'member_education_records'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    education_id = db.Column(db.String(), unique=True, info={'label': 'External Education ID'})
+    degree_level = db.Column(db.String(), info={'label': 'ระดับการศึกษา'})
+    degree_name = db.Column(db.String(), info={'label': 'ชื่อปริญญา'})
+    institution = db.Column(db.String(), info={'label': 'สถาบันการศึกษา'})
+    graduate_year = db.Column(db.Integer(), info={'label': 'ปีที่จบ'})
+    member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
+    member = db.relationship(Member, backref=db.backref('education_records',))
+
+
+class MemberExpertise(db.Model):
+    __tablename__ = 'member_expertise'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    expertise = db.Column(db.String(), info={'label': 'ความเชี่ยวชาญ'})
+    member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
+    member = db.relationship(Member, backref=db.backref('expertise_records', cascade='all, delete-orphan'))
+
+
+class MemberCertificate(db.Model):
+    __tablename__ = 'member_certificates'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    certificate_name = db.Column(db.String(), info={'label': 'ชื่อประกาศนียบัตร'})
+    certificate_detail = db.Column(db.String(), info={'label': 'รายละเอียดประกาศนียบัตร'})
+    issuer = db.Column(db.String(), info={'label': 'หน่วยงานผู้ออก'})
+    issued_date = db.Column(db.Date(), info={'label': 'วันที่ออก'})
+    mtc_issued_date = db.Column(db.Date(), info={'label': 'วันที่ออกโดยสภาเทคนิคการแพทย์'})
+    member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))
+    member = db.relationship(Member, backref=db.backref('certificate_records', cascade='all, delete-orphan'))

@@ -7,6 +7,7 @@ import calendar
 from functools import wraps
 from io import BytesIO
 from pprint import pprint
+from urllib.parse import urljoin
 
 import pandas as pd
 import arrow
@@ -35,6 +36,17 @@ def create_timed_serializer():
     return URLSafeTimedSerializer(current_app.config.get('SECRET_KEY'))
 
 
+def external_url_for(endpoint, **values):
+    """
+    Build external URLs from a trusted base to avoid Host header poisoning.
+    """
+    base_url = current_app.config.get('PUBLIC_BASE_URL') or os.environ.get('PUBLIC_BASE_URL')
+    if not base_url:
+        raise RuntimeError('PUBLIC_BASE_URL is required for external URLs')
+    path = url_for(endpoint, _external=False, **values)
+    return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
+
+
 @cmte.route('/sponsor-expiration/notification')
 def notify_sponsor_expiration():
     today = datetime.now().date()
@@ -46,7 +58,7 @@ def notify_sponsor_expiration():
             for member in all_members:
                 mails.append(member.email)
 
-            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
             message = f'''
                           เรียน ผู้ประสานงาน
 
@@ -65,7 +77,7 @@ def notify_sponsor_expiration():
             for member in all_members:
                 mails.append(member.email)
 
-            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
             message = f'''
                                       เรียน ผู้ประสานงาน
 
@@ -1241,7 +1253,7 @@ def forget_password():
         if member:
             serializer = create_timed_serializer()
             token = serializer.dumps({'email': email})
-            url = url_for('cmte.reset_password', token=token, email=email, _external=True)
+            url = external_url_for('cmte.reset_password', token=token, email=email)
             if not current_app.debug:
                 message = f'''
                 เรียน ท่านเจ้าของอีเมล
@@ -1299,7 +1311,7 @@ def register_sponsor_member(sponsor_id=None):
             member.is_valid = False
             serializer = create_timed_serializer()
             token = serializer.dumps({'email': form.email.data})
-            url = url_for('cmte.validate_email', token=token, email=form.email.data, _external=True)
+            url = external_url_for('cmte.validate_email', token=token, email=form.email.data)
             if sponsor_id:
                 member.sponsor_id = sponsor_id
                 db.session.add(member)
@@ -1412,7 +1424,7 @@ def request_change_coordinator_member(sponsor_id, member_id):
     db.session.commit()
     flash('ส่งคำขอเป็นผู้ประสานงานหลัก เรียบร้อยแล้ว', 'success')
 
-    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+    url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor_id)
     topic_name = member.sponsor.name[:30]+'...' if len(member.sponsor.name) > 30 else member.sponsor.name
     topic = 'MTC-CMTE คำขอเปลี่ยนผู้ประสานงานหลักจาก '+topic_name
     message = f'''
@@ -1508,7 +1520,7 @@ def register_sponsor():
                     db.session.commit()
                     flash(f'ลงทะเบียนเรียบร้อย', 'success')
 
-                    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+                    url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
                     topic_name = member.sponsor.name[:30] + '...' if len(member.sponsor.name) > 30 else member.sponsor.name
                     topic = 'MTC-CMTE คำขอขึ้นทะเบียนสถาบันจาก ' + topic_name
                     message = f'''
@@ -1620,7 +1632,7 @@ def request_edit_sponsor(sponsor_id):
             db.session.add(create_request)
             db.session.commit()
 
-            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
             topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
             topic = 'MTC-CMTE คำขอแก้ไขข้อมูลสถาบันจาก ' + topic_name
             message = f'''
@@ -1733,7 +1745,7 @@ def sponsor_payment(sponsor_id, request_id):
             db.session.add(create_receipt)
             db.session.commit()
 
-            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+            url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor_id)
             topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
             topic = 'MTC-CMTE หลักฐานการชำระเงินจาก ' + topic_name
             message = f'''
@@ -1773,7 +1785,7 @@ def request_renew_sponsor(sponsor_id):
         db.session.commit()
         flash('ส่งคำขอต่ออายุสถาบันเรียบร้อยแล้ว', 'success')
 
-        url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+        url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
         topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
         topic = 'MTC-CMTE คำขอต่ออายุสถาบันจาก ' + topic_name
         message = f'''
@@ -1883,7 +1895,7 @@ def approved_renew_sponsor(request_id):
     for member in all_members:
         mails.append(member.email)
 
-    url = url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor.id, _external=True)
+    url = external_url_for('cmte.manage_sponsor', sponsor_id=renew_request.sponsor.id)
 
     if renew_request.type == 'new':
         message = f'''
@@ -2005,7 +2017,7 @@ def approved_edit_sponsor(request_id):
     all_members = CMTESponsorMember.query.filter_by(sponsor=edit_request.sponsor).all()
     for member in all_members:
         mails.append(member.email)
-    url = url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor.id, _external=True)
+    url = external_url_for('cmte.manage_sponsor', sponsor_id=edit_request.sponsor.id)
     message = f'''
                     เรียน ผู้ประสานงาน 
 
@@ -2047,7 +2059,7 @@ def additional_request_sponsor(sponsor_id, request_id):
         sponsor = CMTEEventSponsor.query.get(sponsor_id)
 
         member = CMTESponsorMember.query.filter_by(sponsor_id=sponsor_id).first()
-        url = url_for('cmte.manage_sponsor', sponsor_id=sponsor_id, _external=True)
+        url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor_id)
         message = f'''
                       เรียน ท่านเจ้าของอีเมล
 
@@ -2098,7 +2110,7 @@ def sponsor_send_additional_info(sponsor_id, request_id):
             db.session.commit()
             flash(f'ส่งข้อมูลเรียบร้อยแล้ว รอเจ้าหน้าที่ตรวจสอบข้อมูล และรอการอนุมัติ', 'success')
 
-            url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+            url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
             topic_name = sponsor.name[:30] + '...' if len(sponsor.name) > 30 else sponsor.name
             topic = 'MTC-CMTE เอกสารเพิ่มเติมจาก ' + topic_name
             message = f'''
@@ -2151,7 +2163,7 @@ def reject_sponsor(sponsor_id, request_id):
         for member in all_members:
             mails.append(member.email)
 
-        url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+        url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
         message = f'''
                         เรียน ผู้ประสานงาน 
 
@@ -2198,7 +2210,7 @@ def verified_payment_sponsor(request_id):
     db.session.commit()
 
     sponsor = CMTEEventSponsor.query.filter_by(id=payment_request.sponsor_id).first()
-    url = url_for('cmte.manage_sponsor', sponsor_id=sponsor.id, _external=True)
+    url = external_url_for('cmte.manage_sponsor', sponsor_id=sponsor.id)
     if sponsor.expire_date:
         old_expire_date = sponsor.expire_date + timedelta(days=1)
         sponsor.registered_datetime = old_expire_date
@@ -2841,7 +2853,7 @@ def admin_send_email_verification(member_id):
     member = CMTESponsorMember.query.get(member_id)
     serializer = create_timed_serializer()
     token = serializer.dumps({'email': member.email})
-    url = url_for('cmte.validate_email', token=token, email=member.email, _external=True)
+    url = external_url_for('cmte.validate_email', token=token, email=member.email)
     message = f'''
     เรียน ท่านเจ้าของอีเมล
 

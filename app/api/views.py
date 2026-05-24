@@ -2,6 +2,7 @@ import os
 import datetime
 import arrow
 from http import HTTPStatus
+from dateutil.relativedelta import relativedelta
 
 import requests
 from flask import jsonify, request
@@ -13,7 +14,7 @@ from flask_restful import Resource
 from werkzeug.security import check_password_hash
 
 from app import db
-from app.members.models import Member, License, MemberAddress
+from app.members.models import Member, License, MemberAddress, LicenseRenewal, MemberEducationRecord, MemberExpertise
 from app.cmte.models import CMTEFeePaymentRecord, CMTEEvent
 
 
@@ -562,6 +563,454 @@ class MemberLicense(Resource):
         return jsonify(data=None), 404
 
 
+class MemberLicenseRegistrationResource(Resource):
+    REQUIRED_FIELDS = ('member_id_txt', 'member_idpeople', 'member_license', 'groupdate')
+    IGNORED_FIELDS = {
+        'member_name',
+        'member_midname',
+        'member_surname',
+        'group_id',
+        'prefix',
+    }
+
+    @staticmethod
+    def _normalize_value(value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @staticmethod
+    def _parse_group_date(raw_value):
+        try:
+            return datetime.datetime.strptime(raw_value, '%Y-%m-%d %H:%M:%S').date()
+        except (TypeError, ValueError):
+            raise ValueError('groupdate must be in YYYY-MM-DD HH:MM:SS format.')
+
+    @staticmethod
+    def _apply_license_registration(member_id, license_number, group_date, status='ปกติ'):
+        latest_license = License.query.filter_by(member_id=member_id) \
+            .order_by(License.end_date.desc()).first()
+        end_date = group_date + relativedelta(years=5, days=-1) if group_date else None
+
+        if latest_license and group_date:
+            renewal = LicenseRenewal.query.filter_by(
+                license=latest_license,
+                start_date=group_date,
+            ).first()
+            if not renewal:
+                renewal = LicenseRenewal(license=latest_license)
+            renewal.issue_date = group_date
+            renewal.start_date = group_date
+            renewal.end_date = end_date
+            db.session.add(renewal)
+
+            if latest_license.end_date and group_date > latest_license.end_date:
+                latest_license.number = license_number
+                latest_license.issue_date = group_date
+                latest_license.start_date = group_date
+                latest_license.end_date = end_date
+                latest_license.status = status
+                db.session.add(latest_license)
+            return latest_license
+
+        if not latest_license:
+            latest_license = License(member_id=member_id, number=license_number)
+
+        latest_license.number = license_number
+        latest_license.issue_date = group_date
+        latest_license.start_date = group_date
+        latest_license.end_date = end_date
+        latest_license.status = status
+        db.session.add(latest_license)
+        return latest_license
+
+    @staticmethod
+    def _serialize_license(license):
+        return {
+            'id': license.id,
+            'number': license.number,
+            'member_id': license.member_id,
+            'issue_date': license.issue_date.isoformat() if license.issue_date else None,
+            'start_date': license.start_date.isoformat() if license.start_date else None,
+            'end_date': license.end_date.isoformat() if license.end_date else None,
+            'status': license.status,
+        }
+
+    @jwt_required()
+    def post(self):
+        """
+        Bulk create or update member licenses from a registration payload.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Licenses processed successfully
+            400:
+                description: Invalid request payload
+        """
+        payload = request.get_json(silent=True) or {}
+        users = payload.get('user')
+        if not isinstance(users, list) or not users:
+            return {'message': 'user must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        processed_licenses = []
+        skipped_licenses = []
+
+        for index, user in enumerate(users):
+            if not isinstance(user, dict):
+                return {'message': f'user[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            normalized_user = {
+                field_name: self._normalize_value(user.get(field_name))
+                for field_name in ('member_id_txt', 'member_idpeople', 'member_license', 'groupdate', 'status')
+            }
+
+            missing_fields = [
+                field_name for field_name in self.REQUIRED_FIELDS
+                if normalized_user.get(field_name) is None
+            ]
+            if missing_fields:
+                return {
+                    'message': f'user[{index}] is missing required fields: {", ".join(missing_fields)}.'
+                }, HTTPStatus.BAD_REQUEST
+
+            incoming_status = (normalized_user.get('status') or '').lower()
+            if incoming_status and incoming_status != 'approve':
+                skipped_licenses.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'member_license': normalized_user['member_license'],
+                    'reason': 'status is not approve.',
+                })
+                continue
+
+            try:
+                group_date = self._parse_group_date(normalized_user['groupdate'])
+            except ValueError as exc:
+                return {'message': f'user[{index}] {exc}'}, HTTPStatus.BAD_REQUEST
+
+            member = Member.query.filter_by(pid=normalized_user['member_idpeople']).first()
+            if member is None:
+                member = Member.query.filter_by(number=normalized_user['member_id_txt']).first()
+
+            if member is None:
+                skipped_licenses.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'member_license': normalized_user['member_license'],
+                    'reason': 'member not found.',
+                })
+                continue
+
+            license = self._apply_license_registration(
+                member_id=member.id,
+                license_number=normalized_user['member_license'],
+                group_date=group_date,
+                status='ปกติ',
+            )
+            processed_licenses.append({
+                'index': index,
+                'member': {
+                    'id': member.id,
+                    'number': member.number,
+                    'pid': member.pid,
+                },
+                'license': self._serialize_license(license),
+                'ignored_fields': sorted(field for field in user.keys() if field in self.IGNORED_FIELDS),
+            })
+
+        if not processed_licenses and skipped_licenses:
+            return {
+                'message': 'No licenses were processed.',
+                'processed_count': 0,
+                'skipped_count': len(skipped_licenses),
+                'skipped': skipped_licenses,
+            }, HTTPStatus.OK
+
+        db.session.commit()
+
+        return {
+            'message': 'Member license registration processed.',
+            'processed_count': len(processed_licenses),
+            'skipped_count': len(skipped_licenses),
+            'data': processed_licenses,
+            'skipped': skipped_licenses,
+        }, HTTPStatus.OK
+
+
+class MemberRegistrationResource(Resource):
+    USER_FIELD_MAP = {
+        'prefix': 'th_title',
+        'member_name': 'th_firstname',
+        'member_surname': 'th_lastname',
+        'member_id_txt': 'number',
+        'member_idpeople': 'pid',
+    }
+    REQUIRED_FIELDS = ('member_name', 'member_surname', 'member_id_txt', 'member_idpeople')
+    IGNORED_FIELDS = {'member_midname'}
+    BEGIN_DATE_REQUIRED_FIELDS = ('member_id_txt', 'member_idpeople', 'groupdate')
+    BEGIN_DATE_IGNORED_FIELDS = {
+        'prefix',
+        'member_name',
+        'member_midname',
+        'member_surname',
+        'group_id',
+    }
+
+    @classmethod
+    def _normalize_value(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @classmethod
+    def _serialize_member(cls, member):
+        return {
+            'id': member.id,
+            'number': member.number,
+            'pid': member.pid,
+            'th_title': member.th_title,
+            'th_firstname': member.th_firstname,
+            'th_lastname': member.th_lastname,
+            'status': member.status,
+            'begin_date': member.begin_date.isoformat() if member.begin_date else None,
+        }
+
+    @staticmethod
+    def _parse_begin_date(raw_value):
+        try:
+            return datetime.datetime.strptime(raw_value, '%Y-%m-%d %H:%M:%S').date()
+        except (TypeError, ValueError):
+            raise ValueError('groupdate must be in YYYY-MM-DD HH:MM:SS format.')
+
+    @jwt_required()
+    def post(self):
+        """
+        Bulk create members from a registration payload.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            201:
+                description: Members created successfully
+            400:
+                description: Invalid request payload
+        """
+        payload = request.get_json(silent=True) or {}
+        users = payload.get('user')
+        if not isinstance(users, list) or not users:
+            return {'message': 'user must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        existing_numbers = {
+            member.number: member
+            for member in Member.query.filter(Member.number.in_([
+                str(user.get('member_id_txt')).strip()
+                for user in users
+                if isinstance(user, dict) and user.get('member_id_txt') not in (None, '')
+            ])).all()
+        }
+        existing_pids = {
+            member.pid: member
+            for member in Member.query.filter(Member.pid.in_([
+                str(user.get('member_idpeople')).strip()
+                for user in users
+                if isinstance(user, dict) and user.get('member_idpeople') not in (None, '')
+            ])).all()
+        }
+
+        seen_numbers = set()
+        seen_pids = set()
+        created_members = []
+        skipped_members = []
+
+        for index, user in enumerate(users):
+            if not isinstance(user, dict):
+                return {'message': f'user[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            normalized_user = {
+                field_name: self._normalize_value(user.get(field_name))
+                for field_name in self.USER_FIELD_MAP
+            }
+
+            missing_fields = [
+                field_name for field_name in self.REQUIRED_FIELDS
+                if normalized_user.get(field_name) is None
+            ]
+            if missing_fields:
+                return {
+                    'message': f'user[{index}] is missing required fields: {", ".join(missing_fields)}.'
+                }, HTTPStatus.BAD_REQUEST
+
+            member_number = normalized_user['member_id_txt']
+            pid = normalized_user['member_idpeople']
+
+            duplicate_reason = None
+            if member_number in seen_numbers:
+                duplicate_reason = 'duplicate member_id_txt in request payload.'
+            elif pid in seen_pids:
+                duplicate_reason = 'duplicate member_idpeople in request payload.'
+            elif member_number in existing_numbers:
+                duplicate_reason = 'member_id_txt already exists.'
+            elif pid in existing_pids:
+                duplicate_reason = 'member_idpeople already exists.'
+
+            if duplicate_reason:
+                skipped_members.append({
+                    'index': index,
+                    'member_id_txt': member_number,
+                    'member_idpeople': pid,
+                    'reason': duplicate_reason,
+                })
+                continue
+
+            member = Member(
+                number=member_number,
+                pid=pid,
+                th_title=normalized_user.get('prefix'),
+                th_firstname=normalized_user['member_name'],
+                th_lastname=normalized_user['member_surname'],
+                status='ปกติ',
+            )
+            db.session.add(member)
+            created_members.append({
+                'index': index,
+                'member': self._serialize_member(member),
+                'ignored_fields': sorted(field for field in user.keys() if field in self.IGNORED_FIELDS),
+            })
+            seen_numbers.add(member_number)
+            seen_pids.add(pid)
+
+        if not created_members and skipped_members:
+            return {
+                'message': 'No members were created.',
+                'created_count': 0,
+                'skipped_count': len(skipped_members),
+                'skipped': skipped_members,
+            }, HTTPStatus.OK
+
+        db.session.commit()
+
+        return {
+            'message': 'Member registration processed.',
+            'created_count': len(created_members),
+            'skipped_count': len(skipped_members),
+            'data': created_members,
+            'skipped': skipped_members,
+        }, HTTPStatus.CREATED
+
+    @jwt_required()
+    def put(self):
+        """
+        Bulk update member begin_date from a member payload.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Members updated successfully
+            400:
+                description: Invalid request payload
+        """
+        payload = request.get_json(silent=True) or {}
+        users = payload.get('user')
+        if not isinstance(users, list) or not users:
+            return {'message': 'user must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        updated_members = []
+        skipped_members = []
+
+        for index, user in enumerate(users):
+            if not isinstance(user, dict):
+                return {'message': f'user[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            normalized_user = {
+                field_name: self._normalize_value(user.get(field_name))
+                for field_name in ('member_id_txt', 'member_idpeople', 'groupdate', 'status')
+            }
+
+            missing_fields = [
+                field_name for field_name in self.BEGIN_DATE_REQUIRED_FIELDS
+                if normalized_user.get(field_name) is None
+            ]
+            if missing_fields:
+                return {
+                    'message': f'user[{index}] is missing required fields: {", ".join(missing_fields)}.'
+                }, HTTPStatus.BAD_REQUEST
+
+            incoming_status = (normalized_user.get('status') or '').lower()
+            if incoming_status and incoming_status != 'approve':
+                skipped_members.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'reason': 'status is not approve.',
+                })
+                continue
+
+            try:
+                begin_date = self._parse_begin_date(normalized_user['groupdate'])
+            except ValueError as exc:
+                return {'message': f'user[{index}] {exc}'}, HTTPStatus.BAD_REQUEST
+
+            member = Member.query.filter_by(pid=normalized_user['member_idpeople']).first()
+            if member is None:
+                member = Member.query.filter_by(number=normalized_user['member_id_txt']).first()
+
+            if member is None:
+                skipped_members.append({
+                    'index': index,
+                    'member_id_txt': normalized_user['member_id_txt'],
+                    'member_idpeople': normalized_user['member_idpeople'],
+                    'reason': 'member not found.',
+                })
+                continue
+
+            member.begin_date = begin_date
+            db.session.add(member)
+            updated_members.append({
+                'index': index,
+                'member': self._serialize_member(member),
+                'ignored_fields': sorted(field for field in user.keys() if field in self.BEGIN_DATE_IGNORED_FIELDS),
+            })
+
+        if not updated_members and skipped_members:
+            return {
+                'message': 'No members were updated.',
+                'updated_count': 0,
+                'skipped_count': len(skipped_members),
+                'skipped': skipped_members,
+            }, HTTPStatus.OK
+
+        db.session.commit()
+
+        return {
+            'message': 'Member begin_date update processed.',
+            'updated_count': len(updated_members),
+            'skipped_count': len(skipped_members),
+            'data': updated_members,
+            'skipped': skipped_members,
+        }, HTTPStatus.OK
+
+
 class MemberAddressResource(Resource):
     ADDRESS_TYPE_MAP = {
         'mailing': 1,
@@ -575,6 +1024,7 @@ class MemberAddressResource(Resource):
     }
     ADDRESS_FIELD_ALIASES = {
         'street_number': ('street_number', 'add1'),
+        'building': ('building',),
         'alley': ('alley', 'soi'),
         'street': ('street', 'road'),
         'village': ('village', 'moo'),
@@ -583,6 +1033,39 @@ class MemberAddressResource(Resource):
         'province': ('province', 'PROVINCE_NAME'),
         'zipcode': ('zipcode',),
     }
+    BULK_ADDRESS_TYPE_MAP = {
+        'now': 1,
+        'contact': 2,
+        'regis': 3,
+        'send_document': 1,
+    }
+    BULK_ADDRESS_FIELD_MAP = {
+        'street_number': 'no',
+        'building': 'building',
+        'village': 'moo',
+        'street': 'road',
+        'alley': 'soi',
+        'province': 'province',
+        'city': 'amphures',
+        'district': 'tambons',
+        'zipcode': 'zipcode',
+    }
+    BULK_IGNORED_FIELDS = {
+        'idcardnumber',
+        'address_id',
+        'member_id',
+        'check_address_now',
+        'send_documents_address',
+    }
+
+    @staticmethod
+    def _resolve_member(pin, payload):
+        member_pin = pin
+        if member_pin is None and isinstance(payload, dict):
+            member_pin = payload.get('idcardnumber')
+        if member_pin is None:
+            return None
+        return Member.query.filter_by(pid=str(member_pin).strip()).first()
 
     @classmethod
     def _parse_address_type(cls, raw_value):
@@ -598,6 +1081,7 @@ class MemberAddressResource(Resource):
             'id': address.id,
             'address_type': cls.ADDRESS_TYPE_LABELS.get(address.address_type, address.address_type),
             'street_number': address.street_number,
+            'building': address.building,
             'alley': address.alley,
             'street': address.street,
             'village': address.village,
@@ -608,8 +1092,92 @@ class MemberAddressResource(Resource):
             'updated_at': address.updated_at.isoformat() if address.updated_at else None,
         }
 
+    @staticmethod
+    def _normalize_address_value(field_name, value):
+        if field_name == 'zipcode':
+            if value in (None, ''):
+                return None
+            try:
+                return int(str(value).strip())
+            except (TypeError, ValueError):
+                raise ValueError('zipcode must be numeric.')
+
+        normalized_value = value.strip() if isinstance(value, str) else value
+        if normalized_value == '':
+            return None
+        return normalized_value
+
+    @classmethod
+    def _update_address_from_payload(cls, address, payload):
+        updated_fields = 0
+        for field_name, aliases in cls.ADDRESS_FIELD_ALIASES.items():
+            for alias in aliases:
+                if alias not in payload:
+                    continue
+
+                normalized_value = cls._normalize_address_value(field_name, payload.get(alias))
+                setattr(address, field_name, normalized_value)
+                updated_fields += 1
+                break
+        return updated_fields
+
+    @classmethod
+    def _upsert_member_address(cls, member, address_type, payload):
+        address = MemberAddress.query.filter_by(member=member, address_type=address_type).first()
+        created = address is None
+        if created:
+            address = MemberAddress(member=member, address_type=address_type)
+            db.session.add(address)
+
+        updated_fields = cls._update_address_from_payload(address, payload)
+        return address, created, updated_fields
+
+    @classmethod
+    def _extract_bulk_address_payloads(cls, payload):
+        address_entries = payload.get('address')
+        if not isinstance(address_entries, list) or not address_entries:
+            return None, {'message': 'address must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        address_data = address_entries[0]
+        if not isinstance(address_data, dict):
+            return None, {'message': 'address items must be objects.'}, HTTPStatus.BAD_REQUEST
+
+        bulk_payloads = {}
+        ignored_fields = []
+
+        for raw_field, value in address_data.items():
+            matched = False
+            for suffix, address_type in cls.BULK_ADDRESS_TYPE_MAP.items():
+                suffix_token = f'_{suffix}'
+                if not raw_field.endswith(suffix_token):
+                    continue
+
+                base_name = raw_field[:-len(suffix_token)]
+                target_field = cls.BULK_ADDRESS_FIELD_MAP.get(base_name)
+                if target_field is None:
+                    ignored_fields.append(raw_field)
+                    matched = True
+                    break
+
+                bulk_payloads.setdefault(address_type, {})[target_field] = value
+                matched = True
+                break
+
+            if matched:
+                continue
+
+            if raw_field in cls.BULK_IGNORED_FIELDS:
+                ignored_fields.append(raw_field)
+            else:
+                ignored_fields.append(raw_field)
+
+        return {
+            'bulk_payloads': bulk_payloads,
+            'ignored_fields': sorted(set(ignored_fields)),
+        }, None, None
+
     @jwt_required()
-    def put(self, pin):
+    def put(self, pin=None):
         """
         Create or update a member mailing, work, or home address.
         ---
@@ -747,58 +1315,397 @@ class MemberAddressResource(Resource):
             404:
                 description: Member not found
         """
-        member = Member.query.filter_by(pid=pin).first()
-        if not member:
-            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
-
         payload = request.get_json(silent=True) or {}
         if not payload:
             return {'message': 'JSON body required.'}, HTTPStatus.BAD_REQUEST
+
+        member = self._resolve_member(pin, payload)
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        if isinstance(payload.get('address'), list):
+            parsed_payload, error_body, error_status = self._extract_bulk_address_payloads(payload)
+            if error_body:
+                return error_body, error_status
+
+            bulk_payloads = parsed_payload['bulk_payloads']
+            ignored_fields = parsed_payload['ignored_fields']
+            if not bulk_payloads:
+                return {'message': 'No supported address fields provided.'}, HTTPStatus.BAD_REQUEST
+
+            results = []
+            created_any = False
+            try:
+                for address_type, address_payload in bulk_payloads.items():
+                    address, created, updated_fields = self._upsert_member_address(member, address_type, address_payload)
+                    if updated_fields == 0:
+                        continue
+                    results.append(self._serialize_address(address))
+                    created_any = created_any or created
+            except ValueError as exc:
+                return {'message': str(exc)}, HTTPStatus.BAD_REQUEST
+
+            if not results:
+                return {'message': 'No supported address fields provided.'}, HTTPStatus.BAD_REQUEST
+
+            db.session.commit()
+            status = HTTPStatus.CREATED if created_any else HTTPStatus.OK
+            return {
+                'data': results,
+                'ignored_fields': ignored_fields,
+            }, status
+
+        flat_bulk_payload, _, _ = self._extract_bulk_address_payloads({'address': [payload]})
+        bulk_payloads = flat_bulk_payload['bulk_payloads']
+        ignored_fields = flat_bulk_payload['ignored_fields']
+        if bulk_payloads:
+            results = []
+            created_any = False
+            try:
+                for address_type, address_payload in bulk_payloads.items():
+                    address, created, updated_fields = self._upsert_member_address(member, address_type, address_payload)
+                    if updated_fields == 0:
+                        continue
+                    results.append(self._serialize_address(address))
+                    created_any = created_any or created
+            except ValueError as exc:
+                return {'message': str(exc)}, HTTPStatus.BAD_REQUEST
+
+            if not results:
+                return {'message': 'No supported address fields provided.'}, HTTPStatus.BAD_REQUEST
+
+            db.session.commit()
+            status = HTTPStatus.CREATED if created_any else HTTPStatus.OK
+            return {
+                'data': results,
+                'ignored_fields': ignored_fields,
+            }, status
 
         address_payload = payload.get('address') if isinstance(payload.get('address'), dict) else payload
         address_type = self._parse_address_type(payload.get('address_type') or address_payload.get('address_type'))
         if address_type is None:
             return {'message': 'address_type must be one of "mailing", "work", or "home".'}, HTTPStatus.BAD_REQUEST
 
-        address = MemberAddress.query.filter_by(member=member, address_type=address_type).first()
-        created = address is None
-        if created:
-            address = MemberAddress(member=member, address_type=address_type)
-            db.session.add(address)
-
-        updated_fields = 0
-        for field_name, aliases in self.ADDRESS_FIELD_ALIASES.items():
-            for alias in aliases:
-                if alias not in address_payload:
-                    continue
-
-                value = address_payload.get(alias)
-                if field_name == 'zipcode':
-                    if value in (None, ''):
-                        normalized_value = None
-                    else:
-                        try:
-                            normalized_value = int(str(value).strip())
-                        except (TypeError, ValueError):
-                            return {'message': 'zipcode must be numeric.'}, HTTPStatus.BAD_REQUEST
-                else:
-                    normalized_value = value.strip() if isinstance(value, str) else value
-                    if normalized_value == '':
-                        normalized_value = None
-
-                setattr(address, field_name, normalized_value)
-                updated_fields += 1
-                break
+        try:
+            address, created, updated_fields = self._upsert_member_address(member, address_type, address_payload)
+        except ValueError as exc:
+            return {'message': str(exc)}, HTTPStatus.BAD_REQUEST
 
         if updated_fields == 0:
             return {'message': 'No address fields provided.'}, HTTPStatus.BAD_REQUEST
 
-            db.session.commit()
-            status = HTTPStatus.CREATED if created else HTTPStatus.OK
+        db.session.commit()
+        status = HTTPStatus.CREATED if created else HTTPStatus.OK
         return {'data': self._serialize_address(address)}, status
 
 
+class MemberEducationResource(Resource):
+    EDUCATION_FIELD_MAP = {
+        'educational_degree': 'degree_name',
+        'educational_name': 'institution',
+        'graduate_year': 'graduate_year',
+    }
+    IGNORED_FIELDS = {'member_id', 'id'}
+    DEFAULT_DEGREE_LEVEL = 'ปริญญาตรี'
+
+    @staticmethod
+    def _serialize_education(record):
+        return {
+            'id': record.id,
+            'education_id': record.education_id,
+            'member_id': record.member_id,
+            'degree_level': record.degree_level,
+            'degree_name': record.degree_name,
+            'institution': record.institution,
+            'graduate_year': record.graduate_year,
+        }
+
+    @staticmethod
+    def _normalize_value(value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @classmethod
+    def _normalize_graduate_year(cls, value):
+        value = cls._normalize_value(value)
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            raise ValueError('graduate_year must be numeric.')
+
+    @jwt_required()
+    def get(self, pin=None):
+        """
+        Get member education records by pin.
+        ---
+        tags:
+            -   Member
+        produces:
+            -   application/json
+        parameters:
+            -   in: path
+                name: pin
+                type: string
+                required: true
+                description: Member national ID card number
+        responses:
+            200:
+                description: Education records returned successfully
+            400:
+                description: Missing idcardnumber
+            404:
+                description: Member not found
+        """
+        idcardnumber = self._normalize_value(pin or request.args.get('idcardnumber'))
+        if idcardnumber is None:
+            return {'message': 'pin is required.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        records = MemberEducationRecord.query.filter_by(member_id=member.id).order_by(MemberEducationRecord.id).all()
+        return {
+            'idcardnumber': member.pid,
+            'member_id': member.id,
+            'data': [self._serialize_education(record) for record in records],
+        }, HTTPStatus.OK
+
+    @jwt_required()
+    def put(self, pin=None):
+        """
+        Create or update member education records by idcardnumber.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Education records processed successfully
+            400:
+                description: Invalid request payload
+            404:
+                description: Member not found
+        """
+        payload = request.get_json(silent=True) or {}
+        idcardnumber = self._normalize_value(pin or payload.get('idcardnumber'))
+        education_items = payload.get('education')
+
+        if idcardnumber is None:
+            return {'message': 'idcardnumber is required.'}, HTTPStatus.BAD_REQUEST
+        if not isinstance(education_items, list) or not education_items:
+            return {'message': 'education must be a non-empty list.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        processed_records = []
+
+        for index, item in enumerate(education_items):
+            if not isinstance(item, dict):
+                return {'message': f'education[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            education_id = self._normalize_value(item.get('education_id'))
+            if education_id is not None:
+                record = MemberEducationRecord.query.filter_by(education_id=education_id).first()
+                if record is not None and record.member_id != member.id:
+                    return {
+                        'message': f'education[{index}].education_id already belongs to another member.'
+                    }, HTTPStatus.BAD_REQUEST
+                if record is None:
+                    record = MemberEducationRecord(member=member, education_id=education_id)
+                    db.session.add(record)
+                    created = True
+                else:
+                    created = False
+            else:
+                record = MemberEducationRecord(member=member)
+                db.session.add(record)
+                created = True
+
+            degree_name = self._normalize_value(item.get('educational_degree'))
+            institution = self._normalize_value(item.get('educational_name'))
+            if degree_name is None or institution is None:
+                return {
+                    'message': f'education[{index}] requires educational_degree and educational_name.'
+                }, HTTPStatus.BAD_REQUEST
+
+            record.degree_level = self.DEFAULT_DEGREE_LEVEL
+            record.education_id = education_id
+            record.institution = institution
+            record.degree_name = degree_name
+            try:
+                record.graduate_year = self._normalize_graduate_year(item.get('graduate_year'))
+            except ValueError as exc:
+                return {'message': f'education[{index}] {exc}'}, HTTPStatus.BAD_REQUEST
+
+            db.session.add(record)
+            processed_records.append({
+                'index': index,
+                'created': created,
+                'education': self._serialize_education(record),
+                'ignored_fields': sorted(field for field in item.keys() if field in self.IGNORED_FIELDS),
+            })
+
+        db.session.commit()
+
+        return {
+            'message': 'Member education records processed.',
+            'processed_count': len(processed_records),
+            'data': processed_records,
+        }, HTTPStatus.OK
+
+
+class MemberExpertiseResource(Resource):
+    IGNORED_FIELDS = {'member_id', 'type_expertise'}
+
+    @staticmethod
+    def _normalize_value(value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                return None
+        return value
+
+    @staticmethod
+    def _serialize_expertise(record):
+        return {
+            'id': record.id,
+            'member_id': record.member_id,
+            'expertise': record.expertise,
+        }
+
+    @jwt_required()
+    def get(self, pin=None):
+        """
+        Get member expertise records by pin.
+        ---
+        tags:
+            -   Member
+        produces:
+            -   application/json
+        parameters:
+            -   in: path
+                name: pin
+                type: string
+                required: true
+                description: Member national ID card number
+        responses:
+            200:
+                description: Expertise records returned successfully
+            400:
+                description: Missing idcardnumber
+            404:
+                description: Member not found
+        """
+        idcardnumber = self._normalize_value(pin or request.args.get('idcardnumber'))
+        if idcardnumber is None:
+            return {'message': 'pin is required.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        records = MemberExpertise.query.filter_by(member_id=member.id).order_by(MemberExpertise.id).all()
+        return {
+            'idcardnumber': member.pid,
+            'member_id': member.id,
+            'data': [self._serialize_expertise(record) for record in records],
+        }, HTTPStatus.OK
+
+    @jwt_required()
+    def put(self, pin=None):
+        """
+        Replace member expertise records by idcardnumber.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        produces:
+            -   application/json
+        responses:
+            200:
+                description: Expertise records processed successfully
+            400:
+                description: Invalid request payload
+            404:
+                description: Member not found
+        """
+        payload = request.get_json(silent=True) or {}
+        idcardnumber = self._normalize_value(pin or payload.get('idcardnumber'))
+        expertise_items = payload.get('expertise')
+
+        if idcardnumber is None:
+            return {'message': 'idcardnumber is required.'}, HTTPStatus.BAD_REQUEST
+        if not isinstance(expertise_items, list):
+            return {'message': 'expertise must be a list.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=idcardnumber).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        for record in member.expertise_records:
+            db.session.delete(record)
+
+        processed_records = []
+        for index, item in enumerate(expertise_items):
+            if not isinstance(item, dict):
+                return {'message': f'expertise[{index}] must be an object.'}, HTTPStatus.BAD_REQUEST
+
+            expertise_name = self._normalize_value(item.get('expertise_name'))
+            if expertise_name is None:
+                return {'message': f'expertise[{index}] requires expertise_name.'}, HTTPStatus.BAD_REQUEST
+
+            record = MemberExpertise(member=member, expertise=expertise_name)
+            db.session.add(record)
+            processed_records.append({
+                'index': index,
+                'expertise': self._serialize_expertise(record),
+                'ignored_fields': sorted(field for field in item.keys() if field in self.IGNORED_FIELDS),
+            })
+
+        db.session.commit()
+
+        return {
+            'message': 'Member expertise records processed.',
+            'processed_count': len(processed_records),
+            'data': processed_records,
+        }, HTTPStatus.OK
+
+
 class MemberInfo(Resource):
+    PROFILE_FIELD_MAP = {
+        'prefix': 'th_title',
+        'prefixEN': 'en_title',
+        'firstnameTH': 'th_firstname',
+        'lastnameTH': 'th_lastname',
+        'firstnameEN': 'en_firstname',
+        'lastnameEN': 'en_lastname',
+        'gender': 'gender',
+        'idcardnumber': 'pid',
+        'passsport_id': 'passport_id',
+        'birthday': 'dob',
+        'nationality': 'nationality',
+        'telephone_number': 'tel',
+        'email': 'email',
+    }
+    UNSUPPORTED_PROFILE_FIELDS = {
+        'midnameTH',
+        'midnameEN',
+        'ethnicity',
+        'religion',
+    }
+
     @staticmethod
     def _serialize_legacy_address(address):
         if not address:
@@ -1021,6 +1928,113 @@ class MemberInfo(Resource):
 
         data['cmte_score'] = {'total': float(total_score), 'valid': float(valid_score)}
         return {'data': data}
+
+    @jwt_required()
+    def put(self, pin):
+        """
+        Update personal information of a member with matching PIN.
+        ---
+        tags:
+            -   Member
+        consumes:
+            -   application/json
+        parameters:
+            -   pin: Personal Identification Number
+                in: path
+                type: string
+                required: true
+            -   in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        profile:
+                            type: object
+        responses:
+            200:
+                description: Member information updated successfully.
+            400:
+                description: Invalid request body or field format.
+            404:
+                description: Member not found.
+            409:
+                description: Requested PID is already used by another member.
+        """
+        if not request.is_json:
+            return {'message': 'JSON body required.'}, HTTPStatus.BAD_REQUEST
+
+        payload = request.get_json(silent=True) or {}
+        profile = payload.get('profile')
+        if not isinstance(profile, dict):
+            return {'message': 'profile object required.'}, HTTPStatus.BAD_REQUEST
+
+        member = Member.query.filter_by(pid=pin).first()
+        if not member:
+            return {'message': 'Member not found.'}, HTTPStatus.NOT_FOUND
+
+        updated_fields = []
+        ignored_fields = []
+
+        for incoming_field, model_field in self.PROFILE_FIELD_MAP.items():
+            if incoming_field not in profile:
+                continue
+
+            value = profile.get(incoming_field)
+            if isinstance(value, str):
+                value = value.strip()
+                if value == '':
+                    value = None
+
+            if incoming_field == 'birthday':
+                if value is None:
+                    setattr(member, model_field, None)
+                    updated_fields.append(model_field)
+                    continue
+                try:
+                    value = datetime.datetime.strptime(value, '%Y-%m-%d').date()
+                except (TypeError, ValueError):
+                    return {'message': 'birthday must be in YYYY-MM-DD format.'}, HTTPStatus.BAD_REQUEST
+
+            if incoming_field == 'idcardnumber':
+                if not value:
+                    return {'message': 'idcardnumber is required.'}, HTTPStatus.BAD_REQUEST
+                existing_member = Member.query.filter_by(pid=value).first()
+                if existing_member and existing_member.id != member.id:
+                    return {'message': 'idcardnumber is already used by another member.'}, HTTPStatus.CONFLICT
+
+            setattr(member, model_field, value)
+            updated_fields.append(model_field)
+
+        for field_name in self.UNSUPPORTED_PROFILE_FIELDS:
+            if field_name in profile:
+                ignored_fields.append(field_name)
+
+        if not updated_fields and not ignored_fields:
+            return {'message': 'No supported profile fields provided.'}, HTTPStatus.BAD_REQUEST
+
+        db.session.add(member)
+        db.session.commit()
+
+        return {
+            'message': 'Member information updated successfully.',
+            'data': {
+                'pid': member.pid,
+                'th_title': member.th_title,
+                'th_firstname': member.th_firstname,
+                'th_lastname': member.th_lastname,
+                'en_title': member.en_title,
+                'en_firstname': member.en_firstname,
+                'en_lastname': member.en_lastname,
+                'gender': member.gender,
+                'passport_id': member.passport_id,
+                'dob': member.dob.isoformat() if member.dob else None,
+                'nationality': member.nationality,
+                'tel': member.tel,
+                'email': member.email,
+            },
+            'updated_fields': updated_fields,
+            'ignored_fields': ignored_fields,
+        }, HTTPStatus.OK
 
 
 class CMTEEventResource(Resource):

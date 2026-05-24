@@ -312,6 +312,46 @@
     font-size: 0.92rem;
   }
 
+  .member-record-stack {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .member-record-card {
+    border-radius: 22px;
+    border: 1px solid var(--member-line);
+    background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+    padding: 1.15rem 1.2rem;
+  }
+
+  .member-record-title {
+    color: var(--member-ink);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 0.85rem;
+  }
+
+  .member-record-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .member-record-item small {
+    display: block;
+    color: var(--member-ink-soft);
+    font-size: 0.82rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .member-record-item span {
+    color: var(--member-ink);
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
   .member-actions {
     margin-top: 1.5rem;
     display: flex;
@@ -362,6 +402,10 @@
     .member-status-box {
       width: 100%;
       min-width: 0;
+    }
+
+    .member-record-grid {
+      grid-template-columns: 1fr;
     }
   }
 
@@ -439,6 +483,7 @@
       </aside>
 
       <section class="member-panel member-info-panel">
+        {% set certificate_records = member.certificate_records | selectattr('mtc_issued_date') | list %}
         <div class="member-section-head">
           <div>
             <div class="member-section-kicker">Professional Credential</div>
@@ -482,6 +527,40 @@
             <div class="member-detail-value">สำนักงานเลขาธิการสภาเทคนิคการแพทย์</div>
           </article>
         </div>
+
+        {% if certificate_records %}
+        <div class="member-section-head" style="margin-top: 2rem;">
+          <div>
+            <div class="member-section-kicker">Certificates</div>
+            <h2 class="member-section-title">ประกาศนียบัตรที่ออกโดยสภาเทคนิคการแพทย์</h2>
+            <p class="member-section-text">
+              แสดงเฉพาะรายการประกาศนียบัตรที่มีวันที่ออกโดยสภาเทคนิคการแพทย์ในระบบปัจจุบัน
+            </p>
+          </div>
+        </div>
+
+        <div class="member-record-stack">
+          {% for certificate in certificate_records %}
+          <article class="member-record-card">
+            <div class="member-record-title">{{ certificate.certificate_name or 'ไม่ระบุชื่อประกาศนียบัตร' }}</div>
+            <div class="member-record-grid">
+              <div class="member-record-item">
+                <small>รายละเอียด</small>
+                <span>{{ certificate.certificate_detail or '-' }}</span>
+              </div>
+              <div class="member-record-item">
+                <small>หน่วยงานผู้ออก</small>
+                <span>{{ certificate.issuer or '-' }}</span>
+              </div>
+              <div class="member-record-item">
+                <small>วันที่ออกโดยสภาเทคนิคการแพทย์</small>
+                <span>{{ certificate.mtc_issued_date|localdate }}</span>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% endif %}
 
         <div class="member-actions">
           <a href="{{ url_for('member.search_member') }}" class="button is-primary">

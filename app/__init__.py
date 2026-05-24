@@ -67,6 +67,22 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
     app.config['TESTING'] = os.environ.get('TESTING') == '1'
+    app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
+    public_base_url = os.environ.get('PUBLIC_BASE_URL')
+    default_secure_cookies = bool(public_base_url and public_base_url.lower().startswith('https://'))
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
+    # Auto-enable secure cookies when PUBLIC_BASE_URL is HTTPS; env var can still override.
+    app.config['SESSION_COOKIE_SECURE'] = os.environ.get(
+        'SESSION_COOKIE_SECURE',
+        '1' if default_secure_cookies else '0'
+    ) == '1'
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['REMEMBER_COOKIE_SAMESITE'] = os.environ.get('REMEMBER_COOKIE_SAMESITE', 'Lax')
+    app.config['REMEMBER_COOKIE_SECURE'] = os.environ.get(
+        'REMEMBER_COOKIE_SECURE',
+        '1' if default_secure_cookies else '0'
+    ) == '1'
     app.config['MAIL_SERVER'] = 'smtp.gmail.com'
     app.config['MAIL_PORT'] = 587
     app.config['MAIL_USE_TLS'] = True
@@ -74,6 +90,7 @@ def create_app():
     app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = ('MTC Web Services', os.environ.get('MAIL_USERNAME'))
+    app.config['PUBLIC_BASE_URL'] = public_base_url
     database_url = os.environ.get('DATABASE_URL')
 
     if database_url.startswith('postgresql'):
@@ -113,7 +130,11 @@ def create_app():
     from app.api.views import (Login,
                                CMTEScore,
                                MemberAddressResource,
+                               MemberEducationResource,
+                               MemberExpertiseResource,
                                MemberInfo,
+                               MemberLicenseRegistrationResource,
+                               MemberRegistrationResource,
                                MemberPID,
                                MemberPIDPhoneNumber,
                                MemberLicense,
@@ -127,6 +148,10 @@ def create_app():
         api.add_resource(CMTEScore, '/members/<string:lic_id>/cmte/scores')
         api.add_resource(MemberPID, '/members/pids/<string:pid>')
         api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')
+        api.add_resource(MemberLicenseRegistrationResource, '/members/licenses/registration')
+        api.add_resource(MemberRegistrationResource, '/members/registration')
+        api.add_resource(MemberEducationResource, '/members/education', '/members/<string:pin>/education')
+        api.add_resource(MemberExpertiseResource, '/members/expertise', '/members/<string:pin>/expertise')
         api.add_resource(MemberInfo, '/members/<string:pin>/info')
         api.add_resource(MemberAddressResource, '/members/<string:pin>/addresses')
         api.add_resource(RefreshToken, '/auth/refresh')
@@ -139,6 +164,13 @@ def create_app():
     @app.route('/')
     def index():
         return render_template('index.html')
+
+    @app.after_request
+    def set_security_headers(response):
+        # Prevent intermediary caches from storing authenticated/dynamic responses.
+        response.headers.setdefault('Cache-Control', 'no-store, private')
+        response.headers.setdefault('Pragma', 'no-cache')
+        return response
 
     @app.template_filter("localdatetime")
     def local_datetime(dt):

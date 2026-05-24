@@ -36,6 +36,76 @@ from urllib3.util import Retry
 INET_API_TOKEN = os.environ.get('INET_API_TOKEN')
 BASE_URL = 'https://mtc.thaijobjob.com/api/user'
 IMG_BASE_URL = 'https://mtc.thaijobjob.com'
+ADDRESS_UPDATE_URL = os.environ.get(
+    'ADDRESS_UPDATE_URL',
+    'https://uat-mtc.thaijobjob.com/api/user/updateDataAddressWithIDcard',
+)
+
+
+def _build_address_sync_payload(member):
+    mailing_address = member.get_address(1)
+    working_address = member.get_address(2)
+    home_address = member.get_address(3)
+
+    def apply_address(payload, prefix, address):
+        payload[f'no_{prefix}'] = address.street_number if address else None
+        payload[f'building_{prefix}'] = address.building if address else None
+        payload[f'moo_{prefix}'] = address.village if address else None
+        payload[f'road_{prefix}'] = address.street if address else None
+        payload[f'soi_{prefix}'] = address.alley if address else None
+        payload[f'province_{prefix}'] = address.province if address else None
+        payload[f'amphures_{prefix}'] = address.city if address else None
+        payload[f'tambons_{prefix}'] = address.district if address else None
+        payload[f'zipcode_{prefix}'] = str(address.zipcode) if address and address.zipcode is not None else None
+
+    payload = {
+        'idcardnumber': member.pid,
+    }
+    # The external API expects four address groups, but the current app stores
+    # working, home, and mailing only. Reuse mailing for both now and document.
+    apply_address(payload, 'now', mailing_address)
+    apply_address(payload, 'regis', home_address)
+    apply_address(payload, 'contact', working_address)
+    apply_address(payload, 'send_document', mailing_address)
+    return payload
+
+
+def _sync_member_address_update(member):
+    if not ADDRESS_UPDATE_URL:
+        return True, None
+
+    payload = _build_address_sync_payload(member)
+    retry = Retry(total=5, backoff_factor=2)
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount('https://', adapter)
+
+    headers = {'Content-Type': 'application/json'}
+    if INET_API_TOKEN:
+        headers['Authorization'] = f'Bearer {INET_API_TOKEN}'
+
+    try:
+        response = session.put(
+            ADDRESS_UPDATE_URL,
+            json=payload,
+            headers=headers,
+            stream=True,
+            timeout=99,
+        )
+    except (requests.exceptions.RequestException,) as exc:
+        current_app.logger.exception('Address sync request failed for member %s', member.id)
+        return False, str(exc)
+
+    if response.ok:
+        return True, None
+
+    current_app.logger.warning(
+        'Address sync failed for member %s with status %s: %s',
+        member.id,
+        response.status_code,
+        response.text[:500],
+    )
+    return False, f'HTTP {response.status_code}'
 
 
 @member.route('/search/test/<license_id>')
@@ -732,6 +802,7 @@ def edit_member_info():
             existing_addresses = {addr.address_type: addr for addr in current_user.addresses}
             address_fields = (
                 'street_number',
+                'building',
                 'alley',
                 'street',
                 'village',
@@ -760,7 +831,11 @@ def edit_member_info():
 
             db.session.add(current_user)
             db.session.commit()
-            flash('บันทึกข้อมูลเรียบร้อยแล้ว', 'success')
+            synced, sync_error = _sync_member_address_update(current_user)
+            if synced:
+                flash('บันทึกข้อมูลเรียบร้อยแล้ว', 'success')
+            else:
+                flash(f'บันทึกข้อมูลเรียบร้อยแล้ว แต่ส่งข้อมูลที่อยู่ไปยังระบบภายนอกไม่สำเร็จ ({sync_error})', 'warning')
             return redirect(url_for('member.index'))
         else:
             flash(f'{form.errors}', 'danger')

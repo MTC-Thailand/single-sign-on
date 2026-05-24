@@ -9,10 +9,10 @@ from sqlalchemy import or_
 
 from app import db, admin_permission
 from app.admin import webadmin
-from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm
+from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm, MemberCertificateAdminForm
 from app.cmte.models import CMTEFeePaymentRecord
 from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm, LicenseRenewalForm
-from app.members.models import License, LicenseRenewal, Member, MemberAddress
+from app.members.models import License, LicenseRenewal, Member, MemberAddress, MemberCertificate
 
 
 def _parse_excel_date(value):
@@ -386,6 +386,74 @@ def edit_license(member_id, license_action):
                            form=form)
 
 
+@webadmin.route('/members/<int:member_id>/certificates/new', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def create_member_certificate(member_id):
+    member = Member.query.get(member_id)
+    if not member:
+        abort(404)
+
+    certificate = MemberCertificate(member=member)
+    form = MemberCertificateAdminForm(obj=certificate)
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(certificate)
+            certificate.member = member
+            db.session.add(certificate)
+            db.session.commit()
+            flash('เพิ่มประกาศนียบัตรเรียบร้อย', 'success')
+            resp = make_response()
+            resp.headers['HX-Refresh'] = 'true'
+            return resp
+        else:
+            print(form.errors)
+
+    return render_template(
+        'webadmin/certificate_form.html',
+        member=member,
+        member_id=member_id,
+        form=form,
+        form_action=url_for('webadmin.create_member_certificate', member_id=member_id),
+        modal_title='New Certificate',
+    )
+
+
+@webadmin.route('/members/<int:member_id>/certificates/<int:certificate_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_permission.require(http_exception=403)
+def edit_member_certificate(member_id, certificate_id):
+    member = Member.query.get(member_id)
+    certificate = MemberCertificate.query.get(certificate_id)
+    if not member or not certificate or certificate.member_id != member.id:
+        abort(404)
+
+    form = MemberCertificateAdminForm(obj=certificate)
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            form.populate_obj(certificate)
+            certificate.member = member
+            db.session.add(certificate)
+            db.session.commit()
+            flash('แก้ไขประกาศนียบัตรเรียบร้อย', 'success')
+            resp = make_response()
+            resp.headers['HX-Refresh'] = 'true'
+            return resp
+        else:
+            print(form.errors)
+
+    return render_template(
+        'webadmin/certificate_form.html',
+        member=member,
+        member_id=member_id,
+        form=form,
+        form_action=url_for('webadmin.edit_member_certificate', member_id=member_id, certificate_id=certificate_id),
+        modal_title='Edit Certificate',
+    )
+
+
 @webadmin.route('/members/<int:member_id>/renewals', methods=['GET'])
 @login_required
 @admin_permission.require(http_exception=403)
@@ -433,27 +501,11 @@ def delete_renewal(member_id, renewal_id):
 def view_member_password():
     if request.method == 'POST':
         license_no = request.form.get('license_no')
-        license = License.query.filter_by(number=license_no).one()
+        license = License.query.filter_by(number=license_no).first()
         if not license:
             return 'No license found.'
         else:
-            return f'''
-            <div class="notification">
-            <p>ชื่อ {license.member.th_fullname}</p>
-            <p>หมายเลขโทรศัพท์ {license.member.tel}</p>
-            <p>วันเดือนปีเกิด {license.member.dob}</p>
-            <p>username: {license.member.username}</p>
-            <p>password: {license.member.password}</p>
-            </div>
-            <a class="button" hx-swap="innerHTML"
-                hx-target="#password-text"
-                hx-get="{url_for('webadmin.edit_member_password', member_id=license.member.id)}">
-                <span class="icon">
-                    <i class="fas fa-pencil-alt"></i>
-                </span>
-                <span>Edit</span>
-            </a>
-            '''
+            return render_template('webadmin/partials/member_password_summary.html', member=license.member)
     return render_template('webadmin/password_view.html')
 
 
@@ -469,20 +521,7 @@ def edit_member_password(member_id):
         form.populate_obj(member)
         db.session.add(member)
         db.session.commit()
-        return f'''
-        <p>หมายเลขโทรศัพท์ {member.tel}</p>
-        <p>วันเดือนปีเกิด {member.dob}</p>
-        <p>username: {member.username}</p>
-        <p>password: {member.password}</p>
-        <a class="button" hx-swap="innerHTML"
-            hx-target="#password-text"
-            hx-get="{url_for('webadmin.edit_member_password', member_id=member_id)}">
-            <span class="icon">
-                <i class="fas fa-pencil-alt"></i>
-            </span>
-            <span>Edit</span>
-        </a>
-        '''
+        return render_template('webadmin/partials/member_password_summary.html', member=member)
     else:
         print(form.errors)
 
@@ -493,34 +532,33 @@ def edit_member_password(member_id):
 def search_member():
     query = request.args.get('query')
     if query:
-        template = '''<table class="table is-fullwidth is-striped">'''
-        template += '''
-        <thead><th>Name</th><th>License No.</th><th>License Date</th><th>License Status</th><th>Phone</th><th colspan="2">Valid CMTE</th></thead>
-        <tbody>
-        '''
         licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
         if not licenses:
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
                                               Member.th_lastname.like(f'%{query}%'),
                                               Member.tel.like(f'%{query}%')))
             licenses = [(member.license, member) for member in members]
+        rows = []
         for lic, member in licenses:
-            url = url_for('webadmin.edit_member_info', member_id=member.id)
-            status_tag = '<span class="tag {}">{}</span>'
             if lic.is_expired:
-                lic_status = status_tag.format('is-danger', 'หมดอายุ')
+                status_class = 'is-danger'
+                status_text = 'หมดอายุ'
             elif lic.status:
                 if lic.status == 'ปกติ':
-                    lic_status = status_tag.format('is-success', lic.status)
+                    status_class = 'is-success'
                 else:
-                    lic_status = status_tag.format('is-warning', lic.status)
+                    status_class = 'is-warning'
+                status_text = lic.status
             else:
-                lic_status = status_tag.format('is-success', 'ปกติ')
-            if lic:
-                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.member.tel}</td><td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
-            else:
-                lic = License.query.filter_by(member_id=member.id).first()
-                template += f'''<tr><td>{member.th_fullname}</td><td>{lic.number}</td><td>{lic.dates}</td><td>{lic_status}</td><td>{lic.member.tel}</td><<td><a href="{url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id)}">{lic.valid_cmte_scores}</a></td><td><a href={url}>แก้ไขข้อมูล</a></td></tr>'''
-        template += '</tbody></table>'
-        return make_response(template)
+                status_class = 'is-success'
+                status_text = 'ปกติ'
+            rows.append({
+                'member': member,
+                'license': lic,
+                'status_class': status_class,
+                'status_text': status_text,
+                'edit_url': url_for('webadmin.edit_member_info', member_id=member.id),
+                'scores_url': url_for('cmte.admin_check_member_cmte_scores', member_id=lic.member_id),
+            })
+        return render_template('webadmin/partials/member_search_results.html', rows=rows)
     return 'Waiting for a search query...'

@@ -1,0 +1,93 @@
+<div class="modal is-active" id="certificate-form-modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">{{ modal_title }}</p>
+            <button type="button" id="cancelCertificateButton" class="delete" aria-label="close"></button>
+        </header>
+        <form hx-post="{{ form_action }}"
+              hx-swap="none"
+              hx-indicator="#save-certificate-btn">
+            {{ form.hidden_tag() }}
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">{{ form.certificate_name.label }}</label>
+                    <div class="control">
+                        {{ form.certificate_name(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.certificate_detail.label }}</label>
+                    <div class="control">
+                        {{ form.certificate_detail(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.issuer.label }}</label>
+                    <div class="control">
+                        {{ form.issuer(class="input") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.issued_date.label }}</label>
+                    <div class="control">
+                        {{ form.issued_date(class="input", type="text") }}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">{{ form.mtc_issued_date.label }}</label>
+                    <div class="control">
+                        {{ form.mtc_issued_date(class="input", type="text") }}
+                    </div>
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <div class="buttons">
+                    <button class="button is-outlined is-dark" id="cancel-certificate-btn">Cancel</button>
+                    <button type="submit" class="button is-success" id="save-certificate-btn">Save</button>
+                </div>
+            </footer>
+        </form>
+    </div>
+</div>
+<script>
+    window.document.getElementById("cancel-certificate-btn").addEventListener("click", function (event) {
+        event.preventDefault()
+        htmx.removeClass(htmx.find('#certificate-form-modal'), 'is-active')
+    })
+    window.document.getElementById("cancelCertificateButton").addEventListener("click", function () {
+        htmx.removeClass(htmx.find('#certificate-form-modal'), 'is-active')
+    })
+    $(document).ready(function () {
+        $("input[name='issued_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if form.issued_date.data %}
+            startDate: {{ form.issued_date.data.strftime('%d/%m/%Y')|tojson|safe }},
+            {% else %}
+            startDate: moment().startOf('day'),
+            {% endif %}
+            timePicker: false,
+            singleDatePicker: true,
+            locale: {
+                format: 'DD/MM/YYYY'
+            }
+        })
+        $("input[name='mtc_issued_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+            {% if form.mtc_issued_date.data %}
+            startDate: {{ form.mtc_issued_date.data.strftime('%d/%m/%Y')|tojson|safe }},
+            {% else %}
+            startDate: moment().startOf('day'),
+            {% endif %}
+            timePicker: false,
+            singleDatePicker: true,
+            locale: {
+                format: 'DD/MM/YYYY'
+            }
+        })
+    })
+</script>
