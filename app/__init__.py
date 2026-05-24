@@ -65,6 +65,7 @@ def create_app():
     global api_resources_registered
 
     app = Flask(__name__)
+    app.config['DEBUG'] = os.environ.get('FLASK_DEBUG') == '1'
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
     app.config['TESTING'] = os.environ.get('TESTING') == '1'
     app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))

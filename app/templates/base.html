@@ -22,7 +22,7 @@
 {% block footer %}
 <div class="section">
     <div class="container">
-        {% if config['DEBUG'] %}
+        {% if config['DEBUG'] or request.host.startswith('127.0.0.1') or request.host.startswith('localhost') %}
         <article class="message is-warning">
             <div class="message-header">
                 DEBUG MODE

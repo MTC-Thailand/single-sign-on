@@ -116,11 +116,16 @@
 
     .admin-member-main {
         display: grid;
-        gap: 1rem;
+        gap: 1.5rem;
     }
 
     .admin-member-form-card {
         padding: 1.4rem;
+    }
+
+    .admin-member-main form {
+        display: grid;
+        gap: 1.5rem;
     }
 
     .admin-member-card-header {
@@ -496,6 +501,14 @@
                                 <span>License</span>
                             </span>
                         </div>
+                        <div class="admin-member-grid two-col">
+                            <div class="field admin-member-field">
+                                <label class="label">{{form.first_license_issue_date.label}}</label>
+                                <div class="control">
+                                    {{form.first_license_issue_date(class="input", type="text")}}
+                                </div>
+                            </div>
+                        </div>
                         {% if form.license.number.data %}
                         <div class="admin-member-grid two-col">
                             <div class="field admin-member-field">
@@ -673,6 +686,23 @@
     })
         $("input[name='dob']").on('apply.daterangepicker', function (ev, picker) {
             $("input[name='dob']").val(picker.startDate.format('DD/MM/YYYY'))
+        })
+        $("input[name='first_license_issue_date']").daterangepicker({
+            buttonClasses: 'button is-small',
+            applyButtonClasses: 'is-link',
+            cancelButtonClasses: 'is-light',
+           autoUpdateInput: false,
+        {% if form.first_license_issue_date.data %}
+        startDate: {{form.first_license_issue_date.data.strftime('%d/%m/%Y')|tojson|safe}},
+        {% endif %}
+        timePicker: false,
+            singleDatePicker: true,
+            locale: {
+            format: 'DD/MM/YYYY'
+        }
+    })
+        $("input[name='first_license_issue_date']").on('apply.daterangepicker', function (ev, picker) {
+            $("input[name='first_license_issue_date']").val(picker.startDate.format('DD/MM/YYYY'))
         })
         $("input[name='license-issue_date']").daterangepicker({
             buttonClasses: 'button is-small',

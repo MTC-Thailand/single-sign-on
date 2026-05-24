@@ -114,12 +114,14 @@ def _apply_license_renewal(member_id, license_number, issue_date, start_date, st
 
 @webadmin.route('/')
 @login_required
+@admin_permission.require(http_exception=403)
 def index():
     return render_template('webadmin/index.html')
 
 
 @webadmin.route('/upload/renew', methods=['GET', 'POST'])
 @login_required
+@admin_permission.require(http_exception=403)
 def upload_renew():
     if request.method == 'POST':
         f = request.files['file']
@@ -147,6 +149,7 @@ def upload_renew():
 
 @webadmin.route('/upload/new', methods=['GET', 'POST'])
 @login_required
+@admin_permission.require(http_exception=403)
 def upload_new():
     if request.method == 'POST':
         f = request.files['file']
@@ -229,6 +232,7 @@ def upload_new():
 
 @webadmin.route('/update/phones', methods=['GET', 'POST'])
 @login_required
+@admin_permission.require(http_exception=403)
 def upload_phone_numbers():
     if request.method == 'POST':
         f = request.files['file']
@@ -276,6 +280,7 @@ def edit_member_info(member_id):
         form.tel.data = member.tel
         form.email.data = member.email
         form.status.data = member.status
+        form.first_license_issue_date.data = member.first_license_issue_date
 
         if member.license:
             form.license.form.process(obj=member.license)
@@ -298,6 +303,7 @@ def edit_member_info(member_id):
         member.tel = form.tel.data
         member.email = form.email.data
         member.status = form.status.data
+        member.first_license_issue_date = form.first_license_issue_date.data
 
         if member.license:
             form.license.form.populate_obj(member.license)
@@ -540,6 +546,8 @@ def search_member():
             licenses = [(member.license, member) for member in members]
         rows = []
         for lic, member in licenses:
+            if not lic:
+                continue
             if lic.is_expired:
                 status_class = 'is-danger'
                 status_text = 'หมดอายุ'
