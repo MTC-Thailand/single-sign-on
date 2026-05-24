@@ -28,6 +28,7 @@ class Member(db.Model, UserMixin):
                                           'choices': [(c, c) for c in ('ปกติ', 'ลาออก', 'พ้นสมาชิกภาพ', 'ตาย')]})
     end_date = db.Column(db.Date(), info={'label': 'วันสิ้นอายุสมาชิกภาพ'})
     begin_date = db.Column(db.Date(), info={'label': 'วันเริ่มต้นสมาชิกภาพ'})
+    first_license_issue_date = db.Column(db.Date(), info={'label': 'วันที่ขึ้นทะเบียนใบอนุญาตครั้งแรก'})
     updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     # TODO: import begin date from the legacy database.
 

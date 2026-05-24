@@ -24,7 +24,8 @@ class MyAdminIndexView(AdminIndexView):
         return current_user.is_authenticated and admin_permission.can()
 
 
-admin = Admin(index_view=MyAdminIndexView())
+admin_ext = Admin(index_view=MyAdminIndexView())
+admin = admin_ext
 migrate = Migrate()
 db = SQLAlchemy()
 swagger = Swagger()
@@ -57,9 +58,12 @@ sponsor_event_management_permission = Permission(ActionNeed('manageEvents'))
 from app.api import api_bp
 
 api = Api(api_bp, decorators=[csrf.exempt])
+api_resources_registered = False
 
 
 def create_app():
+    global api_resources_registered
+
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
     app.config['TESTING'] = os.environ.get('TESTING') == '1'
@@ -80,7 +84,7 @@ def create_app():
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    admin.init_app(app)
+    admin_ext.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
@@ -103,6 +107,7 @@ def create_app():
     app.register_blueprint(institution_blueprint)
 
     from app.admin import webadmin as webadmin_blueprint
+    globals()['admin'] = admin_ext
     app.register_blueprint(webadmin_blueprint)
 
     from app.api.views import (Login,
@@ -116,16 +121,18 @@ def create_app():
                                CMTEFeePaymentResource,
                                CMTEEventResource)
 
-    api.add_resource(Login, '/auth/login')
-    api.add_resource(CMTEEventResource, '/cmte/upcoming-events')
-    api.add_resource(CMTEScore, '/members/<string:lic_id>/cmte/scores')
-    api.add_resource(MemberPID, '/members/pids/<string:pid>')
-    api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')
-    api.add_resource(MemberInfo, '/members/<string:pin>/info')
-    api.add_resource(MemberAddressResource, '/members/<string:pin>/addresses')
-    api.add_resource(RefreshToken, '/auth/refresh')
-    api.add_resource(CMTEFeePaymentResource, '/members/<string:lic_no>/cmte-fee-payment-record')
-    api.add_resource(MemberPIDPhoneNumber, '/members/<string:pid>/check-info', '/members/<string:pid>/phone/<string:phone>/info')
+    if not api_resources_registered:
+        api.add_resource(Login, '/auth/login')
+        api.add_resource(CMTEEventResource, '/cmte/upcoming-events')
+        api.add_resource(CMTEScore, '/members/<string:lic_id>/cmte/scores')
+        api.add_resource(MemberPID, '/members/pids/<string:pid>')
+        api.add_resource(MemberLicense, '/members/licenses/<string:license_number>')
+        api.add_resource(MemberInfo, '/members/<string:pin>/info')
+        api.add_resource(MemberAddressResource, '/members/<string:pin>/addresses')
+        api.add_resource(RefreshToken, '/auth/refresh')
+        api.add_resource(CMTEFeePaymentResource, '/members/<string:lic_no>/cmte-fee-payment-record')
+        api.add_resource(MemberPIDPhoneNumber, '/members/<string:pid>/check-info', '/members/<string:pid>/phone/<string:phone>/info')
+        api_resources_registered = True
 
     app.register_blueprint(api_bp)
 

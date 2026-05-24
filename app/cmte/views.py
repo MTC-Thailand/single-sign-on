@@ -17,7 +17,7 @@ from flask import (render_template, flash, redirect,
 from flask_login import login_required, login_user, current_user
 from flask_principal import identity_changed, Identity
 from flask_wtf.csrf import generate_csrf
-from itsdangerous import TimedJSONWebSignatureSerializer
+from itsdangerous import URLSafeTimedSerializer
 from sqlalchemy import or_, func, and_, case
 
 from app import sponsor_event_management_permission, send_mail
@@ -28,6 +28,11 @@ from app.cmte.models import *
 from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
 bangkok = timezone('Asia/Bangkok')
+TOKEN_MAX_AGE_SECONDS = 3600
+
+
+def create_timed_serializer():
+    return URLSafeTimedSerializer(current_app.config.get('SECRET_KEY'))
 
 
 @cmte.route('/sponsor-expiration/notification')
@@ -1205,9 +1210,9 @@ def sponsor_member_login():
 def reset_password():
     token = request.args.get('token')
     email = request.args.get('email')
-    serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+    serializer = create_timed_serializer()
     try:
-        token_data = serializer.loads(token)
+        token_data = serializer.loads(token, max_age=TOKEN_MAX_AGE_SECONDS)
     except Exception as e:
         return '<h1>Bad JSON Web token. You need a valid token.</h1>' + str(e)
     else:
@@ -1234,7 +1239,7 @@ def forget_password():
         print(email)
         member = CMTESponsorMember.query.filter_by(email=email).first()
         if member:
-            serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+            serializer = create_timed_serializer()
             token = serializer.dumps({'email': email})
             url = url_for('cmte.reset_password', token=token, email=email, _external=True)
             if not current_app.debug:
@@ -1255,9 +1260,9 @@ def forget_password():
 def validate_email():
     token = request.args.get('token')
     email = request.args.get('email')
-    serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+    serializer = create_timed_serializer()
     try:
-        token_data = serializer.loads(token)
+        token_data = serializer.loads(token, max_age=TOKEN_MAX_AGE_SECONDS)
     except Exception as e:
         return '<h1>Bad JSON Web token. You need a valid token.</h1>' + str(e)
     else:
@@ -1292,7 +1297,7 @@ def register_sponsor_member(sponsor_id=None):
             form.populate_obj(member)
             member.password = form.password.data
             member.is_valid = False
-            serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+            serializer = create_timed_serializer()
             token = serializer.dumps({'email': form.email.data})
             url = url_for('cmte.validate_email', token=token, email=form.email.data, _external=True)
             if sponsor_id:
@@ -2834,7 +2839,7 @@ def admin_edit_sponsor_member(member_id):
 @cmte.route('/admin/sponsors/members/<int:member_id>/send-verification', methods=['GET', 'POST'])
 def admin_send_email_verification(member_id):
     member = CMTESponsorMember.query.get(member_id)
-    serializer = TimedJSONWebSignatureSerializer(current_app.config.get('SECRET_KEY'))
+    serializer = create_timed_serializer()
     token = serializer.dumps({'email': member.email})
     url = url_for('cmte.validate_email', token=token, email=member.email, _external=True)
     message = f'''
