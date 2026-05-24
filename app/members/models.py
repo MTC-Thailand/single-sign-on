@@ -108,7 +108,7 @@ class License(db.Model):
     today = date.today().strftime('%Y-%m-%d')
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     number = db.Column(db.String(), unique=True, nullable=False, info={'label': 'หมายเลข'})
-    issue_date = db.Column(db.Date(), nullable=False, info={'label': 'วันอนุมัติใบอนุญาต_'})
+    issue_date = db.Column(db.Date(), nullable=False, info={'label': 'วันที่อนุมัติใบอนุญาต'})
     start_date = db.Column(db.Date(), nullable=False, info={'label': 'วันเริ่ม'})
     end_date = db.Column(db.Date(), nullable=False, info={'label': 'วันสิ้นสุด'})
     member_id = db.Column(db.Integer(), db.ForeignKey('members.id'))

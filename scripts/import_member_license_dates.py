@@ -36,11 +36,11 @@ from app.members.models import License
 
 REQUIRED_COLUMNS = {
     "license_no",
-    "license_begin_date",
+    "appr_date",
 }
 MEMBER_DATE_FIELD = "first_license_issue_date"
 LICENSE_NUMBER_FIELD = "number"
-SOURCE_DATE_COLUMN = "license_begin_date"
+SOURCE_DATE_COLUMN = "appr_date"
 OPTIONAL_MEMBER_NAME_COLUMN = "member_name"
 BATCH_SIZE = 500
 DOWNLOAD_TIMEOUT_SECONDS = 120
@@ -146,8 +146,8 @@ def row_log(
         "row_number": row_number,
         "license_no": license_no,
         "member_name": member_name,
-        "raw_license_begin_date": format_log_value(raw_issue_date),
-        "license_begin_date": format_log_value(issue_date),
+        "raw_appr_date": format_log_value(raw_issue_date),
+        "appr_date": format_log_value(issue_date),
         MEMBER_DATE_FIELD: format_log_value(issue_date),
         "member_id": member_id,
         "existing_first_license_issue_date": format_log_value(existing_date),
@@ -288,8 +288,8 @@ def write_logs(output_dir, summary, invalid_rows, unmatched_rows, conflict_rows,
         "row_number",
         "license_no",
         "member_name",
-        "raw_license_begin_date",
-        "license_begin_date",
+        "raw_appr_date",
+        "appr_date",
         "first_license_issue_date",
         "member_id",
         "existing_first_license_issue_date",
@@ -327,7 +327,7 @@ def print_invalid_rows(invalid_rows):
     for row in invalid_rows:
         print(
             "row_number={row_number}, license_no={license_no}, "
-            "raw_license_begin_date={raw_license_begin_date}, reason={reason}".format(**row)
+            "raw_appr_date={raw_appr_date}, reason={reason}".format(**row)
         )
 
 
