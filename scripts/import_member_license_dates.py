@@ -24,6 +24,7 @@ import pandas as pd
 import requests
 from requests import RequestException
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -59,6 +60,7 @@ def parse_args():
 
 
 def download_excel(file_url):
+    print("Downloading Excel file...", flush=True)
     try:
         response = requests.get(file_url, timeout=DOWNLOAD_TIMEOUT_SECONDS)
         response.raise_for_status()
@@ -80,14 +82,18 @@ def download_excel(file_url):
     if content_type and not any(kind in content_type for kind in excel_content_types) and not looks_like_excel:
         raise RuntimeError(f"Downloaded response does not look like an Excel file. Content-Type: {content_type}")
 
+    print(f"Downloaded {len(content):,} bytes.", flush=True)
     return BytesIO(content)
 
 
 def read_excel(workbook, sheet_name):
+    print(f"Reading Excel sheet {sheet_name!r}...", flush=True)
     try:
-        return pd.read_excel(workbook, sheet_name=sheet_name, engine="openpyxl", dtype={"license_no": object})
+        frame = pd.read_excel(workbook, sheet_name=sheet_name, engine="openpyxl", dtype={"license_no": object})
     except Exception as exc:
         raise RuntimeError(f"Failed to read Excel file: {exc}") from exc
+    print(f"Read {len(frame):,} rows.", flush=True)
+    return frame
 
 
 def validate_columns(frame):
@@ -151,19 +157,26 @@ def row_log(
 
 def load_license_map(license_numbers):
     license_map = {}
+    total = len(license_numbers)
     for start in range(0, len(license_numbers), BATCH_SIZE):
         batch = license_numbers[start:start + BATCH_SIZE]
         licenses = (
             License.query
+            .options(joinedload(License.member))
             .filter(getattr(License, LICENSE_NUMBER_FIELD).in_(batch))
             .all()
         )
         for license_record in licenses:
             license_map[getattr(license_record, LICENSE_NUMBER_FIELD)] = license_record
+        print(
+            f"Loaded licenses {min(start + BATCH_SIZE, total):,}/{total:,}; matched {len(license_map):,}.",
+            flush=True,
+        )
     return license_map
 
 
 def prepare_rows(frame):
+    print("Validating rows...", flush=True)
     valid_rows = []
     invalid_rows = []
 
@@ -208,6 +221,7 @@ def prepare_rows(frame):
             "issue_date": issue_date,
         })
 
+    print(f"Validated {len(frame):,} rows: {len(valid_rows):,} valid, {len(invalid_rows):,} invalid.", flush=True)
     return valid_rows, invalid_rows
 
 
@@ -218,6 +232,7 @@ def process_rows(valid_rows, dry_run):
     conflict_rows = []
 
     unique_license_numbers = sorted({row["license_no"] for row in valid_rows})
+    print(f"Loading {len(unique_license_numbers):,} unique license numbers from the database...", flush=True)
     license_map = load_license_map(unique_license_numbers)
 
     for start in range(0, len(valid_rows), BATCH_SIZE):
@@ -253,6 +268,11 @@ def process_rows(valid_rows, dry_run):
                 row_log(row_number, license_no, member_name, issue_date, "existing date differs", member.id, existing_date)
             )
 
+        print(
+            f"Processed {min(start + BATCH_SIZE, len(valid_rows)):,}/{len(valid_rows):,} valid rows.",
+            flush=True,
+        )
+
     return counts, updated_rows, unmatched_rows, conflict_rows
 
 
@@ -262,6 +282,7 @@ def write_log(path, rows, columns):
 
 
 def write_logs(output_dir, summary, invalid_rows, unmatched_rows, conflict_rows, updated_rows):
+    print(f"Writing CSV logs to {output_dir}...", flush=True)
     output_dir.mkdir(parents=True, exist_ok=True)
     detail_columns = [
         "row_number",
@@ -322,10 +343,12 @@ def main():
     output_dir = Path(args.output_dir)
 
     try:
+        print("Starting import.", flush=True)
         workbook = download_excel(args.file_url)
         frame = read_excel(workbook, args.sheet_name)
         validate_columns(frame)
 
+        print("Creating Flask app context...", flush=True)
         app = create_app()
         with app.app_context():
             valid_rows, invalid_rows = prepare_rows(frame)
@@ -345,9 +368,12 @@ def main():
             write_logs(output_dir, summary, invalid_rows, unmatched_rows, conflict_rows, updated_rows)
 
             if args.dry_run:
+                print("Dry run complete; rolling back session.", flush=True)
                 db.session.rollback()
             else:
+                print("Committing updates...", flush=True)
                 db.session.commit()
+                print("Commit complete.", flush=True)
 
             print_summary(summary, output_dir)
             print_invalid_rows(invalid_rows)
