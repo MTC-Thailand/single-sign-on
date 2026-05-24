@@ -172,7 +172,8 @@ def upload_new():
                                 number=row['mem_id_txt'],
                                 email=row['email'],
                                 tel=row['telephone_number'],
-                                dob=dob
+                                dob=dob,
+                                first_license_issue_date=license_issue_date
                                 )
                 db.session.add(member)
                 license = License.query.filter_by(number=str(int(row['license_no']))).first()
@@ -204,6 +205,8 @@ def upload_new():
                         setattr(member, attr_name, value)
                 if dob is not None:
                     member.dob = dob
+                if member.first_license_issue_date is None and license_issue_date is not None:
+                    member.first_license_issue_date = license_issue_date
                 db.session.add(member)
                 license = License.query.filter_by(number=str(int(row['license_no']))).first()
                 if license:
