@@ -47,7 +47,9 @@
                     </table>
                 {% endif %}
                 <a href="https://mtcouncil.org/cmte/">แบบฟอร์มการคิดคะแนนกิจกรรมการเป็นอาจารย์พิเศษ</a>
-                <form method="post" enctype="multipart/form-data">
+                <form method="post"
+                      enctype="multipart/form-data"
+                      action="{% if record %}{{ url_for('member.edit_individual_score_group_form', group_record_id=record.id) }}{% else %}{{ url_for('member.individual_score_group_form', activity_id=activity.id) }}{% endif %}">
                     {{form.hidden_tag()}}
                     <div class="field">
                         <label class="label">{{form.desc.label}}</label>
@@ -67,38 +69,104 @@
                             {{form.end_date(class="input", type="text")}}
                         </div>
                     </div>
-                    {% if record %}
-                    <label class="label">รายชื่อสมาชิก</label>
-                    <table class="table is-bordered is-striped">
-                        <tbody>
-                        {% for r in record.records %}
-                            <tr>
-                            <td>{{ r.license.member.th_fullname }}</td>
-                            <td>{{ r.license_number }}</td>
-                            <td>
-                                <a hx-delete="{{ url_for('member.delete_individual_score_record', record_id=r.id) }}"
-                                   hx-confirm="ต้องการลบรายนี้หรือไม่"
-                                   hx-target="closest tr"
-                                   hx-swap="outerHTML"
-                                   hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
-                                >
-                                    <span class="icon">
-                                        <i class="fa-solid fa-trash has-text-danger"></i>
-                                    </span>
-                                </a>
-                            </td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                    {% endif %}
+                    <div class="field">
+                        <label class="label">รายชื่อสมาชิกและคะแนน</label>
+                        <p class="help">เลือกสมาชิกด้านล่าง แล้วกำหนดคะแนนของแต่ละคนแยกกัน</p>
+                        <table class="table is-bordered is-striped is-fullwidth">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อ</th>
+                                    <th>เลขท.น.</th>
+                                    <th style="width: 180px;">คะแนน</th>
+                                    <th style="width: 48px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="group-member-score-body">
+                                {% if group_members|default([]) %}
+                                {% for member in group_members %}
+                                    <tr data-license-number="{{ member.license_number }}">
+                                        <td>{{ member.name }}</td>
+                                        <td>{{ member.license_number }}</td>
+                                        <td>
+                                            <input type="number"
+                                                   step="1"
+                                                   min="0"
+                                                   class="input"
+                                                   name="score_{{ member.license_number }}"
+                                                   value="{{ member.score }}">
+                                        </td>
+                                        <td>
+                                            {% if member.record_id %}
+                                            <a class="group-member-delete"
+                                               data-license-number="{{ member.license_number }}"
+                                               hx-delete="{{ url_for('member.delete_individual_score_record', record_id=member.record_id) }}"
+                                               hx-confirm="ต้องการลบรายนี้หรือไม่"
+                                               hx-target="closest tr"
+                                               hx-swap="outerHTML"
+                                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                                            >
+                                                <span class="icon">
+                                                    <i class="fa-solid fa-trash has-text-danger"></i>
+                                                </span>
+                                            </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                {% elif record %}
+                                {% for r in record.records %}
+                                    <tr data-license-number="{{ r.license_number }}">
+                                        <td>{{ r.license.member.th_fullname }}</td>
+                                        <td>{{ r.license_number }}</td>
+                                        <td>
+                                            <input type="number"
+                                                   step="0.01"
+                                                   min="0"
+                                                   class="input"
+                                                   name="score_{{ r.license_number }}"
+                                                   value="{{ r.score }}">
+                                        </td>
+                                        <td>
+                                            <a class="group-member-delete"
+                                               data-license-number="{{ r.license_number }}"
+                                               hx-delete="{{ url_for('member.delete_individual_score_record', record_id=r.id) }}"
+                                               hx-confirm="ต้องการลบรายนี้หรือไม่"
+                                               hx-target="closest tr"
+                                               hx-swap="outerHTML"
+                                               hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+                                            >
+                                                <span class="icon">
+                                                    <i class="fa-solid fa-trash has-text-danger"></i>
+                                                </span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="field">
                         <label class="label">เพิ่มรายชื่อผู้เข้าร่วมกิจกรรม</label>
                         <div class="control">
                             <p class="help">
                                 ค้นหาด้วยชื่อหรือนามสกุลหรือเลขท.น.
                             </p>
-                            <select multiple="multiple" name="members" class="js-example-basic-multiple"></select>
+                            <select multiple="multiple" name="members" class="js-example-basic-multiple">
+                                {% if group_members|default([]) %}
+                                {% for member in group_members %}
+                                    <option value="{{ member.license_number }}"
+                                            selected
+                                            data-score="{{ member.score }}">{{ member.name }}</option>
+                                {% endfor %}
+                                {% elif record %}
+                                {% for r in record.records %}
+                                    <option value="{{ r.license_number }}"
+                                            selected
+                                            data-score="{{ r.score }}">{{ r.license.member.th_fullname }}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
                             <p class="help has-text-danger">
                                 กรุณาเพิ่มรายชื่ออย่างน้อย 1 คน
                             </p>
@@ -142,10 +210,13 @@
                     {% endfor %}
                     <div class="field is-grouped">
                         <div class="control">
-                            <a class="button is-light" href="{{url_for('member.individual_score_group_index')}}">Cancel</a>
+                            <a class="button is-light" href="{{url_for('member.individual_score_group_index')}}">Back</a>
                         </div>
                         <div class="control">
-                            <button type="submit" class="button is-success">Submit</button>
+                            <button type="submit" name="action" value="draft" class="button is-warning is-light">Save Draft</button>
+                        </div>
+                        <div class="control">
+                            <button type="submit" name="action" value="submit" class="button is-success">Submit</button>
                         </div>
                     </div>
                 </form>
@@ -160,7 +231,96 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('.js-example-basic-multiple').select2({
+            const memberSelect = $('.js-example-basic-multiple');
+            const memberScoreBody = $('#group-member-score-body');
+
+            function addMemberScoreRow(member) {
+                if (!member || !member.licenseNumber) {
+                    return;
+                }
+
+                const existingRow = memberScoreBody.find(`tr[data-license-number="${member.licenseNumber}"]`);
+                if (existingRow.length) {
+                    return;
+                }
+
+                memberScoreBody.find('td[colspan="4"]').closest('tr').remove();
+
+                const row = $('<tr>').attr('data-license-number', member.licenseNumber);
+                row.append($('<td>').text(member.name));
+                row.append($('<td>').text(member.licenseNumber));
+
+                const scoreCell = $('<td>');
+                scoreCell.append(
+                    $('<input>', {
+                        type: 'number',
+                        step: '0.01',
+                        min: '0',
+                        class: 'input',
+                        name: `score_${member.licenseNumber}`,
+                        value: member.score ?? '',
+                    })
+                );
+                row.append(scoreCell);
+
+                const actionCell = $('<td>');
+                actionCell.append(
+                    $('<button>', {
+                        type: 'button',
+                        class: 'button is-small is-light',
+                        text: 'ลบ',
+                    }).on('click', function () {
+                        const option = memberSelect.find(`option[value="${member.licenseNumber}"]`);
+                        option.prop('selected', false);
+                        memberSelect.trigger('change');
+                    })
+                );
+                row.append(actionCell);
+                memberScoreBody.append(row);
+            }
+
+            $(document).on('click', '.group-member-delete', function () {
+                const licenseNumber = $(this).data('license-number');
+                window.setTimeout(function () {
+                    const option = memberSelect.find(`option[value="${licenseNumber}"]`);
+                    option.prop('selected', false);
+                    memberSelect.trigger('change');
+                }, 0);
+            });
+
+            function syncMemberScoreRows() {
+                const existingScores = {};
+                memberScoreBody.find('tr').each(function () {
+                    const row = $(this);
+                    const licenseNumber = row.data('license-number');
+                    const scoreInput = row.find('input[name^="score_"]');
+                    if (licenseNumber && scoreInput.length) {
+                        existingScores[licenseNumber] = scoreInput.val();
+                    }
+                });
+
+                const selectedMembers = memberSelect.find('option:selected').map(function () {
+                    return {
+                        licenseNumber: this.value,
+                        name: $(this).text(),
+                        score: existingScores[this.value] ?? $(this).data('score') ?? '',
+                    };
+                }).get();
+
+                memberScoreBody.empty();
+                if (!selectedMembers.length) {
+                    memberScoreBody.append(
+                        '<tr><td colspan="4" class="has-text-grey">ยังไม่มีรายชื่อสมาชิกที่เลือก</td></tr>'
+                    );
+                    return;
+                }
+
+                selectedMembers.forEach(function (member) {
+                    addMemberScoreRow(member);
+                });
+            }
+
+            memberSelect.select2({
                 width: "100%",
                 ajax: {
                     url: {{url_for('member.get_members')|tojson|safe}},
@@ -169,6 +329,16 @@
                 }
             }
             );
+            memberSelect.on('select2:select', function (evt) {
+                const data = evt.params.data;
+                addMemberScoreRow({
+                    licenseNumber: data.id,
+                    name: data.text,
+                    score: '',
+                });
+            });
+            memberSelect.on('change', syncMemberScoreRows);
+            syncMemberScoreRows();
             $("input[name='end_date']").daterangepicker({
                 buttonClasses: 'button is-small',
                 applyButtonClasses: 'is-link',

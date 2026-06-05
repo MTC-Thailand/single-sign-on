@@ -8,6 +8,9 @@
             {% include "messages.html" %}
             <div class="tabs is-boxed">
                 <ul>
+                    <li {% if status == 'draft' %} class="is-active" {% endif %}>
+                        <a href="{{ url_for('cmte.admin_group_individual_score_index', status='draft') }}">ฉบับร่าง</a>
+                    </li>
                     <li {% if status == 'pending' %} class="is-active" {% endif %}>
                         <a href="{{ url_for('cmte.admin_group_individual_score_index', status='pending') }}">รออนุมัติ</a>
                     </li>

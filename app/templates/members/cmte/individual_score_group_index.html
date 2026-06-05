@@ -31,22 +31,20 @@
                     {% endfor %}
                     </tbody>
                 </table>
-                <h1 class="title has-text-centered is-size-4">รายการยื่นขออนุมัติคะแนนส่วนบุคคลที่รอการอนุมัติ</h1>
-                <pre>
-                </pre>
+                <h1 class="title has-text-centered is-size-4">รายการคำขอทั้งหมด</h1>
                 <table class="table is-fullwidth">
                     <thead>
                     <th>รายละเอียด</th>
-                    <th>สมาชิก</th>
+                    <th>รายชื่อ</th>
                     <th>วันที่ยื่น</th>
                     <th>สถานะ</th>
                     <th></th>
                     </thead>
                     <tbody>
-                        {% for rec in current_user.pending_cmte_group_submission_records %}
+                        {% for rec in records %}
                         <tr>
                             <td>
-                                {% if rec.status == 'รออนุมัติ' %}
+                                {% if rec.status in ['ฉบับร่าง', 'รออนุมัติ'] %}
                                 <a href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
                                     <span>
                                         {{rec.detail}}
@@ -59,22 +57,56 @@
                                 {{rec.detail}}
                                 {% endif %}
                             </td>
-                            <td>{{rec.participants|join(',')}}</td>
+                            <td>{{ rec.participants|join(', ') }}</td>
                             <td>{{rec.create_datetime|localdatetime}}</td>
                             <td>{{rec.status}}</td>
                             <td>
-                                {% if rec.active_info_requests %}
-                                    <a class="button is-link" href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
+                                {% if rec.status == 'ฉบับร่าง' %}
+                                    <a class="button is-warning is-light" href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
                                         <span class="icon">
-                                            <i class="fa-solid fa-circle-info"></i>
+                                            <i class="fa-solid fa-file-pen"></i>
                                         </span>
-                                        <span>ดำเนินการแก้ไข</span>
+                                        <span>แก้ไขแบบร่าง</span>
                                     </a>
-                                    <a class="button is-success" href="{{ url_for('member.list_individual_group_score_info_requests', next=request.url, record_id=rec.id) }}">
+                                    <a class="button is-danger"
+                                       hx-delete="{{ url_for('member.delete_individual_score_group_record', group_record_id=rec.id) }}"
+                                       hx-confirm="ต้องการลบแบบร่างนี้หรือไม่"
+                                       hx-target="closest tr"
+                                       hx-swap="outerHTML"
+                                       hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'>
                                         <span class="icon">
-                                            <i class="fa-solid fa-circle-info"></i>
+                                            <i class="fa-solid fa-trash-can"></i>
                                         </span>
-                                        <span>ส่งขออนุมัติอีกครั้ง</span>
+                                        <span>ลบ</span>
+                                    </a>
+                                {% elif rec.status == 'รออนุมัติ' %}
+                                    {% if rec.active_info_requests %}
+                                        <a class="button is-link" href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </span>
+                                            <span>ดำเนินการแก้ไข</span>
+                                        </a>
+                                        <a class="button is-success" href="{{ url_for('member.list_individual_group_score_info_requests', next=request.url, record_id=rec.id) }}">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </span>
+                                            <span>ส่งขออนุมัติอีกครั้ง</span>
+                                        </a>
+                                    {% else %}
+                                        <a class="button is-link is-light" href="{{ url_for('member.edit_individual_score_group_form', group_record_id=rec.id) }}">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-file-pen"></i>
+                                            </span>
+                                            <span>แก้ไข</span>
+                                        </a>
+                                    {% endif %}
+                                {% else %}
+                                    <a class="button is-light" href="{{ url_for('member.individual_score_group_detail', record_id=rec.id) }}">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </span>
+                                        <span>ดูข้อมูล</span>
                                     </a>
                                 {% endif %}
                             </td>

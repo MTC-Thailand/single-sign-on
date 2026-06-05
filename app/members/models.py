@@ -100,7 +100,19 @@ class Member(db.Model, UserMixin):
 
     @property
     def pending_cmte_group_submission_records(self):
-        return self.cmte_group_submission_records.filter_by(approved_date=None, closed_date=None)
+        from app.cmte.models import CMTEEventGroupParticipationRecord
+        return self.cmte_group_submission_records.filter_by(
+            approved_date=None,
+            closed_date=None
+        ).filter(CMTEEventGroupParticipationRecord.submitted_datetime.isnot(None))
+
+    @property
+    def draft_cmte_group_submission_records(self):
+        return self.cmte_group_submission_records.filter_by(
+            approved_date=None,
+            closed_date=None,
+            submitted_datetime=None,
+        )
 
 
 class License(db.Model):

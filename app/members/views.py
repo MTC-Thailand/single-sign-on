@@ -1,6 +1,7 @@
 import base64
 import json
 import time
+from decimal import Decimal, InvalidOperation
 from datetime import datetime
 
 import arrow
@@ -68,6 +69,28 @@ def _build_address_sync_payload(member):
     apply_address(payload, 'contact', working_address)
     apply_address(payload, 'send_document', mailing_address)
     return payload
+
+
+def _build_group_member_rows(license_numbers, score_values=None, record_ids=None):
+    score_values = score_values or {}
+    record_ids = record_ids or {}
+    if not license_numbers:
+        return []
+
+    licenses = License.query.filter(License.number.in_(license_numbers)).all()
+    license_map = {license.number: license for license in licenses}
+    rows = []
+    for license_number in license_numbers:
+        license = license_map.get(license_number)
+        if not license:
+            continue
+        rows.append({
+            'license_number': license_number,
+            'name': license.member.th_fullname,
+            'score': score_values.get(license_number, ''),
+            'record_id': record_ids.get(license_number),
+        })
+    return rows
 
 
 def _sync_member_address_update(member):
@@ -370,7 +393,14 @@ def individual_score_index():
 @login_required
 def individual_score_group_index():
     activities = CMTEEventActivity.query.filter_by(group_submission_only=True)
-    return render_template('members/cmte/individual_score_group_index.html', activities=activities)
+    records = current_user.cmte_group_submission_records.order_by(
+        CMTEEventGroupParticipationRecord.create_datetime.desc()
+    ).all()
+    return render_template(
+        'members/cmte/individual_score_group_index.html',
+        activities=activities,
+        records=records,
+    )
 
 
 @member.route('/cmte/api/activity-field', methods=['GET'])
@@ -438,6 +468,15 @@ def individual_score_form():
 def individual_score_detail(record_id):
     record = CMTEEventParticipationRecord.query.get(record_id)
     return render_template('members/cmte/individual_score_detail.html', record=record)
+
+
+@member.route('/cmte/individual-group-score-records/<int:record_id>', methods=['GET'])
+@login_required
+def individual_score_group_detail(record_id):
+    record = CMTEEventGroupParticipationRecord.query.get_or_404(record_id)
+    if record.creator_id != current_user.id:
+        abort(403)
+    return render_template('members/cmte/individual_score_group_detail.html', record=record)
 
 
 
@@ -521,12 +560,37 @@ def individual_score_group_form(activity_id):
                              aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                              region_name=os.environ.get('BUCKETEER_AWS_REGION'))
     if request.method == 'POST':
+        action = request.form.get('action', 'submit')
+        selected_members = request.form.getlist('members')
+        member_scores = {license_number: request.form.get(f'score_{license_number}', '').strip()
+                         for license_number in selected_members}
         all_docs = []
         if form.validate_on_submit():
-            if not request.form.getlist('members'):
+            if not selected_members:
                 flash(f'กรุณาเพิ่มรายชื่อผู้เข้าร่วมกิจกรรม', 'danger')
                 return render_template('members/cmte/individual_score_group_form.html',
-                                       form=form, activity=activity)
+                                       form=form, activity=activity, group_members=[])
+            parsed_scores = {}
+            for license_number in selected_members:
+                raw_score = member_scores.get(license_number, '')
+                if raw_score == '':
+                    flash('กรุณากรอกคะแนนของสมาชิกทุกคน', 'danger')
+                    return render_template(
+                        'members/cmte/individual_score_group_form.html',
+                        form=form,
+                        activity=activity,
+                        group_members=_build_group_member_rows(selected_members, member_scores),
+                    )
+                try:
+                    parsed_scores[license_number] = Decimal(raw_score)
+                except InvalidOperation:
+                    flash('คะแนนของสมาชิกไม่ถูกต้อง', 'danger')
+                    return render_template(
+                        'members/cmte/individual_score_group_form.html',
+                        form=form,
+                        activity=activity,
+                        group_members=_build_group_member_rows(selected_members, member_scores),
+                    )
             group = CMTEEventGroupParticipationRecord(creator=current_user, activity=activity)
             for doc_form in form.upload_files:
                 _file = doc_form.upload_file.data
@@ -544,26 +608,50 @@ def individual_score_group_form(activity_id):
                 form.populate_obj(record)
                 record.individual = True
                 record.license_number = license_number
+                record.score = parsed_scores.get(license_number)
                 record.event_type_id = activity.type_id
                 record.activity_id = activity_id
                 record.create_datetime = arrow.now('Asia/Bangkok').datetime
                 group.records.append(record)
                 db.session.add(record)
             group.create_datetime = arrow.now('Asia/Bangkok').datetime
+            if action == 'submit':
+                group.submitted_datetime = arrow.now('Asia/Bangkok').datetime
             db.session.add(group)
             db.session.commit()
-            flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
-            return redirect(url_for('member.individual_score_group_index'))
+            if action == 'submit':
+                flash('ดำเนินการบันทึกข้อมูลและยื่นขออนุมัติเรียบร้อย', 'success')
+                return redirect(url_for('member.individual_score_group_index'))
+            else:
+                flash('บันทึกฉบับร่างเรียบร้อย', 'success')
+            return render_template(
+                'members/cmte/individual_score_group_form.html',
+                activity=group.activity,
+                form=form,
+                record=group,
+                group_members=_build_group_member_rows(
+                    [record.license_number for record in group.records.all()],
+                    {record.license_number: record.score or '' for record in group.records.all()},
+                    {record.license_number: record.id for record in group.records.all()},
+                ),
+            )
         else:
             flash(f'{form.errors}', 'danger')
+            return render_template(
+                'members/cmte/individual_score_group_form.html',
+                form=form,
+                activity=activity,
+                group_members=_build_group_member_rows(selected_members, member_scores),
+            )
     return render_template('members/cmte/individual_score_group_form.html',
-                           form=form, activity=activity)
+                           form=form, activity=activity, group_members=[])
 
 
 @member.route('/cmte/individual-score-group/<int:group_record_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_individual_score_group_form(group_record_id):
     group_record = CMTEEventGroupParticipationRecord.query.get(group_record_id)
+    was_draft = group_record.submitted_datetime is None
     first_record = group_record.records.all()[0]
     form = IndividualScoreGroupForm()
     if request.method == 'GET':
@@ -575,7 +663,47 @@ def edit_individual_score_group_form(group_record_id):
                              aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                              region_name=os.environ.get('BUCKETEER_AWS_REGION'))
     if request.method == 'POST':
+        action = request.form.get('action', 'submit')
+        selected_members = request.form.getlist('members')
+        member_scores = {license_number: request.form.get(f'score_{license_number}', '').strip()
+                         for license_number in selected_members}
         if form.validate_on_submit():
+            if not selected_members:
+                flash('กรุณาเพิ่มรายชื่อผู้เข้าร่วมกิจกรรม', 'danger')
+                return render_template(
+                    'members/cmte/individual_score_group_form.html',
+                    activity=group_record.activity,
+                    form=form,
+                    record=group_record,
+                    group_members=_build_group_member_rows(
+                        [record.license_number for record in group_record.records.all()],
+                        {record.license_number: record.score or '' for record in group_record.records.all()},
+                        {record.license_number: record.id for record in group_record.records.all()},
+                    ),
+                )
+            parsed_scores = {}
+            for license_number in selected_members:
+                raw_score = member_scores.get(license_number, '')
+                if raw_score == '':
+                    flash('กรุณากรอกคะแนนของสมาชิกทุกคน', 'danger')
+                    return render_template(
+                        'members/cmte/individual_score_group_form.html',
+                        activity=group_record.activity,
+                        form=form,
+                        record=group_record,
+                        group_members=_build_group_member_rows(selected_members, member_scores),
+                    )
+                try:
+                    parsed_scores[license_number] = Decimal(raw_score)
+                except InvalidOperation:
+                    flash('คะแนนของสมาชิกไม่ถูกต้อง', 'danger')
+                    return render_template(
+                        'members/cmte/individual_score_group_form.html',
+                        activity=group_record.activity,
+                        form=form,
+                        record=group_record,
+                        group_members=_build_group_member_rows(selected_members, member_scores),
+                    )
             for doc_form in form.upload_files:
                 _file = doc_form.upload_file.data
                 if _file:
@@ -586,6 +714,10 @@ def edit_individual_score_group_form(group_record_id):
                     doc.upload_datetime = arrow.now('Asia/Bangkok').datetime
                     doc.note = doc_form.note.data
                     db.session.add(doc)
+            selected_license_numbers = set(selected_members)
+            for record in group_record.records.all():
+                if record.license_number not in selected_license_numbers:
+                    db.session.delete(record)
             for license_number in request.form.getlist('members'):
                 record = CMTEEventParticipationRecord.query.filter_by(license_number=license_number,
                                                                       group_id=group_record_id).first()
@@ -595,14 +727,51 @@ def edit_individual_score_group_form(group_record_id):
                     record.event_type_id = first_record.activity.type_id
                     record.activity_id = first_record.activity_id
                     record.create_datetime = arrow.now('Asia/Bangkok').datetime
-                    db.session.add(record)
+                record.score = parsed_scores.get(license_number)
+                db.session.add(record)
+            group_record.submitted_datetime = (
+                arrow.now('Asia/Bangkok').datetime if action == 'submit' else None
+            )
+            db.session.add(group_record)
             db.session.commit()
-            flash('ดำเนินการบันทึกข้อมูลเรียบร้อย โปรดรอการอนุมัติคะแนน', 'success')
-            return redirect(url_for('member.individual_score_group_index'))
+            if action == 'submit':
+                flash('ดำเนินการบันทึกข้อมูลและยื่นขออนุมัติเรียบร้อย', 'success')
+                if was_draft:
+                    return redirect(url_for('member.individual_score_group_index'))
+                return redirect(url_for('member.list_individual_group_score_info_requests', record_id=group_record.id))
+            else:
+                flash('บันทึกฉบับร่างเรียบร้อย', 'success')
+            return render_template(
+                'members/cmte/individual_score_group_form.html',
+                activity=group_record.activity,
+                form=form,
+                record=group_record,
+                group_members=_build_group_member_rows(
+                    [record.license_number for record in group_record.records.all()],
+                    {record.license_number: record.score or '' for record in group_record.records.all()},
+                    {record.license_number: record.id for record in group_record.records.all()},
+                ),
+            )
         else:
             flash(f'{form.errors}', 'danger')
-    return render_template('members/cmte/individual_score_group_form.html',
-                           activity=group_record.activity, form=form, record=group_record)
+            return render_template(
+                'members/cmte/individual_score_group_form.html',
+                activity=group_record.activity,
+                form=form,
+                record=group_record,
+                group_members=_build_group_member_rows(selected_members, member_scores),
+            )
+    return render_template(
+        'members/cmte/individual_score_group_form.html',
+        activity=group_record.activity,
+        form=form,
+        record=group_record,
+        group_members=_build_group_member_rows(
+            [record.license_number for record in group_record.records.all()],
+            {record.license_number: record.score or '' for record in group_record.records.all()},
+            {record.license_number: record.id for record in group_record.records.all()},
+        ),
+    )
 
 
 @member.route('/api/cmte/individual-score-group/<int:record_id>/delete', methods=['DELETE'])
@@ -610,6 +779,19 @@ def edit_individual_score_group_form(group_record_id):
 def delete_individual_score_record(record_id):
     record = CMTEEventParticipationRecord.query.get(record_id)
     db.session.delete(record)
+    db.session.commit()
+    return ''
+
+
+@member.route('/api/cmte/individual-score-groups/<int:group_record_id>/delete', methods=['DELETE'])
+@login_required
+def delete_individual_score_group_record(group_record_id):
+    group_record = CMTEEventGroupParticipationRecord.query.get_or_404(group_record_id)
+    if group_record.creator_id != current_user.id:
+        abort(403)
+    if group_record.submitted_datetime is not None:
+        abort(400)
+    db.session.delete(group_record)
     db.session.commit()
     return ''
 

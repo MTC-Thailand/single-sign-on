@@ -102,8 +102,10 @@ def cmte_admin_index():
     edit_requests = CMTESponsorEditRequest.query.filter_by(status='pending').count()
     pending_requests = requests + edit_requests
     pending_payments = CMTEFeePaymentRecord.query.filter_by(payment_datetime=None).count()
-    pending_group_individual_records = CMTEEventGroupParticipationRecord.query.filter_by(approved_date=None,
-                                                                                         closed_date=None).count()
+    pending_group_individual_records = CMTEEventGroupParticipationRecord.query.filter_by(
+        approved_date=None,
+        closed_date=None
+    ).filter(CMTEEventGroupParticipationRecord.submitted_datetime.isnot(None)).count()
     pending_individual_records = CMTEEventParticipationRecord.query.filter_by(individual=True,
                                                                               approved_date=None,
                                                                               closed_date=None).count()

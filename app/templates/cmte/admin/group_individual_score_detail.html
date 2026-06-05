@@ -27,7 +27,26 @@
                         <td>{{ group_record.record.desc }}</td>
                         <tr>
                             <td>รายชื่อ</td>
-                            <td>{{ group_record.participants|join(', ') }}</td>
+                            <td>
+                                <table class="table is-bordered is-striped is-fullwidth">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อ</th>
+                                            <th>เลขท.น.</th>
+                                            <th>คะแนน</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for record in group_record.records %}
+                                        <tr>
+                                            <td>{{ record.license.member.th_fullname }}</td>
+                                            <td>{{ record.license_number }}</td>
+                                            <td>{{ record.score or '-' }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </td>
                         </tr>
                         <tr>
                             <td>วันที่ยื่น</td>
@@ -86,6 +105,13 @@
                         </tbody>
                     </table>
                     <div class="buttons is-centered">
+                        <a class="button"
+                           href="{{ url_for('cmte.admin_group_individual_score_index', status=request.args.get('status', 'pending')) }}">
+                            <span class="icon">
+                              <i class="fa-solid fa-arrow-left"></i>
+                            </span>
+                            <span>Back</span>
+                        </a>
                         <a class="button is-danger"
                            hx-delete="{{ url_for('cmte.admin_group_individual_score_edit', group_record_id=group_record.id) }}"
                            hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
@@ -97,7 +123,7 @@
                             </span>
                             <span>ลบรายการ</span>
                         </a>
-                        <a class="button is-link is-outlined"
+                        <a class="button is-link"
                            href="{{ url_for('cmte.admin_group_individual_score_edit', group_record_id=group_record.id) }}">
                             <span class="icon">
                               <i class="fa-solid fa-pen"></i>
@@ -108,17 +134,34 @@
                 </div>
             </div>
             <div class="columns">
-                <div class="column is-one-third">
-                    <nav class="panel is-success">
-                        <p class="panel-heading">อนุมัติ</p>
+                <div class="column is-half">
+                    <nav class="panel">
+                        <p class="panel-heading">เปลี่ยนสถานะ</p>
                         <form method="post">
-                            <div class="panel-block">
+                            <div class="panel-block is-block">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="action" value="approve">
-                                <label class="label">คะแนน</label>
-                                <div class="control">
-                                    <input type="number" name="score" class="input" required>
+                                <input type="hidden" name="action" value="update_status">
+                                <div class="field">
+                                    <label class="label">สถานะ</label>
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select name="status">
+                                                <option value="draft" {% if current_status == 'draft' %}selected{% endif %}>ฉบับร่าง</option>
+                                                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>รออนุมัติ</option>
+                                                <option value="approved" {% if current_status == 'approved' %}selected{% endif %}>อนุมัติ</option>
+                                                <option value="waiting" {% if current_status == 'waiting' %}selected{% endif %}>ขอข้อมูลเพิ่มเติม</option>
+                                                <option value="rejected" {% if current_status == 'rejected' %}selected{% endif %}>ไม่อนุมัติ</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
+                                <div class="field">
+                                    <label class="label">หมายเหตุ</label>
+                                    <div class="control">
+                                        <textarea class="textarea" name="status_note" placeholder="ใช้เมื่อขอข้อมูลเพิ่มเติม"></textarea>
+                                    </div>
+                                </div>
+                                <p class="help">หากเลือก ขอข้อมูลเพิ่มเติม ต้องกรอกรายละเอียดในช่องหมายเหตุ</p>
                             </div>
                             <div class="panel-block">
                                 <div class="control">
@@ -128,42 +171,15 @@
                         </form>
                     </nav>
                 </div>
-                <div class="column is-one-third">
-                    <nav class="panel is-warning">
-                        <p class="panel-heading">ขอข้อมูลเพิ่มเติม</p>
-                        <form method="post">
-                            <div class="panel-block">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="action" value="info_request">
-                                <div class="control">
-                                    <textarea class="textarea" name="detail" placeholder="รายละเอียด"></textarea>
-                                </div>
-                            </div>
-                            <div class="panel-block">
-                                <div class="control">
-                                    <button type="submit" class="button is-warning">Send</button>
-                                </div>
-                            </div>
-                        </form>
-                    </nav>
-                </div>
-                <div class="column is-one-third">
-                    <nav class="panel is-danger">
-                        <p class="panel-heading">ไม่อนุมัติ</p>
-                        <form method="post">
-                            <div class="panel-block">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="action" value="reject">
-                                <div class="control">
-                                    {{ form.reason(class="textarea", placeholder="เหตุผล") }}
-                                </div>
-                            </div>
-                            <div class="panel-block">
-                                <div class="control">
-                                    <button type="submit" class="button is-danger">Reject</button>
-                                </div>
-                            </div>
-                        </form>
+                <div class="column is-half">
+                    <nav class="panel is-info">
+                        <p class="panel-heading">สถานะปัจจุบัน</p>
+                        <div class="panel-block">
+                            <strong>{{ group_record.status }}</strong>
+                        </div>
+                        <div class="panel-block">
+                            <p>การอนุมัติจะใช้คะแนนรายบุคคลตามตารางด้านบน</p>
+                        </div>
                     </nav>
                 </div>
             </div>

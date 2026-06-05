@@ -4,6 +4,7 @@ import time
 import os
 import uuid
 import calendar
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from io import BytesIO
 from pprint import pprint
@@ -30,6 +31,28 @@ from app import cmte_admin_permission, cmte_sponsor_admin_permission
 
 bangkok = timezone('Asia/Bangkok')
 TOKEN_MAX_AGE_SECONDS = 3600
+
+
+def _build_group_member_rows(license_numbers, score_values=None, record_ids=None):
+    score_values = score_values or {}
+    record_ids = record_ids or {}
+    if not license_numbers:
+        return []
+
+    licenses = License.query.filter(License.number.in_(license_numbers)).all()
+    license_map = {license.number: license for license in licenses}
+    rows = []
+    for license_number in license_numbers:
+        license = license_map.get(license_number)
+        if not license:
+            continue
+        rows.append({
+            'license_number': license_number,
+            'name': license.member.th_fullname,
+            'score': score_values.get(license_number, ''),
+            'record_id': record_ids.get(license_number),
+        })
+    return rows
 
 
 def create_timed_serializer():
@@ -2391,8 +2414,12 @@ def admin_get_group_individual_score_records():
     direction = request.args.get('order[0][dir]')
     col_name = request.args.get('columns[{}][data]'.format(col_idx))
     query = CMTEEventGroupParticipationRecord.query \
-        .filter(CMTEEventGroupParticipationRecord.create_datetime!=None) \
         .order_by(CMTEEventGroupParticipationRecord.create_datetime.desc())
+    if status == 'draft':
+        query = query.filter(CMTEEventGroupParticipationRecord.submitted_datetime == None) \
+            .filter_by(approved_date=None, closed_date=None)
+    else:
+        query = query.filter(CMTEEventGroupParticipationRecord.submitted_datetime != None)
     if status == 'pending':
         query = query.filter_by(approved_date=None, closed_date=None)
     elif status == 'approved':
@@ -2430,7 +2457,11 @@ def admin_get_group_individual_score_records():
     data = []
     for record in query:
         _dict = record.to_dict()
-        _dict['url'] = url_for('cmte.admin_group_individual_score_detail', record_id=record.id)
+        _dict['url'] = url_for(
+            'cmte.admin_group_individual_score_detail',
+            record_id=record.id,
+            status=status,
+        )
         data.append(_dict)
     return jsonify({'data': data,
                     'recordsFiltered': total_filtered,
@@ -2565,32 +2596,109 @@ def admin_individual_score_detail(record_id):
 def admin_group_individual_score_detail(record_id):
     group_record = CMTEEventGroupParticipationRecord.query.get(record_id)
     form = IndividualScoreGroupForm(obj=group_record)
+    if not group_record.submitted_datetime:
+        current_status = 'draft'
+    elif group_record.approved_date:
+        current_status = 'approved'
+    elif group_record.closed_date:
+        current_status = 'rejected'
+    elif group_record.active_info_requests:
+        current_status = 'waiting'
+    else:
+        current_status = 'pending'
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'approve':
-            score = request.form.get('score', type=float)
+        if action == 'update_status':
+            selected_status = request.form.get('status')
+            status_note = request.form.get('status_note', '').strip()
+            today = arrow.now('Asia/Bangkok').date()
+            now = arrow.now('Asia/Bangkok').datetime
+
+            if selected_status == 'draft':
+                group_record.submitted_datetime = None
+                group_record.approved_date = None
+                group_record.closed_date = None
+                for record in group_record.records:
+                    record.approved_date = None
+                    record.closed_date = None
+                    db.session.add(record)
+                db.session.add(group_record)
+                db.session.commit()
+                flash('บันทึกสถานะเรียบร้อย', 'success')
+                return redirect(url_for('cmte.admin_group_individual_score_index', status='draft'))
+
+            if not group_record.submitted_datetime:
+                group_record.submitted_datetime = now
+
+            if selected_status == 'approved':
+                group_record.approved_date = today
+                group_record.closed_date = None
+                for record in group_record.records:
+                    record.set_score_valid_date()
+                    record.approved_date = today
+                    record.closed_date = None
+                    db.session.add(record)
+                for req in group_record.active_info_requests:
+                    req.closed_at = now
+                    db.session.add(req)
+                db.session.add(group_record)
+                db.session.commit()
+                flash('อนุมัติคะแนนเรียบร้อยแล้ว', 'success')
+                return redirect(url_for('cmte.admin_group_individual_score_index', status='approved'))
+
+            if selected_status == 'waiting':
+                if not status_note:
+                    flash('กรุณากรอกรายละเอียดคำขอข้อมูลเพิ่มเติม', 'warning')
+                    return render_template(
+                        'cmte/admin/group_individual_score_detail.html',
+                        group_record=group_record,
+                        form=form,
+                        current_status=current_status,
+                    )
+                info_request = CMTEParticipationRecordRequest(group_record=group_record)
+                info_request.created_at = now
+                info_request.requester = current_user
+                info_request.detail = status_note
+                group_record.approved_date = None
+                group_record.closed_date = None
+                for record in group_record.records:
+                    record.approved_date = None
+                    record.closed_date = None
+                    db.session.add(record)
+                db.session.add(info_request)
+                db.session.add(group_record)
+                db.session.commit()
+                flash('ส่งคำขอข้อมูลเพิ่มเติมเรียบร้อยแล้ว', 'success')
+                return redirect(url_for('cmte.admin_group_individual_score_index', status='waiting'))
+
+            if selected_status == 'rejected':
+                group_record.approved_date = None
+                group_record.closed_date = today
+                for record in group_record.records:
+                    record.approved_date = None
+                    record.closed_date = today
+                    db.session.add(record)
+                for req in group_record.active_info_requests:
+                    req.closed_at = now
+                    db.session.add(req)
+                db.session.add(group_record)
+                db.session.commit()
+                flash('บันทึกข้อมูลเรียบร้อย', 'success')
+                return redirect(url_for('cmte.admin_group_individual_score_index', status='rejected'))
+
+            group_record.approved_date = None
+            group_record.closed_date = None
             for record in group_record.records:
-                record.score = score
-                record.set_score_valid_date()
-                record.approved_date = arrow.now('Asia/Bangkok').date()
+                record.approved_date = None
+                record.closed_date = None
                 db.session.add(record)
-                group_record.approved_date = arrow.now('Asia/Bangkok').date()
             db.session.add(group_record)
             db.session.commit()
-            flash(f'อนุมัติคะแนนเรียบร้อยแล้ว', 'success')
-            return redirect(url_for('cmte.admin_group_individual_score_index'))
-        elif action == 'info_request':
-            _request = CMTEParticipationRecordRequest(group_record=group_record)
-            _request.created_at = arrow.now('Asia/Bangkok').datetime
-            _request.requester = current_user
-            _request.detail = request.form.get('detail')
-            db.session.add(_request)
-            db.session.commit()
-            flash(f'ส่งคำขอข้อมูลเพิ่มเติมเรียบร้อยแล้ว', 'success')
-            return redirect(url_for('cmte.admin_group_individual_score_index'))
+            flash('บันทึกสถานะเรียบร้อย', 'success')
+            return redirect(url_for('cmte.admin_group_individual_score_index', status='pending'))
 
     return render_template('cmte/admin/group_individual_score_detail.html',
-                           group_record=group_record, form=form)
+                           group_record=group_record, form=form, current_status=current_status)
 
 
 @cmte.route('/events/group-individuals/<int:group_record_id>/edit', methods=['GET', 'POST', 'DELETE'])
@@ -2618,6 +2726,9 @@ def admin_group_individual_score_edit(group_record_id):
                              aws_secret_access_key=os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
                              region_name=os.environ.get('BUCKETEER_AWS_REGION'))
     if request.method == 'POST':
+        selected_members = request.form.getlist('members')
+        member_scores = {license_number: request.form.get(f'score_{license_number}', '').strip()
+                         for license_number in selected_members}
         if form.validate_on_submit():
             for record in group_record.records:
                 record.desc = form.desc.data
@@ -2625,6 +2736,44 @@ def admin_group_individual_score_edit(group_record_id):
                 record.end_date = form.end_date.data
                 record.reason = form.reason.data
                 db.session.add(record)
+
+            if not selected_members:
+                flash('กรุณาเพิ่มรายชื่อผู้เข้าร่วมกิจกรรม', 'danger')
+                return render_template(
+                    'cmte/admin/group_individual_score_form.html',
+                    activity=group_record.activity,
+                    form=form,
+                    record=group_record,
+                    group_members=_build_group_member_rows(
+                        [record.license_number for record in group_record.records.all()],
+                        {record.license_number: record.score or '' for record in group_record.records.all()},
+                        {record.license_number: record.id for record in group_record.records.all()},
+                    ),
+                )
+
+            parsed_scores = {}
+            for license_number in selected_members:
+                raw_score = member_scores.get(license_number, '')
+                if raw_score == '':
+                    flash('กรุณากรอกคะแนนของสมาชิกทุกคน', 'danger')
+                    return render_template(
+                        'cmte/admin/group_individual_score_form.html',
+                        activity=group_record.activity,
+                        form=form,
+                        record=group_record,
+                        group_members=_build_group_member_rows(selected_members, member_scores),
+                    )
+                try:
+                    parsed_scores[license_number] = Decimal(raw_score)
+                except InvalidOperation:
+                    flash('คะแนนของสมาชิกไม่ถูกต้อง', 'danger')
+                    return render_template(
+                        'cmte/admin/group_individual_score_form.html',
+                        activity=group_record.activity,
+                        form=form,
+                        record=group_record,
+                        group_members=_build_group_member_rows(selected_members, member_scores),
+                    )
 
             group_record.reason = form.reason.data
             db.session.add(group_record)
@@ -2640,6 +2789,11 @@ def admin_group_individual_score_edit(group_record_id):
                     doc.note = doc_form.note.data
                     db.session.add(doc)
 
+            selected_license_numbers = set(selected_members)
+            for record in group_record.records.all():
+                if record.license_number not in selected_license_numbers:
+                    db.session.delete(record)
+
             for license_number in request.form.getlist('members'):
                 record = CMTEEventParticipationRecord.query.filter_by(license_number=license_number,
                                                                       group_id=group_record_id).first()
@@ -2653,15 +2807,32 @@ def admin_group_individual_score_edit(group_record_id):
                     record.start_date = form.start_date.data
                     record.end_date = form.end_date.data
                     record.reason = form.reason.data
-                    db.session.add(record)
+                record.score = parsed_scores.get(license_number)
+                db.session.add(record)
             db.session.commit()
             flash('ดำเนินการบันทึกข้อมูลเรียบร้อย', 'success')
             return redirect(url_for('cmte.admin_group_individual_score_detail', record_id=group_record_id))
         else:
             flash(f'{form.errors}', 'danger')
+            return render_template(
+                'cmte/admin/group_individual_score_form.html',
+                activity=group_record.activity,
+                form=form,
+                record=group_record,
+                group_members=_build_group_member_rows(selected_members, member_scores),
+            )
 
-    return render_template('cmte/admin/group_individual_score_form.html',
-                           activity=group_record.activity, form=form, record=group_record)
+    return render_template(
+        'cmte/admin/group_individual_score_form.html',
+        activity=group_record.activity,
+        form=form,
+        record=group_record,
+        group_members=_build_group_member_rows(
+            [record.license_number for record in group_record.records.all()],
+            {record.license_number: record.score or '' for record in group_record.records.all()},
+            {record.license_number: record.id for record in group_record.records.all()},
+        ),
+    )
 
 
 @cmte.route('/events/individuals/docs/<int:doc_id>', methods=['DELETE'])

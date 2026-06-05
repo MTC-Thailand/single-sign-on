@@ -469,6 +469,7 @@ class CMTEEventGroupParticipationRecord(db.Model):
                                                            lazy='dynamic',
                                                            cascade='all, delete-orphan'))
     create_datetime = db.Column('create_datetime', db.DateTime(timezone=True))
+    submitted_datetime = db.Column('submitted_datetime', db.DateTime(timezone=True))
     approved_date = db.Column('approved_date', db.Date(), info={'label': 'วันอนุมัติคะแนน'})
     closed_date = db.Column('closed_date', db.Date())
     reason = db.Column('reason', db.Text(), info={'label': 'เหตุผล'})
@@ -493,8 +494,10 @@ class CMTEEventGroupParticipationRecord(db.Model):
             return 'อนุมัติ'
         elif self.closed_date:
             return 'ไม่อนุมัติ'
-        else:
+        elif self.submitted_datetime:
             return 'รออนุมัติ'
+        else:
+            return 'ฉบับร่าง'
 
     @property
     def participants(self):
@@ -505,11 +508,15 @@ class CMTEEventGroupParticipationRecord(db.Model):
         return [req for req in self.info_requests if req.responded_at is None]
 
     def to_dict(self):
+        create_datetime = self.create_datetime
+        if create_datetime is None and self.record:
+            create_datetime = self.record.create_datetime
         return {
             'id': self.id,
             'name': self.creator.th_fullname,
             'status': self.status,
-            'create_datetime': self.create_datetime.isoformat() if self.create_datetime else None,
+            'create_datetime': create_datetime.isoformat() if create_datetime else None,
+            'submitted_datetime': self.submitted_datetime.isoformat() if self.submitted_datetime else None,
             'license_number': self.creator.license.number,
             'detail': self.detail,
         }
