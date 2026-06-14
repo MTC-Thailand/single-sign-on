@@ -46,7 +46,7 @@
                         </tbody>
                     </table>
                 {% endif %}
-                <a href="https://mtcouncil.org/cmte/">แบบฟอร์มการคิดคะแนนกิจกรรมการเป็นอาจารย์พิเศษ</a>
+                <a href="https://mtcouncil.org/cmte/">แบบฟอร์มการคิดคะแนนกิจกรรม</a>
                 <form method="post"
                       enctype="multipart/form-data"
                       action="{% if record %}{{ url_for('member.edit_individual_score_group_form', group_record_id=record.id) }}{% else %}{{ url_for('member.individual_score_group_form', activity_id=activity.id) }}{% endif %}">
