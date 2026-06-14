@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}Member Dashboard{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .member-dashboard-section {
+        padding-top: 0.75rem;
+    }
+
+    .member-dashboard-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .member-dashboard-hero,
+    .member-dashboard-panel {
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 24px;
+        box-shadow: 0 18px 40px rgba(34, 79, 148, 0.08);
+        background: rgba(255, 255, 255, 0.94);
+    }
+
+    .member-dashboard-hero {
+        padding: 1.5rem;
+        background:
+            radial-gradient(circle at top right, rgba(198, 58, 52, 0.12), transparent 28%),
+            linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(243, 247, 255, 0.95));
+    }
+
+    .member-dashboard-kicker {
+        display: inline-block;
+        margin-bottom: 0.5rem;
+        color: var(--theme-primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+    }
+
+    .member-dashboard-lead {
+        color: var(--theme-muted);
+        line-height: 1.7;
+        max-width: 60rem;
+    }
+
+    .member-dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .member-dashboard-stat {
+        padding: 1.15rem;
+        border-radius: 20px;
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.95));
+    }
+
+    .member-dashboard-stat .label {
+        color: var(--theme-muted);
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .member-dashboard-stat .value {
+        color: var(--theme-text);
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.4rem;
+    }
+
+    .member-dashboard-stat .help-text {
+        color: var(--theme-muted);
+        font-size: 0.92rem;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .member-dashboard-panel {
+        padding: 1.5rem;
+    }
+
+    .member-dashboard-panel + .member-dashboard-panel {
+        margin-top: 1rem;
+    }
+
+    .member-dashboard-panel-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .member-dashboard-panel-heading h2 {
+        margin: 0;
+    }
+
+    .member-dashboard-status-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .member-dashboard-active-grid {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .member-dashboard-chart-card {
+        border-radius: 20px;
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.95));
+        padding: 1rem;
+    }
+
+    .member-dashboard-chart {
+        min-height: 320px;
+    }
+
+    .member-dashboard-status-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.95rem 1rem;
+        border-radius: 18px;
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        background: rgba(250, 252, 255, 0.98);
+    }
+
+    .member-dashboard-status-item span:first-child {
+        color: var(--theme-text);
+        font-weight: 600;
+    }
+
+    .member-dashboard-status-item span:last-child {
+        color: var(--theme-primary);
+        font-weight: 800;
+    }
+
+    @media screen and (max-width: 1023px) {
+        .member-dashboard-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .member-dashboard-active-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+        .member-dashboard-hero,
+        .member-dashboard-panel {
+            padding: 1.15rem;
+        }
+
+        .member-dashboard-grid,
+        .member-dashboard-status-list {
+            grid-template-columns: 1fr;
+        }
+
+        .member-dashboard-panel-heading {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "admin_nav.html" %}
+<section class="section member-dashboard-section">
+    <div class="container">
+        {% include "messages.html" %}
+
+        <div class="member-dashboard-shell">
+            <section class="member-dashboard-hero">
+                <p class="member-dashboard-kicker">Member Dashboard</p>
+                <h1 class="title is-4">ภาพรวมสถิติสมาชิก</h1>
+                <p class="member-dashboard-lead">
+                    หน้านี้สรุปสถานะสมาชิก ใบอนุญาต การต่ออายุ และข้อมูลสนับสนุนอื่น ๆ ที่ใช้ติดตามภาพรวมของระบบได้เร็วขึ้น
+                </p>
+            </section>
+
+            <section class="member-dashboard-panel">
+                <div class="member-dashboard-panel-heading">
+                    <div>
+                        <p class="member-dashboard-kicker">Overall Statistics</p>
+                        <h2 class="title is-5">สถิติหลัก</h2>
+                    </div>
+                </div>
+
+                <div class="member-dashboard-grid">
+                    <div class="member-dashboard-stat">
+                        <p class="label">สมาชิกทั้งหมด</p>
+                        <p class="value">{{ total_members }}</p>
+                        <p class="help-text">จำนวนบัญชีสมาชิกทั้งหมดในระบบ</p>
+                    </div>
+                    <div class="member-dashboard-stat">
+                        <p class="label">สมาชิกสถานะปกติ</p>
+                        <p class="value">{{ active_members }}</p>
+                        <p class="help-text">สมาชิกที่ยังอยู่ในสถานะใช้งาน</p>
+                    </div>
+                    <div class="member-dashboard-stat">
+                        <p class="label">ใบอนุญาตทั้งหมด</p>
+                        <p class="value">{{ total_licenses }}</p>
+                        <p class="help-text">บันทึกใบอนุญาตที่มีอยู่ทั้งหมด</p>
+                    </div>
+                    <div class="member-dashboard-stat">
+                        <p class="label">ใบอนุญาตใช้งานได้</p>
+                        <p class="value">{{ active_licenses }}</p>
+                        <p class="help-text">ใบอนุญาตที่ยังไม่หมดอายุ</p>
+                    </div>
+                    <div class="member-dashboard-stat">
+                        <p class="label">ใบอนุญาตหมดอายุ</p>
+                        <p class="value">{{ expired_licenses }}</p>
+                        <p class="help-text">ใบอนุญาตที่หมดอายุแล้ว</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="member-dashboard-panel">
+                <div class="member-dashboard-panel-heading">
+                    <div>
+                        <p class="member-dashboard-kicker">Active Licenses</p>
+                        <h2 class="title is-5">ใบอนุญาตใช้งานได้ตามช่วงอายุ</h2>
+                    </div>
+                </div>
+
+                <div class="member-dashboard-active-grid">
+                    <div class="member-dashboard-stat">
+                        <p class="label">ใบอนุญาตใช้งานได้</p>
+                        <p class="value">{{ active_licenses }}</p>
+                        <p class="help-text">ใบอนุญาตที่ยังมีผลใช้งานในระบบ</p>
+                    </div>
+                    <div class="member-dashboard-chart-card">
+                        <div id="active-license-age-chart" class="member-dashboard-chart"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="member-dashboard-panel">
+                <div class="member-dashboard-panel-heading">
+                    <div>
+                        <p class="member-dashboard-kicker">Active Licenses</p>
+                        <h2 class="title is-5">ระยะเวลาคงเหลือของใบอนุญาตตามปี</h2>
+                    </div>
+                </div>
+
+                <div class="member-dashboard-chart-card">
+                    <div id="active-license-days-chart" class="member-dashboard-chart"></div>
+                </div>
+            </section>
+
+            <section class="member-dashboard-panel">
+                <div class="member-dashboard-panel-heading">
+                    <div>
+                        <p class="member-dashboard-kicker">Renewal Eligibility</p>
+                        <h2 class="title is-5">สมาชิกที่มีคะแนน CMTE &gt;= 50 สำหรับต่ออายุใบอนุญาต</h2>
+                    </div>
+                </div>
+
+                <div class="member-dashboard-chart-card">
+                    <div id="active-license-eligibility-chart" class="member-dashboard-chart"></div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+    const activeLicenseAgeRows = {{ active_license_age_rows|tojson }};
+    const activeLicenseDaysRows = {{ active_license_days_rows|tojson }};
+    const activeLicenseEligibilityRows = {{ active_license_eligibility_rows|tojson }};
+    let activeLicenseChartsReady = false;
+
+    function drawActiveLicenseChart() {
+        if (!activeLicenseChartsReady || !window.google || !google.visualization) {
+            return;
+        }
+
+        const chartData = new google.visualization.DataTable();
+        chartData.addColumn('string', 'Age range');
+        chartData.addColumn('number', 'Active licenses');
+        chartData.addRows(activeLicenseAgeRows.length ? activeLicenseAgeRows : [['No data', 0]]);
+
+        const chart = new google.visualization.ColumnChart(
+            document.getElementById('active-license-age-chart')
+        );
+        chart.draw(chartData, {
+            legend: {position: 'none'},
+            colors: ['#3273dc'],
+            hAxis: {title: 'Member Age'},
+            chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
+            height: 320
+        });
+    }
+
+    function drawActiveLicenseDaysChart() {
+        if (!activeLicenseChartsReady || !window.google || !google.visualization) {
+            return;
+        }
+
+        const chartData = new google.visualization.DataTable();
+        chartData.addColumn('string', 'Days remaining');
+        chartData.addColumn('number', 'Active licenses');
+        chartData.addRows(activeLicenseDaysRows.length ? activeLicenseDaysRows : [['No data', 0]]);
+
+        const chart = new google.visualization.ColumnChart(
+            document.getElementById('active-license-days-chart')
+        );
+        chart.draw(chartData, {
+            legend: {position: 'none'},
+            colors: ['#23d160'],
+            hAxis: {title: 'Years Remaining'},
+            chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
+            height: 320
+        });
+    }
+
+    function drawActiveLicenseEligibilityChart() {
+        if (!activeLicenseChartsReady || !window.google || !google.visualization) {
+            return;
+        }
+
+        const chartData = new google.visualization.DataTable();
+        chartData.addColumn('string', 'Years remaining');
+        chartData.addColumn('number', 'Eligible');
+        chartData.addColumn('number', 'Not eligible');
+        chartData.addRows(activeLicenseEligibilityRows.length ? activeLicenseEligibilityRows : [['No data', 0, 0]]);
+
+        const chart = new google.visualization.ColumnChart(
+            document.getElementById('active-license-eligibility-chart')
+        );
+        chart.draw(chartData, {
+            legend: {position: 'bottom'},
+            colors: ['#23d160', '#ff3860'],
+            hAxis: {title: 'Years Remaining'},
+            chartArea: {left: 56, top: 24, width: '82%', height: '70%'},
+            height: 320
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        google.charts.load('current', {packages: ['corechart']});
+        google.charts.setOnLoadCallback(() => {
+            activeLicenseChartsReady = true;
+            drawActiveLicenseChart();
+            drawActiveLicenseDaysChart();
+            drawActiveLicenseEligibilityChart();
+        });
+        window.addEventListener('resize', () => {
+            drawActiveLicenseChart();
+            drawActiveLicenseDaysChart();
+            drawActiveLicenseEligibilityChart();
+        });
+    });
+</script>
+{% endblock %}

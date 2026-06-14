@@ -5,12 +5,12 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 from flask import render_template, request, url_for, make_response, flash, redirect, abort
 from flask_login import login_required
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from app import db, admin_permission
 from app.admin import webadmin
 from app.admin.forms import MemberInfoAdminForm, LicenseAdminForm, MemberCertificateAdminForm
-from app.cmte.models import CMTEFeePaymentRecord
+from app.cmte.models import CMTEEventParticipationRecord, CMTEFeePaymentRecord
 from app.members.forms import MemberInfoForm, MemberUsernamePasswordForm, LicenseRenewalForm
 from app.members.models import License, LicenseRenewal, Member, MemberAddress, MemberCertificate
 
@@ -117,6 +117,183 @@ def _apply_license_renewal(member_id, license_number, issue_date, start_date, st
 @admin_permission.require(http_exception=403)
 def index():
     return render_template('webadmin/index.html')
+
+
+@webadmin.route('/member-dashboard', methods=['GET'])
+@login_required
+@admin_permission.require(http_exception=403)
+def member_dashboard():
+    today = date.today()
+
+    def _calculate_age(dob):
+        return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+    total_members = Member.query.count()
+    active_members = Member.query.filter(
+        or_(Member.status == 'ปกติ', Member.status.is_(None))
+    ).count()
+    total_licenses = License.query.count()
+    active_licenses = License.query.filter(License.end_date >= today).count()
+    expired_licenses = License.query.filter(License.end_date < today).count()
+
+    valid_cmte_scores_subquery = (
+        db.session.query(
+            CMTEEventParticipationRecord.license_number.label('license_number'),
+            func.coalesce(func.sum(CMTEEventParticipationRecord.score), 0).label('valid_cmte_scores'),
+        )
+        .join(License, CMTEEventParticipationRecord.license_number == License.number)
+        .filter(
+            CMTEEventParticipationRecord.approved_date.isnot(None),
+            CMTEEventParticipationRecord.score_valid_until == License.end_date,
+        )
+        .group_by(CMTEEventParticipationRecord.license_number)
+        .subquery()
+    )
+
+    active_license_age_counts = {
+        '20-30': 0,
+        '30-40': 0,
+        '40-50': 0,
+        '50-60': 0,
+        'over60': 0,
+    }
+    active_licenses_with_ages = (
+        License.query
+        .join(Member)
+        .filter(
+            License.end_date >= today,
+            Member.dob.isnot(None),
+        )
+        .all()
+    )
+    for license in active_licenses_with_ages:
+        if not license.member or not license.member.dob:
+            continue
+        age = _calculate_age(license.member.dob)
+        if 20 <= age < 30:
+            active_license_age_counts['20-30'] += 1
+        elif 30 <= age < 40:
+            active_license_age_counts['30-40'] += 1
+        elif 40 <= age < 50:
+            active_license_age_counts['40-50'] += 1
+        elif 50 <= age < 60:
+            active_license_age_counts['50-60'] += 1
+        elif age >= 60:
+            active_license_age_counts['over60'] += 1
+
+    active_license_age_rows = [
+        ['20-30', active_license_age_counts['20-30']],
+        ['30-40', active_license_age_counts['30-40']],
+        ['40-50', active_license_age_counts['40-50']],
+        ['50-60', active_license_age_counts['50-60']],
+        ['over60', active_license_age_counts['over60']],
+    ]
+
+    active_license_days_counts = {
+        '0-0.5y': 0,
+        '0.5-1y': 0,
+        '1-2y': 0,
+        '2-3y': 0,
+        '3-4y': 0,
+    }
+    active_license_eligibility_counts = {
+        '0-0.5y': {'eligible': 0, 'not_eligible': 0},
+        '0.5-1y': {'eligible': 0, 'not_eligible': 0},
+        '1-2y': {'eligible': 0, 'not_eligible': 0},
+        '2-3y': {'eligible': 0, 'not_eligible': 0},
+        '3-4y': {'eligible': 0, 'not_eligible': 0},
+    }
+    active_license_rows = (
+        db.session.query(
+            License.end_date.label('end_date'),
+            Member.dob.label('dob'),
+            func.coalesce(valid_cmte_scores_subquery.c.valid_cmte_scores, 0).label('valid_cmte_scores'),
+        )
+        .join(Member)
+        .outerjoin(valid_cmte_scores_subquery, valid_cmte_scores_subquery.c.license_number == License.number)
+        .filter(
+            License.end_date >= today,
+            Member.dob.isnot(None),
+        )
+        .all()
+    )
+
+    for row in active_license_rows:
+        remaining_days = (row.end_date - today).days
+        if remaining_days <= 183:
+            remaining_bucket = '0-0.5y'
+        elif remaining_days <= 365:
+            remaining_bucket = '0.5-1y'
+        elif remaining_days <= 730:
+            remaining_bucket = '1-2y'
+        elif remaining_days <= 1095:
+            remaining_bucket = '2-3y'
+        else:
+            remaining_bucket = '3-4y'
+
+        if remaining_days <= 183:
+            active_license_days_counts['0-0.5y'] += 1
+        elif remaining_days <= 365:
+            active_license_days_counts['0.5-1y'] += 1
+        elif remaining_days <= 730:
+            active_license_days_counts['1-2y'] += 1
+        elif remaining_days <= 1095:
+            active_license_days_counts['2-3y'] += 1
+        else:
+            active_license_days_counts['3-4y'] += 1
+
+        if row.valid_cmte_scores >= 50:
+            active_license_eligibility_counts[remaining_bucket]['eligible'] += 1
+        else:
+            active_license_eligibility_counts[remaining_bucket]['not_eligible'] += 1
+
+    active_license_days_rows = [
+        ['0-0.5y', active_license_days_counts['0-0.5y']],
+        ['0.5-1y', active_license_days_counts['0.5-1y']],
+        ['1-2y', active_license_days_counts['1-2y']],
+        ['2-3y', active_license_days_counts['2-3y']],
+        ['3-4y', active_license_days_counts['3-4y']],
+    ]
+
+    active_license_eligibility_rows = [
+        [
+            '0-0.5y',
+            active_license_eligibility_counts['0-0.5y']['eligible'],
+            active_license_eligibility_counts['0-0.5y']['not_eligible'],
+        ],
+        [
+            '0.5-1y',
+            active_license_eligibility_counts['0.5-1y']['eligible'],
+            active_license_eligibility_counts['0.5-1y']['not_eligible'],
+        ],
+        [
+            '1-2y',
+            active_license_eligibility_counts['1-2y']['eligible'],
+            active_license_eligibility_counts['1-2y']['not_eligible'],
+        ],
+        [
+            '2-3y',
+            active_license_eligibility_counts['2-3y']['eligible'],
+            active_license_eligibility_counts['2-3y']['not_eligible'],
+        ],
+        [
+            '3-4y',
+            active_license_eligibility_counts['3-4y']['eligible'],
+            active_license_eligibility_counts['3-4y']['not_eligible'],
+        ],
+    ]
+
+    return render_template(
+        'webadmin/member_dashboard.html',
+        total_members=total_members,
+        active_members=active_members,
+        total_licenses=total_licenses,
+        active_licenses=active_licenses,
+        expired_licenses=expired_licenses,
+        active_license_age_rows=active_license_age_rows,
+        active_license_days_rows=active_license_days_rows,
+        active_license_eligibility_rows=active_license_eligibility_rows,
+    )
 
 
 @webadmin.route('/upload/renew', methods=['GET', 'POST'])
