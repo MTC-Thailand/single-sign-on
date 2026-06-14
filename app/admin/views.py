@@ -3,7 +3,7 @@ from datetime import date, datetime
 import arrow
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from flask import render_template, request, url_for, make_response, flash, redirect, abort
+from flask import render_template, request, url_for, make_response, flash, redirect, abort, jsonify
 from flask_login import login_required
 from sqlalchemy import func, or_
 
@@ -123,6 +123,10 @@ def index():
 @login_required
 @admin_permission.require(http_exception=403)
 def member_dashboard():
+    return render_template('webadmin/member_dashboard.html')
+
+
+def _build_member_dashboard_payload():
     today = date.today()
 
     def _calculate_age(dob):
@@ -157,19 +161,22 @@ def member_dashboard():
         '50-60': 0,
         'over60': 0,
     }
-    active_licenses_with_ages = (
-        License.query
+    active_license_rows = (
+        db.session.query(
+            License.end_date.label('end_date'),
+            Member.dob.label('dob'),
+            func.coalesce(valid_cmte_scores_subquery.c.valid_cmte_scores, 0).label('valid_cmte_scores'),
+        )
         .join(Member)
+        .outerjoin(valid_cmte_scores_subquery, valid_cmte_scores_subquery.c.license_number == License.number)
         .filter(
             License.end_date >= today,
             Member.dob.isnot(None),
         )
         .all()
     )
-    for license in active_licenses_with_ages:
-        if not license.member or not license.member.dob:
-            continue
-        age = _calculate_age(license.member.dob)
+    for row in active_license_rows:
+        age = _calculate_age(row.dob)
         if 20 <= age < 30:
             active_license_age_counts['20-30'] += 1
         elif 30 <= age < 40:
@@ -203,21 +210,6 @@ def member_dashboard():
         '2-3y': {'eligible': 0, 'not_eligible': 0},
         '3-4y': {'eligible': 0, 'not_eligible': 0},
     }
-    active_license_rows = (
-        db.session.query(
-            License.end_date.label('end_date'),
-            Member.dob.label('dob'),
-            func.coalesce(valid_cmte_scores_subquery.c.valid_cmte_scores, 0).label('valid_cmte_scores'),
-        )
-        .join(Member)
-        .outerjoin(valid_cmte_scores_subquery, valid_cmte_scores_subquery.c.license_number == License.number)
-        .filter(
-            License.end_date >= today,
-            Member.dob.isnot(None),
-        )
-        .all()
-    )
-
     for row in active_license_rows:
         remaining_days = (row.end_date - today).days
         if remaining_days <= 183:
@@ -283,17 +275,23 @@ def member_dashboard():
         ],
     ]
 
-    return render_template(
-        'webadmin/member_dashboard.html',
-        total_members=total_members,
-        active_members=active_members,
-        total_licenses=total_licenses,
-        active_licenses=active_licenses,
-        expired_licenses=expired_licenses,
-        active_license_age_rows=active_license_age_rows,
-        active_license_days_rows=active_license_days_rows,
-        active_license_eligibility_rows=active_license_eligibility_rows,
-    )
+    return {
+        'total_members': total_members,
+        'active_members': active_members,
+        'total_licenses': total_licenses,
+        'active_licenses': active_licenses,
+        'expired_licenses': expired_licenses,
+        'active_license_age_rows': active_license_age_rows,
+        'active_license_days_rows': active_license_days_rows,
+        'active_license_eligibility_rows': active_license_eligibility_rows,
+    }
+
+
+@webadmin.route('/member-dashboard/data', methods=['GET'])
+@login_required
+@admin_permission.require(http_exception=403)
+def member_dashboard_data():
+    return jsonify(_build_member_dashboard_payload())
 
 
 @webadmin.route('/upload/renew', methods=['GET', 'POST'])
