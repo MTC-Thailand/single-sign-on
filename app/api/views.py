@@ -454,7 +454,6 @@ class MemberPID(Resource):
                     'th_title': member.th_title,
                     'th_firstname': member.th_firstname,
                     'th_lastname': member.th_lastname,
-                    'telephone': member.tel,
                     'status': member.status or 'ปกติ',
                 },
             }
