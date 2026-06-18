@@ -92,6 +92,10 @@
                             <td>{% if current_user.age is not none %}{{ current_user.age }} ปี{% else %}-{% endif %}</td>
                         </tr>
                         <tr>
+                            <td><strong>วันที่ขึ้นทะเบียนใบอนุญาตครั้งแรก</strong></td>
+                            <td>{{ current_user.first_license_issue_date|localdate or '-' }}</td>
+                        </tr>
+                        <tr>
                             <td><strong>ใบอนุญาตหมดอายุ</strong></td>
                             <td>
                                 {{ current_user.license.end_date|localdate }} ({{ current_user.license.end_date|humanizedate }})
