@@ -72,6 +72,18 @@ def _get_first_row_value(row, *column_names, default=None):
     return default
 
 
+def _normalize_excel_identifier(value):
+    """Return spreadsheet identifiers without numeric formatting artifacts."""
+    if value is None or pd.isna(value):
+        return None
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    value = str(value).strip()
+    if value.endswith('.0') and value[:-2].isdigit():
+        return value[:-2]
+    return value
+
+
 def _apply_license_renewal(member_id, license_number, issue_date, start_date, status='ปกติ'):
     latest_license = License.query.filter_by(member_id=member_id) \
         .order_by(License.end_date.desc()).first()
@@ -328,7 +340,17 @@ def upload_renew():
 def upload_new():
     if request.method == 'POST':
         f = request.files['file']
-        df = pd.read_excel(f, engine='openpyxl', dtype={'telephone_number': str})
+        df = pd.read_excel(
+            f,
+            engine='openpyxl',
+            dtype={
+                'idcardnumber': str,
+                'mem_id_txt': str,
+                'license_no': str,
+                'telephone_number': str,
+            },
+        )
+        skipped_rows = []
         for idx, row in df.iterrows():
             dob = _parse_excel_date(_get_first_row_value(row, 'dob', 'birthday', 'date_of_birth', 'birth_date'))
             has_traditional_fee = _get_row_value(row, 'form_tradition') == 1
@@ -336,33 +358,50 @@ def upload_new():
             license_start_date = _parse_excel_date(_get_row_value(row, 'license_begin_date'))
             license_end_date = _parse_excel_date(_get_row_value(row, 'license_exp_date'))
             license_issue_date = _parse_excel_date(_get_row_value(row, 'approve_date'))
-            member = Member.query.filter_by(pid=str(int(row['idcardnumber']))).first()
+            member_pid = _normalize_excel_identifier(_get_row_value(row, 'idcardnumber'))
+            license_number = _normalize_excel_identifier(_get_row_value(row, 'license_no'))
+            member = Member.query.filter_by(pid=member_pid).first() if member_pid else None
             if not member:
-                member = Member(pid=str(row['idcardnumber']),
-                                th_title=row['prefix'],
-                                th_firstname=row['firstnameTH'],
-                                th_lastname=row['lastnameTH'],
-                                en_firstname=row['firstnameEN'],
-                                en_lastname=row['lastnameEN'],
-                                number=row['mem_id_txt'],
-                                email=row['email'],
-                                tel=row['telephone_number'],
-                                dob=dob,
-                                first_license_issue_date=license_issue_date
-                                )
+                required_member_values = {
+                    'idcardnumber': member_pid,
+                    'mem_id_txt': _normalize_excel_identifier(_get_row_value(row, 'mem_id_txt')),
+                    'firstnameTH': _get_row_value(row, 'firstnameTH'),
+                    'lastnameTH': _get_row_value(row, 'lastnameTH'),
+                }
+                missing_member_values = [
+                    column for column, value in required_member_values.items()
+                    if value is None
+                ]
+                if missing_member_values:
+                    skipped_rows.append(
+                        f'row {idx + 2}: new member missing {", ".join(missing_member_values)}'
+                    )
+                    continue
+                member = Member(
+                    pid=member_pid,
+                    th_title=_get_row_value(row, 'prefix'),
+                    th_firstname=_get_row_value(row, 'firstnameTH'),
+                    th_lastname=_get_row_value(row, 'lastnameTH'),
+                    en_firstname=_get_row_value(row, 'firstnameEN'),
+                    en_lastname=_get_row_value(row, 'lastnameEN'),
+                    number=_normalize_excel_identifier(_get_row_value(row, 'mem_id_txt')),
+                    email=_get_row_value(row, 'email'),
+                    tel=_get_row_value(row, 'telephone_number'),
+                    dob=dob,
+                    first_license_issue_date=license_issue_date,
+                )
                 db.session.add(member)
-                license = License.query.filter_by(number=str(int(row['license_no']))).first()
-                if not license:
-                    license = License(start_date=license_start_date,
-                                      end_date=license_end_date,
-                                      issue_date=license_issue_date,
-                                      number=str(row['license_no']),
-                                      member=member)
-                else:
-                    license.start_date = license_start_date
-                    license.end_date = license_end_date
-                    license.issue_date = license_issue_date
-                db.session.add(license)
+                license = License.query.filter_by(number=license_number).first() if license_number else None
+                if not license and all((license_issue_date, license_start_date, license_end_date)):
+                    license = License(
+                        start_date=license_start_date,
+                        end_date=license_end_date,
+                        issue_date=license_issue_date,
+                        number=license_number,
+                        member=member,
+                    )
+                if license:
+                    db.session.add(license)
             else:
                 member_updates = {
                     'prefix': 'th_title',
@@ -383,11 +422,14 @@ def upload_new():
                 if member.first_license_issue_date is None and license_issue_date is not None:
                     member.first_license_issue_date = license_issue_date
                 db.session.add(member)
-                license = License.query.filter_by(number=str(int(row['license_no']))).first()
+                license = License.query.filter_by(number=license_number).first() if license_number else None
                 if license:
-                    license.start_date = license_start_date
-                    license.end_date = license_end_date
-                    license.issue_date = license_issue_date
+                    if license_start_date is not None:
+                        license.start_date = license_start_date
+                    if license_end_date is not None:
+                        license.end_date = license_end_date
+                    if license_issue_date is not None:
+                        license.issue_date = license_issue_date
                     db.session.add(license)
             # The source spreadsheet uses form_tradition as a fee-paid flag for the traditional fee flow.
             if has_traditional_fee and payment_date is not None:
@@ -404,6 +446,8 @@ def upload_new():
                     )
                     db.session.add(cmte_payment_record)
         db.session.commit()
+        if skipped_rows:
+            return 'Upload completed. Skipped: {}'.format('; '.join(skipped_rows))
         return 'Upload completed.'
     return render_template('webadmin/upload_renew.html')
 
