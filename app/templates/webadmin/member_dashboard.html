@@ -267,20 +267,36 @@
                         <p class="help-text">สมาชิกที่ยังอยู่ในสถานะใช้งาน</p>
                     </div>
                     <div class="member-dashboard-stat">
-                        <p class="label">ใบอนุญาตทั้งหมด</p>
-                        <p class="value" id="metric-total-licenses">-</p>
-                        <p class="help-text">บันทึกใบอนุญาตที่มีอยู่ทั้งหมด</p>
-                    </div>
-                    <div class="member-dashboard-stat">
                         <p class="label">ใบอนุญาตใช้งานได้</p>
                         <p class="value" id="metric-active-licenses">-</p>
                         <p class="help-text">ใบอนุญาตที่ยังไม่หมดอายุ</p>
                     </div>
-                    <div class="member-dashboard-stat">
-                        <p class="label">ใบอนุญาตหมดอายุ</p>
-                        <p class="value" id="metric-expired-licenses">-</p>
-                        <p class="help-text">ใบอนุญาตที่หมดอายุแล้ว</p>
+                </div>
+            </section>
+
+            <section class="member-dashboard-panel">
+                <div class="member-dashboard-panel-heading">
+                    <div>
+                        <p class="member-dashboard-kicker">Active Members</p>
+                        <h2 class="title is-5">สมาชิกสถานะปกติตามช่วงอายุ</h2>
                     </div>
+                </div>
+
+                <div class="member-dashboard-chart-card">
+                    <div id="active-member-age-chart" class="member-dashboard-chart"></div>
+                </div>
+            </section>
+
+            <section class="member-dashboard-panel">
+                <div class="member-dashboard-panel-heading">
+                    <div>
+                        <p class="member-dashboard-kicker">Member Statuses</p>
+                        <h2 class="title is-5">สมาชิกตามสถานะ</h2>
+                    </div>
+                </div>
+
+                <div class="member-dashboard-chart-card">
+                    <div id="member-status-chart" class="member-dashboard-chart"></div>
                 </div>
             </section>
 
@@ -296,7 +312,7 @@
                     <div class="member-dashboard-stat">
                         <p class="label">ใบอนุญาตใช้งานได้</p>
                         <p class="value">{{ active_licenses }}</p>
-                        <p class="help-text">ใบอนุญาตที่ยังมีผลใช้งานในระบบ</p>
+                        <p class="help-text">ใบอนุญาตสถานะปกติที่ยังไม่หมดอายุ</p>
                     </div>
                     <div class="member-dashboard-chart-card">
                         <div id="active-license-age-chart" class="member-dashboard-chart"></div>
@@ -344,6 +360,46 @@
 
     function updateMetric(id, value) {
         document.getElementById(id).textContent = value ?? 0;
+    }
+
+    function drawMemberStatusChart() {
+        if (!activeLicenseChartsReady || !window.google || !google.visualization || !dashboardPayload) {
+            return;
+        }
+
+        const chartData = new google.visualization.DataTable();
+        chartData.addColumn('string', 'Member status');
+        chartData.addColumn('number', 'Members');
+        chartData.addRows(
+            dashboardPayload.member_status_rows.length ? dashboardPayload.member_status_rows : [['No data', 0]]
+        );
+
+        new google.visualization.PieChart(document.getElementById('member-status-chart')).draw(chartData, {
+            legend: {position: 'right'},
+            sliceVisibilityThreshold: 0,
+            chartArea: {left: 24, top: 24, width: '85%', height: '80%'},
+            height: 320
+        });
+    }
+
+    function drawActiveMemberAgeChart() {
+        if (!activeLicenseChartsReady || !window.google || !google.visualization || !dashboardPayload) {
+            return;
+        }
+
+        const chartData = new google.visualization.DataTable();
+        chartData.addColumn('string', 'Age range');
+        chartData.addColumn('number', 'Active members');
+        chartData.addRows(
+            dashboardPayload.active_member_age_rows.length ? dashboardPayload.active_member_age_rows : [['No data', 0]]
+        );
+
+        new google.visualization.PieChart(document.getElementById('active-member-age-chart')).draw(chartData, {
+            legend: {position: 'right'},
+            sliceVisibilityThreshold: 0,
+            chartArea: {left: 24, top: 24, width: '85%', height: '80%'},
+            height: 320
+        });
     }
 
     function drawActiveLicenseChart() {
@@ -414,13 +470,13 @@
         dashboardPayload = payload;
         updateMetric('metric-total-members', payload.total_members);
         updateMetric('metric-active-members', payload.active_members);
-        updateMetric('metric-total-licenses', payload.total_licenses);
         updateMetric('metric-active-licenses', payload.active_licenses);
-        updateMetric('metric-expired-licenses', payload.expired_licenses);
 
         google.charts.load('current', {packages: ['corechart']});
         google.charts.setOnLoadCallback(() => {
             activeLicenseChartsReady = true;
+            drawMemberStatusChart();
+            drawActiveMemberAgeChart();
             drawActiveLicenseChart();
             drawActiveLicenseDaysChart();
             drawActiveLicenseEligibilityChart();
@@ -444,6 +500,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadDashboard();
         window.addEventListener('resize', () => {
+            drawMemberStatusChart();
+            drawActiveMemberAgeChart();
             drawActiveLicenseChart();
             drawActiveLicenseDaysChart();
             drawActiveLicenseEligibilityChart();

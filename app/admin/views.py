@@ -145,11 +145,52 @@ def _build_member_dashboard_payload():
         return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
     total_members = Member.query.count()
-    active_members = Member.query.filter(
-        or_(Member.status == 'ปกติ', Member.status.is_(None))
-    ).count()
+    active_member_status_filter = or_(Member.status == 'ปกติ', Member.status.is_(None))
+    active_members = Member.query.filter(active_member_status_filter).count()
+    active_member_age_counts = {
+        '20-30': 0,
+        '30-40': 0,
+        '40-50': 0,
+        '50-60': 0,
+        'over60': 0,
+    }
+    for (dob,) in Member.query.with_entities(Member.dob).filter(
+        active_member_status_filter,
+        Member.dob.isnot(None),
+    ):
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        if 20 <= age < 30:
+            active_member_age_counts['20-30'] += 1
+        elif 30 <= age < 40:
+            active_member_age_counts['30-40'] += 1
+        elif 40 <= age < 50:
+            active_member_age_counts['40-50'] += 1
+        elif 50 <= age < 60:
+            active_member_age_counts['50-60'] += 1
+        elif age >= 60:
+            active_member_age_counts['over60'] += 1
+    active_member_age_rows = [
+        ['20-30', active_member_age_counts['20-30']],
+        ['30-40', active_member_age_counts['30-40']],
+        ['40-50', active_member_age_counts['40-50']],
+        ['50-60', active_member_age_counts['50-60']],
+        ['over60', active_member_age_counts['over60']],
+    ]
+    member_status_counts = {
+        'ปกติ': 0,
+        'ลาออก': 0,
+        'พ้นสมาชิกภาพ': 0,
+        'ตาย': 0,
+    }
+    for status, count in db.session.query(Member.status, func.count(Member.id)).group_by(Member.status):
+        member_status_counts[status or 'ปกติ'] = member_status_counts.get(status or 'ปกติ', 0) + count
+    member_status_rows = [[status, count] for status, count in member_status_counts.items()]
     total_licenses = License.query.count()
-    active_licenses = License.query.filter(License.end_date >= today).count()
+    active_license_status_filter = or_(License.status == 'ปกติ', License.status.is_(None))
+    active_licenses = License.query.filter(
+        License.end_date >= today,
+        active_license_status_filter,
+    ).count()
     expired_licenses = License.query.filter(License.end_date < today).count()
 
     valid_cmte_scores_subquery = (
@@ -183,6 +224,7 @@ def _build_member_dashboard_payload():
         .outerjoin(valid_cmte_scores_subquery, valid_cmte_scores_subquery.c.license_number == License.number)
         .filter(
             License.end_date >= today,
+            active_license_status_filter,
             Member.dob.isnot(None),
         )
         .all()
@@ -290,6 +332,8 @@ def _build_member_dashboard_payload():
     return {
         'total_members': total_members,
         'active_members': active_members,
+        'active_member_age_rows': active_member_age_rows,
+        'member_status_rows': member_status_rows,
         'total_licenses': total_licenses,
         'active_licenses': active_licenses,
         'expired_licenses': expired_licenses,
