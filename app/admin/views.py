@@ -374,7 +374,8 @@ def upload_renew():
                     member.th_lastname = row['lastname']
                     db.session.add(member)
         db.session.commit()
-        return 'Update completed. <a href="{}">Back</a>'.format(url_for('webadmin.index'))
+        flash('อัปเดตข้อมูลการต่ออายุใบอนุญาตเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('webadmin.upload_renew'))
     return render_template('webadmin/upload_renew.html')
 
 

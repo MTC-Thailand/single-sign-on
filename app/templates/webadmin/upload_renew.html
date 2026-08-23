@@ -1,15 +1,164 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Upload Renewed Members</title>
-</head>
-<body>
-<h1>Upload รายชื่อต่ออายุใบอนุญาต</h1>
-<form method="post" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
-    <input type="file" name="file">
-    <input type="submit">
-</form>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Upload Member and License Data{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .upload-page-section {
+        padding-top: 1.5rem;
+    }
+
+    .upload-page-card {
+        max-width: 46rem;
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid rgba(34, 79, 148, 0.12);
+        border-radius: 24px;
+        box-shadow: 0 18px 40px rgba(34, 79, 148, 0.08);
+    }
+
+    .upload-page-card .card-header {
+        background: linear-gradient(135deg, rgba(232, 240, 255, 0.95), rgba(255, 255, 255, 0.98));
+        box-shadow: none;
+    }
+
+    .upload-page-card .card-header-title {
+        display: block;
+        padding: 1.5rem 1.75rem 1.25rem;
+    }
+
+    .upload-page-kicker {
+        display: block;
+        margin-bottom: 0.45rem;
+        color: var(--theme-primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+    }
+
+    .upload-page-card .card-content {
+        padding: 1.75rem;
+    }
+
+    .upload-page-description {
+        margin-bottom: 1.5rem;
+        color: var(--theme-muted);
+        line-height: 1.7;
+    }
+
+    .upload-file-box {
+        padding: 1.25rem;
+        border: 1px dashed rgba(34, 79, 148, 0.3);
+        border-radius: 16px;
+        background: rgba(247, 250, 255, 0.8);
+    }
+
+    .upload-file-name {
+        margin-top: 0.6rem;
+        color: var(--theme-muted);
+        font-size: 0.9rem;
+    }
+
+    .upload-page-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    @media screen and (max-width: 600px) {
+        .upload-page-card .card-content,
+        .upload-page-card .card-header-title {
+            padding: 1.25rem;
+        }
+
+        .upload-page-actions {
+            align-items: stretch;
+            flex-direction: column-reverse;
+        }
+
+        .upload-page-actions .button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section upload-page-section">
+    <div class="container">
+        {% include "messages.html" %}
+
+        <div class="card upload-page-card">
+            <header class="card-header">
+                <div class="card-header-title">
+                    <span class="upload-page-kicker">Member &amp; License Data</span>
+                    <h1 class="title is-4 mb-0">อัปโหลดข้อมูลสมาชิกและใบอนุญาต</h1>
+                </div>
+            </header>
+
+            <div class="card-content">
+                <p class="upload-page-description">
+                    เลือกไฟล์ Excel ที่มีข้อมูลสมาชิกและใบอนุญาต แล้วอัปโหลดเพื่อเพิ่มหรือปรับปรุงข้อมูลในระบบ
+                </p>
+
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="upload-file-box">
+                        <div class="field mb-0">
+                            <label class="label" for="member-license-file">ไฟล์ข้อมูลสมาชิกและใบอนุญาต</label>
+                            <div class="control">
+                                <input
+                                    class="file-input"
+                                    id="member-license-file"
+                                    type="file"
+                                    name="file"
+                                    accept=".xls,.xlsx"
+                                    required
+                                >
+                                <label class="button is-link is-light" for="member-license-file">
+                                    <span class="icon"><i class="fa-solid fa-file-arrow-up"></i></span>
+                                    <span>เลือกไฟล์</span>
+                                </label>
+                            </div>
+                            <p class="help">รองรับไฟล์ Excel นามสกุล .xls หรือ .xlsx</p>
+                            <p class="upload-file-name" id="member-license-file-name">ยังไม่ได้เลือกไฟล์</p>
+                        </div>
+                    </div>
+
+                    <div class="upload-page-actions">
+                        <a class="button is-light" href="{{ url_for('webadmin.index') }}">
+                            <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                            <span>กลับหน้าหลัก</span>
+                        </a>
+                        <button class="button is-success" type="submit">
+                            <span class="icon"><i class="fa-solid fa-upload"></i></span>
+                            <span>อัปโหลดข้อมูล</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const fileInput = document.getElementById('member-license-file');
+        const fileName = document.getElementById('member-license-file-name');
+
+        fileInput.addEventListener('change', () => {
+            fileName.textContent = fileInput.files.length
+                ? fileInput.files[0].name
+                : 'ยังไม่ได้เลือกไฟล์';
+        });
+    });
+</script>
+{% endblock %}
