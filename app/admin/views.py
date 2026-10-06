@@ -186,6 +186,19 @@ def _build_member_dashboard_payload():
         member_status_counts[status or 'ปกติ'] = member_status_counts.get(status or 'ปกติ', 0) + count
     member_status_rows = [[status, count] for status, count in member_status_counts.items()]
     total_licenses = License.query.count()
+    first_license_issue_year = today.year - 9
+    first_licenses_issued_by_year = {
+        year: 0 for year in range(first_license_issue_year, today.year + 1)
+    }
+    for (issue_date,) in Member.query.with_entities(Member.first_license_issue_date).filter(
+        Member.first_license_issue_date >= date(first_license_issue_year, 1, 1),
+        Member.first_license_issue_date <= today,
+    ):
+        first_licenses_issued_by_year[issue_date.year] += 1
+    first_licenses_issued_by_year_rows = [
+        [str(year), first_licenses_issued_by_year[year]]
+        for year in range(first_license_issue_year, today.year + 1)
+    ]
     active_license_status_filter = or_(License.status == 'ปกติ', License.status.is_(None))
     active_licenses = License.query.filter(
         License.end_date >= today,
@@ -337,6 +350,7 @@ def _build_member_dashboard_payload():
         'total_licenses': total_licenses,
         'active_licenses': active_licenses,
         'expired_licenses': expired_licenses,
+        'first_licenses_issued_by_year_rows': first_licenses_issued_by_year_rows,
         'active_license_age_rows': active_license_age_rows,
         'active_license_days_rows': active_license_days_rows,
         'active_license_eligibility_rows': active_license_eligibility_rows,

@@ -323,6 +323,19 @@
             <section class="member-dashboard-panel">
                 <div class="member-dashboard-panel-heading">
                     <div>
+                        <p class="member-dashboard-kicker">First-time Licenses</p>
+                        <h2 class="title is-5">ใบอนุญาตที่ออกครั้งแรกในช่วง 10 ปีที่ผ่านมา</h2>
+                    </div>
+                </div>
+
+                <div class="member-dashboard-chart-card">
+                    <div id="licenses-issued-by-year-chart" class="member-dashboard-chart"></div>
+                </div>
+            </section>
+
+            <section class="member-dashboard-panel">
+                <div class="member-dashboard-panel-heading">
+                    <div>
                         <p class="member-dashboard-kicker">Active Licenses</p>
                         <h2 class="title is-5">ระยะเวลาคงเหลือของใบอนุญาตตามปี</h2>
                     </div>
@@ -423,6 +436,26 @@
         });
     }
 
+    function drawLicensesIssuedByYearChart() {
+        if (!activeLicenseChartsReady || !window.google || !google.visualization || !dashboardPayload) {
+            return;
+        }
+
+        const chartData = new google.visualization.DataTable();
+        chartData.addColumn('string', 'Year');
+        chartData.addColumn('number', 'First-time licenses');
+        chartData.addRows(dashboardPayload.first_licenses_issued_by_year_rows);
+
+        new google.visualization.ColumnChart(document.getElementById('licenses-issued-by-year-chart')).draw(chartData, {
+            legend: {position: 'none'},
+            colors: ['#c63a34'],
+            hAxis: {title: 'Year'},
+            vAxis: {title: 'First-time Licenses', minValue: 0, format: '0'},
+            chartArea: {left: 72, top: 24, width: '82%', height: '70%'},
+            height: 320
+        });
+    }
+
     function drawActiveLicenseDaysChart() {
         if (!activeLicenseChartsReady || !window.google || !google.visualization || !dashboardPayload) {
             return;
@@ -478,6 +511,7 @@
             drawMemberStatusChart();
             drawActiveMemberAgeChart();
             drawActiveLicenseChart();
+            drawLicensesIssuedByYearChart();
             drawActiveLicenseDaysChart();
             drawActiveLicenseEligibilityChart();
             document.getElementById('member-dashboard-loading').classList.add('is-hidden');
@@ -503,6 +537,7 @@
             drawMemberStatusChart();
             drawActiveMemberAgeChart();
             drawActiveLicenseChart();
+            drawLicensesIssuedByYearChart();
             drawActiveLicenseDaysChart();
             drawActiveLicenseEligibilityChart();
         });
