@@ -817,13 +817,14 @@ def edit_member_password(member_id):
 @login_required
 @admin_permission.require(http_exception=403)
 def search_member():
-    query = request.args.get('query')
+    query = request.args.get('query', '').strip()
     if query:
         licenses = [(license.member.license, license.member) for license in License.query.filter_by(number=query)]
         if not licenses:
             members = Member.query.filter(or_(Member.th_firstname.like(f'%{query}%'),
                                               Member.th_lastname.like(f'%{query}%'),
-                                              Member.tel.like(f'%{query}%')))
+                                              Member.tel.like(f'%{query}%'),
+                                              Member.pid == query))
             licenses = [(member.license, member) for member in members]
         rows = []
         for lic, member in licenses:
