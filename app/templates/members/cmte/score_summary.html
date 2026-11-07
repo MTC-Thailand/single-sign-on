@@ -191,11 +191,11 @@
 
     function drawCenteredText(ctx, text, x, y, options = {}) {
         ctx.save();
-        ctx.textAlign = 'center';
+        ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = options.color || '#3b342d';
         ctx.font = options.font || `700 84px ${CERTIFICATE_FONT_FAMILY}`;
-        ctx.fillText(text, x, y);
+        ctx.fillText(text, x - ctx.measureText(text).width / 2, y);
         ctx.restore();
     }
 
@@ -206,7 +206,7 @@
         let fontSize = options.fontSize || 84;
 
         ctx.save();
-        ctx.textAlign = 'center';
+        ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = options.color || '#3b342d';
 
@@ -215,7 +215,7 @@
             fontSize -= 4;
         } while (ctx.measureText(text).width > (options.maxWidth || 2600) && fontSize > minSize);
 
-        ctx.fillText(text, x, y);
+        ctx.fillText(text, x - ctx.measureText(text).width / 2, y);
         ctx.restore();
     }
 
