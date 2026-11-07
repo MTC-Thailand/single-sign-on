@@ -86,7 +86,7 @@
                                             <td>{{ member.license_number }}</td>
                                             <td>
                                                 <input type="number"
-                                                       step="1"
+                                                       step="any"
                                                        min="0"
                                                        class="input"
                                                        name="score_{{ member.license_number }}"
@@ -206,7 +206,7 @@
                 scoreCell.append(
                     $('<input>', {
                         type: 'number',
-                        step: '1',
+                        step: 'any',
                         min: '0',
                         class: 'input',
                         name: `score_${member.licenseNumber}`,
